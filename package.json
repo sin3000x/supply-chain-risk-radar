@@ -1,1 +1,1 @@
-{"name":"external-event-demo","private":true,"type":"module","engines":{"node":">=22.18.0"},"scripts":{"start":"node server.mjs","test":"node --test"}}
+{"name":"supply-chain-risk-radar","private":true,"type":"module","engines":{"node":">=22.18.0"},"scripts":{"start":"node --disable-warning=ExperimentalWarning server.mjs","test":"node --disable-warning=ExperimentalWarning --test"}}

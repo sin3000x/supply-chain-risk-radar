@@ -1,4 +1,5 @@
 import {classifyByKeyword} from './vendor/worldmonitor/threat-keyword-classifier.ts';
+import {normalizeArticleUrl} from './vendor/worldmonitor/article-identity.js';
 export const feeds = {
   news: 'news/v1/list-feed-digest?variant=full&lang=en',
   signal: 'intelligence/v1/list-cross-source-signals',
@@ -17,8 +18,10 @@ export function normalize(kind, payload) {
   return (source ?? []).flatMap(raw => {
     const upstreamId = kind === 'news' ? raw.link : raw.id;
     const title = kind === 'signal' ? raw.summary : raw.title;
-    if (!upstreamId || !title || seen.has(upstreamId)) return [];
-    seen.add(upstreamId);
+    // One article can arrive through several regional feeds or with tracking parameters.
+    const identity = kind === 'news' ? normalizeArticleUrl(upstreamId) || upstreamId : upstreamId;
+    if (!upstreamId || !title || seen.has(identity)) return [];
+    seen.add(identity);
     const classification = kind === 'news' ? raw.threat ?? classifyByKeyword(title) : null;
     return [{
       id: `worldmonitor:${kind}:${upstreamId}`,

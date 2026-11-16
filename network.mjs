@@ -33,16 +33,25 @@ export async function loadNetwork(directory, label) {
       name.length >= 2 && (/\p{Script=Han}/u.test(name) || name.length >= 5 && /[a-z]/.test(name))
     ).map(name=>new RegExp(/\p{Script=Han}/u.test(name) ? escape(name) : `\\b${escape(name)}\\b`,'u')),
   }));
+  function matchPlaces(text, anchors) {
+    const explicit = anchors?.length > 0;
+    const mentioned = explicit ? '' : fold(text);
+    const matched = explicit ? anchors.map(id=>byId.get(id)).filter(Boolean)
+      : matchers.filter(({patterns})=>patterns.some(pattern=>pattern.test(mentioned))).map(({node})=>node);
+    const specific = matched.some(node=>node.type !== 'city');
+    return {explicit, nodes:matched.filter(node=>explicit || !specific || node.type !== 'city')};
+  }
   return {
     summary:{label,nodeCount:nodes.length,laneCount:lanes.length,originCount:origins.size,destinationCount:destinations.size},
+    /** Network node IDs a single report mentions (title and region only). */
+    findPlaces(record) {
+      return matchPlaces([record.title,record.region].join(' ')).nodes.filter(node=>index.has(node.id)).map(node=>node.id);
+    },
     annotate(event) {
       if (event.routeRelevant === false) return {...event,networkMatches:[]};
-      const mentioned = fold([event.title,event.summary,...event.records.filter(r=>r.role !== 'background').flatMap(r=>event.topic ? [r.title,r.region] : [r.title,r.summary,r.region])].join(' '));
-      const explicit = event.geoAnchors?.length > 0;
-      const matched = explicit ? event.geoAnchors.map(id=>byId.get(id)).filter(Boolean)
-        : matchers.filter(({patterns})=>patterns.some(pattern=>pattern.test(mentioned))).map(({node})=>node);
-      const specific = matched.some(node=>node.type !== 'city');
-      return {...event,networkMatches:matched.filter(node=>explicit || !specific || node.type !== 'city').map(node=>({
+      const {explicit,nodes} = matchPlaces([event.title,event.summary,...event.records.filter(r=>r.role !== 'background')
+        .flatMap(r=>event.topic ? [r.title,r.region] : [r.title,r.summary,r.region])].join(' '), event.geoAnchors);
+      return {...event,networkMatches:nodes.map(node=>({
         nodeId:node.id,nodeName:node.name_zh,nodeType:node.type,basis:explicit ? 'event_anchor' : 'place_mention',
         routes:index.get(node.id) ?? [],
       })).filter(match=>match.routes.length)};
