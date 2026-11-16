@@ -20,17 +20,17 @@ async function getFeed(kind, path, mode) {
     if (mode === 'live' && !origin) {
       if (kind !== 'news') return {kind,state:'not_configured',records:[]};
       const {stdout} = await exec('python3', [fileURLToPath(new URL('./public-news.py', import.meta.url))], {
-        timeout: 12000, maxBuffer: 1024 * 1024,
+        timeout: 24000, maxBuffer: 2 * 1024 * 1024,
       });
       const payload = JSON.parse(stdout);
-      const errors = Object.keys(payload.errors);
+      const errors = payload.feedStatus.filter(feed=>feed.error);
       const records = normalize(kind, payload).map(record => ({
         ...record,
         id: record.id.replace(/^worldmonitor:/, 'rss:'),
         source:{...record.source,provider:'Publisher RSS',endpoint:null},
       }));
-      return {kind, records, state:errors.length === 3 ? 'unavailable' : errors.length ? 'partial' : records.length ? 'ok' : 'empty',
-        error:errors.length ? errors.join('、')+' 获取失败' : null};
+      return {kind, records, feedStatus:payload.feedStatus, state:errors.length === payload.feedStatus.length ? 'unavailable' : errors.length ? 'partial' : records.length ? 'ok' : 'empty',
+        error:errors.length ? errors.map(feed=>feed.name).join('、')+' 获取失败' : null};
     }
     if (mode === 'live') {
       const response = await fetch(new URL(`/api/${path}`, origin), {

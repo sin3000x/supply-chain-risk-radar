@@ -41,6 +41,7 @@ function render() {
   el('export').disabled = !list.length;
   if (!data) return;
   el('status').textContent = [data.mode === 'sample' ? '虚构样例' : `筛选 ${data.sources.find(s=>s.kind==='news')?.records.length ?? 0} 篇报道`, data.mode === 'sample' ? null : data.liveSource === 'self-hosted' ? '自建 WorldMonitor' : '公开新闻 RSS',
+    ...data.sources.filter(s=>s.feedStatus).map(s=>`RSS 源 ${s.feedStatus.filter(f=>!f.error).length}/${s.feedStatus.length} 可用`),
     ...data.sources.map(s=>`${labels[s.kind]}：${states[s.state]}${s.error ? '（'+s.error+'）' : ''}`), `显示 ${list.length} 个事件`].filter(Boolean).join(' · ');
   const network = data.network;
   el('network-status').textContent = `${network.label} · ${network.originCount} 个起点 · ${network.destinationCount} 个终点 · ${network.laneCount} 条线路`;

@@ -1,0 +1,87 @@
+[
+  {
+    "name": "BBC World",
+    "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+    "category": "world"
+  },
+  {
+    "name": "Guardian World",
+    "url": "https://www.theguardian.com/world/rss",
+    "category": "world"
+  },
+  {
+    "name": "Al Jazeera",
+    "url": "https://www.aljazeera.com/xml/rss/all.xml",
+    "category": "world"
+  },
+  {
+    "name": "CNA",
+    "url": "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml",
+    "category": "regional"
+  },
+  {
+    "name": "Nikkei Asia",
+    "url": "https://news.google.com/rss/search?q=site%3Aasia.nikkei.com%20when%3A3d&hl=en-US&gl=US&ceid=US:en",
+    "category": "regional"
+  },
+  {
+    "name": "France 24 Asia Pacific",
+    "url": "https://www.france24.com/en/asia-pacific/rss",
+    "category": "regional"
+  },
+  {
+    "name": "France 24 Africa",
+    "url": "https://www.france24.com/en/africa/rss",
+    "category": "regional"
+  },
+  {
+    "name": "France 24 LatAm",
+    "url": "https://www.france24.com/en/americas/rss",
+    "category": "regional"
+  },
+  {
+    "name": "DW News",
+    "url": "https://rss.dw.com/xml/rss-en-all",
+    "category": "regional"
+  },
+  {
+    "name": "Reuters India",
+    "url": "https://news.google.com/rss/search?q=site%3Areuters.com%20India%20when%3A3d&hl=en-US&gl=US&ceid=US:en",
+    "category": "regional"
+  },
+  {
+    "name": "Reuters Business",
+    "url": "https://news.google.com/rss/search?q=site%3Areuters.com%20business%20markets%20when%3A1d&hl=en-US&gl=US&ceid=US:en",
+    "category": "trade"
+  },
+  {
+    "name": "Trade & Tariffs",
+    "url": "https://news.google.com/rss/search?q=(tariff+OR+\"trade+war\"+OR+\"trade+deficit\"+OR+sanctions)+when:2d&hl=en-US&gl=US&ceid=US:en",
+    "category": "trade"
+  },
+  {
+    "name": "gCaptain",
+    "url": "https://gcaptain.com/feed/",
+    "category": "shipping"
+  },
+  {
+    "name": "Shipping & Freight",
+    "url": "https://news.google.com/rss/search?q=(%22bulk%20carrier%22%20OR%20%22dry%20bulk%22%20OR%20%22commodity%20shipping%22%20OR%20%22Port%20Hedland%22%20OR%20%22Strait%20of%20Hormuz%22)%20when%3A3d&hl=en-US&gl=US&ceid=US:en",
+    "category": "shipping"
+  },
+  {
+    "name": "Port & Logistics",
+    "url": "https://news.google.com/rss/search?q=(%22iron%20ore%20port%22%20OR%20%22copper%20port%22%20OR%20%22commodity%20port%22%20OR%20%22mineral%20logistics%22)%20when%3A7d&hl=en-US&gl=US&ceid=US:en",
+    "category": "shipping"
+  },
+  {
+    "name": "U.S. Trade Representative",
+    "url": "https://ustr.gov/rss.xml",
+    "category": "official"
+  },
+  {
+    "name": "Treasury",
+    "url": "https://news.google.com/rss/search?q=site%3Atreasury.gov%20when%3A1d&hl=en-US&gl=US&ceid=US:en",
+    "category": "official"
+  }
+]
