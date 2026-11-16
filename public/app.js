@@ -47,7 +47,8 @@ function render() {
   for (const event of list) {
     const card = add(items,'article','','event-card');
     const heading = add(card,'header','','event-header');
-    add(heading,'div',[event.region,`${event.records.length} 条记录`].filter(Boolean).join(' · '),'meta');
+    const publishers = new Set(event.records.filter(r=>r.kind === 'news').map(r=>r.source.publisher).filter(Boolean));
+    add(heading,'div',[event.region,publishers.size > 1 && `${publishers.size} 家媒体`,`${event.records.length} 条记录`].filter(Boolean).join(' · '),'meta');
     add(heading,'h2',event.title);
     if(event.summary) add(heading,'p',event.summary);
     const mapping = add(card,'section','','network-matches');

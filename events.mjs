@@ -1,3 +1,5 @@
+import {clusterNews} from './news-clusters.mjs';
+
 const sampleStrike = {
   id: 'sample:event:port-strike',
   title: '鹿特丹港：两座码头拟罢工',
@@ -7,9 +9,17 @@ const sampleStrike = {
 };
 const strikeRecords = new Set(['news:https://example.com/demo/port-strike', 'signal:sample-port-ops', 'forecast:sample-port']);
 
-export function buildEvents(sources, mode) {
+export function buildEvents(sources, mode, findPlaces = () => []) {
   const events = new Map();
+  if (mode === 'live') {
+    const news = sources.flatMap(source=>source.records).filter(record=>record.kind === 'news');
+    for (const records of clusterNews(news,findPlaces)) {
+      const first = records[0];
+      events.set(first.id,{id:first.id,title:first.title,region:first.region,records});
+    }
+  }
   for (const {records} of sources) for (const record of records) {
+    if (mode === 'live' && record.kind === 'news') continue;
     const linked = mode === 'sample' && strikeRecords.has(record.kind + ':' + record.source.upstreamId);
     const event = linked ? sampleStrike : {id:record.id,title:record.title,region:record.region};
     if (!events.has(event.id)) events.set(event.id, {...event, records:[]});

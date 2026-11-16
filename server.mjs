@@ -60,7 +60,7 @@ const server = createServer(async (req,res) => {
       const mode = url.searchParams.get('mode') === 'live' ? 'live' : 'sample';
       const sources = await Promise.all(Object.entries(feeds).map(([kind,path]) => getFeed(kind,path,mode)));
       res.writeHead(200,{'content-type':'application/json; charset=utf-8','cache-control':'no-store'});
-      res.end(JSON.stringify({schemaVersion:'0.2',mode,liveSource:origin ? 'self-hosted' : 'rss',fetchedAt:new Date().toISOString(),sources,network:network.summary,events:buildEvents(sources,mode).map(event=>network.annotate(event))})); return;
+      res.end(JSON.stringify({schemaVersion:'0.2',mode,liveSource:origin ? 'self-hosted' : 'rss',fetchedAt:new Date().toISOString(),sources,network:network.summary,events:buildEvents(sources,mode, record=>network.annotate({records:[{...record,summary:null}]}).networkMatches.map(match=>match.nodeId)).map(event=>network.annotate(event))})); return;
     }
     const file = routes[url.pathname];
     if (!file) {res.writeHead(404); res.end('Not found'); return;}
