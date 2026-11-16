@@ -22,6 +22,26 @@ let data;
 const cache = new Map();
 const pending = new Map();
 const errors = new Map();
+const modeControl = el('mode');
+const modeKey = 'external-event-mode';
+const snapshotKey = 'external-event-live-v1';
+try {
+  const savedMode = localStorage.getItem(modeKey);
+  if (savedMode === 'live' || savedMode === 'sample') modeControl.value = savedMode;
+} catch {}
+try {
+  const saved = JSON.parse(sessionStorage.getItem(snapshotKey));
+  if (saved?.mode === 'live' && Array.isArray(saved.events) && Array.isArray(saved.sources)) {
+    cache.set('live',saved);
+  }
+} catch {}
+function rememberLive(result) {
+  try {
+    // Cards already contain the relevant articles; omit the full input feed.
+    const sources = result.sources.map(({records,...source})=>({...source,recordCount:records?.length ?? 0}));
+    sessionStorage.setItem(snapshotKey,JSON.stringify({...result,sources}));
+  } catch {}
+}
 function add(parent, tag, value, cls) {
   const child = document.createElement(tag);
   child.textContent = value;
@@ -42,14 +62,15 @@ function render() {
   items.replaceChildren();
   const list = visible();
   el('export').disabled = !list.length;
-  const mode = el('mode').value;
+  const mode = modeControl.value;
   const loading = pending.has(mode);
   const error = errors.get(mode);
   if (!data) {
     el('status').textContent = loading ? '正在获取数据…' : error ?? '';
     return;
   }
-  el('status').textContent = [data.mode === 'sample' ? '虚构样例' : `筛选 ${data.sources.find(s=>s.kind==='news')?.records.length ?? 0} 篇报道`, data.mode === 'sample' ? null : data.liveSource === 'self-hosted' ? '自建 WorldMonitor' : '公开新闻 RSS',
+  const news = data.sources.find(source=>source.kind==='news');
+  el('status').textContent = [data.mode === 'sample' ? '虚构样例' : `筛选 ${news?.recordCount ?? news?.records?.length ?? 0} 篇报道`, data.mode === 'sample' ? null : data.liveSource === 'self-hosted' ? '自建 WorldMonitor' : '公开新闻 RSS',
     ...data.sources.filter(s=>s.feedStatus).map(s=>`RSS 源 ${s.feedStatus.filter(f=>!f.error).length}/${s.feedStatus.length} 可用`),
     ...data.sources.map(s=>`${labels[s.kind]}：${states[s.state]}${s.error ? '（'+s.error+'）' : ''}`), `显示 ${list.length} 个事件`,
     data.mode === 'live' && `上次更新：${new Date(data.fetchedAt).toLocaleString('zh-CN')}`,
@@ -127,7 +148,7 @@ function render() {
   }
 }
 async function refresh() {
-  const mode = el('mode').value;
+  const mode = modeControl.value;
   errors.delete(mode);
   if (!pending.has(mode)) {
     const task = (async () => {
@@ -139,11 +160,12 @@ async function refresh() {
         const available = result.sources.some(source=>['ok','partial','stale','empty'].includes(source.state));
         if (!available && cache.has(mode)) throw Error('数据来源暂不可用');
         cache.set(mode,result);
+        if (mode === 'live' && available) rememberLive(result);
       } catch (error) {
         errors.set(mode,error.message);
       } finally {
         pending.delete(mode);
-        if (el('mode').value === mode) {
+        if (modeControl.value === mode) {
           data = cache.get(mode);
           render();
         }
@@ -154,7 +176,11 @@ async function refresh() {
   data = cache.get(mode);
   render();
 }
-el('mode').onchange=refresh;el('refresh').onclick=refresh;el('kind').onchange=render;el('search').oninput=render;
+modeControl.onchange=()=>{
+  try {localStorage.setItem(modeKey,modeControl.value);} catch {}
+  refresh();
+};
+el('refresh').onclick=refresh;el('kind').onchange=render;el('search').oninput=render;
 el('export').onclick=()=>{
   const url=URL.createObjectURL(new Blob([JSON.stringify({schemaVersion:data.schemaVersion,mode:data.mode,fetchedAt:data.fetchedAt,network:data.network,events:visible()},null,2)],{type:'application/json'}));
   const link=document.createElement('a');link.href=url;link.download='external-intelligence.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
