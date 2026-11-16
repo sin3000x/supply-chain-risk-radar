@@ -1,4 +1,4 @@
-import {clusterNews} from './news-clusters.mjs';
+import {clusterNews,routeTopics} from './news-clusters.mjs';
 
 const sampleStrike = {
   id: 'sample:event:port-strike',
@@ -13,9 +13,10 @@ export function buildEvents(sources, mode, findPlaces = () => []) {
   const events = new Map();
   if (mode === 'live') {
     const news = sources.flatMap(source=>source.records).filter(record=>record.kind === 'news');
-    for (const records of clusterNews(news,findPlaces)) {
-      const first = records[0];
-      events.set(first.id,{id:first.id,title:first.title,region:first.region,records});
+    for (const group of clusterNews(news,findPlaces)) {
+      const {primary,topic,action,entities,records}=group;
+      events.set(primary.id,{id:primary.id,title:primary.title,region:primary.region,
+        topic,action,entities,routeRelevant:routeTopics.has(topic),records});
     }
   }
   for (const {records} of sources) for (const record of records) {
@@ -27,7 +28,7 @@ export function buildEvents(sources, mode, findPlaces = () => []) {
   }
   for (const event of events.values()) {
     event.records.sort((a,b)=>(a.time.value ?? '').localeCompare(b.time.value ?? ''));
-    event.updatedAt = event.records.at(-1).time.value;
+    event.updatedAt = event.records.filter(record=>record.role!=='background').at(-1).time.value;
   }
   return [...events.values()].sort((a,b)=>(b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
 }

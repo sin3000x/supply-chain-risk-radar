@@ -36,7 +36,8 @@ export async function loadNetwork(directory, label) {
   return {
     summary:{label,nodeCount:nodes.length,laneCount:lanes.length,originCount:origins.size,destinationCount:destinations.size},
     annotate(event) {
-      const mentioned = fold([event.title,event.summary,...event.records.flatMap(r=>[r.title,r.summary,r.region])].join(' '));
+      if (event.routeRelevant === false) return {...event,networkMatches:[]};
+      const mentioned = fold([event.title,event.summary,...event.records.filter(r=>r.role !== 'background').flatMap(r=>event.topic ? [r.title,r.region] : [r.title,r.summary,r.region])].join(' '));
       const explicit = event.geoAnchors?.length > 0;
       const matched = explicit ? event.geoAnchors.map(id=>byId.get(id)).filter(Boolean)
         : matchers.filter(({patterns})=>patterns.some(pattern=>pattern.test(mentioned))).map(({node})=>node);
