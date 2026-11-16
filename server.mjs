@@ -4,11 +4,14 @@ import { fileURLToPath } from 'node:url';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { feeds, normalize } from './feed.mjs';
+import { openEventStore } from './event-store.mjs';
 import { buildEvents } from './events.mjs';
 import { loadNetwork } from './network.mjs';
 import { samples } from './samples.mjs';
 const networkDirectory = process.env.RISK_NETWORK_DATA_DIR || fileURLToPath(new URL('./data/',import.meta.url));
 const network = await loadNetwork(networkDirectory, process.env.RISK_NETWORK_DATA_DIR ? '自定义线路数据' : 'risk_network 默认线路');
+const findPlaces = record => network.annotate({records:[{...record,summary:null}]}).networkMatches.map(match=>match.nodeId);
+const eventStore = await openEventStore(process.env.EVENT_STORE_PATH || fileURLToPath(new URL('./var/events.json',import.meta.url)),findPlaces);
 const origin = process.env.WM_BASE_URL;
 const exec = promisify(execFile);
 const key = process.env.WM_API_KEY;
@@ -59,8 +62,16 @@ const server = createServer(async (req,res) => {
     if (url.pathname === '/api/feed') {
       const mode = url.searchParams.get('mode') === 'live' ? 'live' : 'sample';
       const sources = await Promise.all(Object.entries(feeds).map(([kind,path]) => getFeed(kind,path,mode)));
+      const snapshot = buildEvents(sources,mode,findPlaces);
+      const events = mode === 'live' ? await eventStore.update(snapshot) : snapshot;
       res.writeHead(200,{'content-type':'application/json; charset=utf-8','cache-control':'no-store'});
-      res.end(JSON.stringify({schemaVersion:'0.2',mode,liveSource:origin ? 'self-hosted' : 'rss',fetchedAt:new Date().toISOString(),sources,network:network.summary,events:buildEvents(sources,mode, record=>network.annotate({records:[{...record,summary:null}]}).networkMatches.map(match=>match.nodeId)).map(event=>network.annotate(event))})); return;
+      res.end(JSON.stringify({schemaVersion:'0.3',mode,liveSource:origin ? 'self-hosted' : 'rss',fetchedAt:new Date().toISOString(),sources,network:network.summary,events:events.map(event=>network.annotate(event))})); return;
+    }
+    const eventPath = url.pathname.match(/^\/api\/events\/(evt_[a-f0-9-]+)$/);
+    if (eventPath) {
+      const event = eventStore.get(eventPath[1]);
+      res.writeHead(event ? 200 : 404,{'content-type':'application/json; charset=utf-8','cache-control':'no-store'});
+      res.end(JSON.stringify(event ? network.annotate(event) : {error:'event_not_found'})); return;
     }
     const file = routes[url.pathname];
     if (!file) {res.writeHead(404); res.end('Not found'); return;}

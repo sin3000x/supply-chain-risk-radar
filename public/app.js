@@ -18,7 +18,10 @@ const topics = {maritime_security:'航道安全',transport_disruption:'运输运
 const phases = {published:'发布',detected:'检测',updated:'更新'};
 const states = {ok:'已获取',empty:'无记录',stale:'缓存数据',unavailable:'暂不可用',partial:'部分可用',not_configured:'待接自建 WorldMonitor'};
 const directions = {rising:'上升',falling:'下降',stable:'平稳'};
-let data, request = 0;
+let data;
+const cache = new Map();
+const pending = new Map();
+const errors = new Map();
 function add(parent, tag, value, cls) {
   const child = document.createElement(tag);
   child.textContent = value;
@@ -39,12 +42,19 @@ function render() {
   items.replaceChildren();
   const list = visible();
   el('export').disabled = !list.length;
-  if (!data) return;
+  const mode = el('mode').value;
+  const loading = pending.has(mode);
+  const error = errors.get(mode);
+  if (!data) {
+    el('status').textContent = loading ? '正在获取数据…' : error ?? '';
+    return;
+  }
   el('status').textContent = [data.mode === 'sample' ? '虚构样例' : `筛选 ${data.sources.find(s=>s.kind==='news')?.records.length ?? 0} 篇报道`, data.mode === 'sample' ? null : data.liveSource === 'self-hosted' ? '自建 WorldMonitor' : '公开新闻 RSS',
     ...data.sources.filter(s=>s.feedStatus).map(s=>`RSS 源 ${s.feedStatus.filter(f=>!f.error).length}/${s.feedStatus.length} 可用`),
-    ...data.sources.map(s=>`${labels[s.kind]}：${states[s.state]}${s.error ? '（'+s.error+'）' : ''}`), `显示 ${list.length} 个事件`].filter(Boolean).join(' · ');
-  const network = data.network;
-  el('network-status').textContent = `${network.label} · ${network.originCount} 个起点 · ${network.destinationCount} 个终点 · ${network.laneCount} 条线路`;
+    ...data.sources.map(s=>`${labels[s.kind]}：${states[s.state]}${s.error ? '（'+s.error+'）' : ''}`), `显示 ${list.length} 个事件`,
+    data.mode === 'live' && `上次更新：${new Date(data.fetchedAt).toLocaleString('zh-CN')}`,
+    loading && '正在后台更新…',
+    error && `更新失败，显示上次结果（${error}）`].filter(Boolean).join(' · ');
   if (!list.length) add(items,'p','当前筛选下没有可展示的记录。','meta');
   for (const event of list) {
     const card = add(items,'article','','event-card');
@@ -52,6 +62,8 @@ function render() {
     const publishers = new Set(event.records.filter(r=>r.kind === 'news' && r.role !== 'background').map(r=>r.source.publisher).filter(Boolean));
     add(heading,'div',[topics[event.topic],event.region,publishers.size > 1 && `${publishers.size} 家媒体`,`${event.records.length} 条记录`].filter(Boolean).join(' · '),'meta');
     add(heading,'h2',event.title);
+    const identity = add(heading,'div','事件 ID：','meta event-id');
+    add(identity,'code',event.id);
     if(event.summary) add(heading,'p',event.summary);
     if(event.networkMatches.length) {
     const mapping = add(card,'section','','network-matches');
@@ -70,22 +82,44 @@ function render() {
     }
     }
     const timeline = add(card,'div','','event-timeline');
+    const normalizeHeadline = value => (value ?? '').normalize('NFKC').toLowerCase().match(/[\p{L}\p{N}]+/gu)?.join(' ') ?? '';
+    const entries = new Map();
     for (const r of [...event.records.filter(r=>r.role !== 'background'),...event.records.filter(r=>r.role === 'background')]) {
-    const entry = add(timeline,'section','','event-entry');
-    add(entry,'span',r.role === 'background' ? '背景分析' : labels[r.kind],'badge');
-    if(event.records.length > 1) add(entry,'h3',r.title);
-    add(entry,'div',[r.region,r.category,r.time.value && `${phases[r.time.kind]}：${new Date(r.time.value).toLocaleString('zh-CN')}`].filter(Boolean).join(' · '),'meta');
-    if(r.summary) add(entry,'p',r.summary);
-    if(r.forecast) {
-      const f=r.forecast;
-      add(entry,'p',[`概率 ${pct(f.probability)}`,f.priorProbability != null && `上次 ${pct(f.priorProbability)}`,directions[f.direction],f.horizon].filter(Boolean).join(' · '),'forecast');
-      if(f.change) add(entry,'p',f.change);
-      if(r.evidence.triggers.length) add(entry,'p','关注：'+r.evidence.triggers.join('、'),'meta');
+      const key = r.kind === 'news' ? `news:${r.role ?? ''}:${normalizeHeadline(r.title)}` : r.id;
+      if (!entries.has(key)) entries.set(key,[]);
+      entries.get(key).push(r);
     }
-    if(r.source.publisher) add(entry,'div',r.source.publisher,'meta');
-    if(/^https?:\/\//i.test(r.source.url || '')) {
-      const a=add(entry,'a','查看来源'); a.href=r.source.url; a.target='_blank'; a.rel='noopener noreferrer';
-    }
+    for (const records of entries.values()) {
+      const r = records[0];
+      const entry = add(timeline,'section','','event-entry');
+      add(entry,'span',r.role === 'background' ? '背景分析' : labels[r.kind],'badge');
+      if(normalizeHeadline(event.title) !== normalizeHeadline(r.title)) add(entry,'h3',r.title);
+      add(entry,'div',[r.region,r.category,r.time.value && `${phases[r.time.kind]}：${new Date(r.time.value).toLocaleString('zh-CN')}`].filter(Boolean).join(' · '),'meta');
+      const headline = normalizeHeadline(r.title);
+      const publisher = normalizeHeadline(r.source.publisher);
+      const summary = records.find(item=>{
+        const text = normalizeHeadline(item.summary);
+        return text && text !== headline && text !== [headline,normalizeHeadline(item.source.publisher) || publisher].filter(Boolean).join(' ');
+      })?.summary;
+      if(summary) add(entry,'p',summary);
+      if(r.forecast) {
+        const f=r.forecast;
+        add(entry,'p',[`概率 ${pct(f.probability)}`,f.priorProbability != null && `上次 ${pct(f.priorProbability)}`,directions[f.direction],f.horizon].filter(Boolean).join(' · '),'forecast');
+        if(f.change) add(entry,'p',f.change);
+        if(r.evidence.triggers.length) add(entry,'p','关注：'+r.evidence.triggers.join('、'),'meta');
+      }
+      const links = new Set();
+      for (const record of records) {
+        const {publisher,url} = record.source;
+        if (!url || links.has(url) || !/^https?:\/\//i.test(url)) {
+          if (!url && publisher) add(entry,'div',publisher,'meta');
+          continue;
+        }
+        links.add(url);
+        const line = add(entry,'div','','meta');
+        const a=add(line,'a',publisher || '查看来源');
+        a.href=url; a.target='_blank'; a.rel='noopener noreferrer';
+      }
     }
     const details=add(card,'details','');
     add(details,'summary','查看整张事件卡的 JSON');
@@ -93,14 +127,32 @@ function render() {
   }
 }
 async function refresh() {
-  const token = ++request;
-  data = null; render(); el('status').textContent='正在获取数据…';
-  try {
-    const response = await fetch('/api/feed?mode='+el('mode').value);
-    if (!response.ok) throw Error('本地接口暂不可用');
-    const result = await response.json();
-    if (token === request) {data=result;render();}
-  } catch(e) {if (token === request) el('status').textContent=e.message;}
+  const mode = el('mode').value;
+  errors.delete(mode);
+  if (!pending.has(mode)) {
+    const task = (async () => {
+      try {
+        const response = await fetch('/api/feed?mode='+mode);
+        if (!response.ok) throw Error('本地接口暂不可用');
+        const result = await response.json();
+        if (result.mode !== mode || !Array.isArray(result.events)) throw Error('数据格式异常');
+        const available = result.sources.some(source=>['ok','partial','stale','empty'].includes(source.state));
+        if (!available && cache.has(mode)) throw Error('数据来源暂不可用');
+        cache.set(mode,result);
+      } catch (error) {
+        errors.set(mode,error.message);
+      } finally {
+        pending.delete(mode);
+        if (el('mode').value === mode) {
+          data = cache.get(mode);
+          render();
+        }
+      }
+    })();
+    pending.set(mode,task);
+  }
+  data = cache.get(mode);
+  render();
 }
 el('mode').onchange=refresh;el('refresh').onclick=refresh;el('kind').onchange=render;el('search').oninput=render;
 el('export').onclick=()=>{

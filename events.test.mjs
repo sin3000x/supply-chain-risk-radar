@@ -26,3 +26,16 @@ test('live intake groups coverage, attaches commentary, and filters unrelated ne
   assert.equal(single.length,1);
   assert.equal(single[0].records.find(r=>r.id==='2').role,'background');
 });
+
+test('identical short headlines share an event ID while retaining article links', () => {
+  const urls=['https://example.com/one','https://example.org/two'];
+  const records=urls.map((url,i)=>({
+    id:'rss:'+url, kind:'news', title:i ? 'Port closes.' : 'Port closes',
+    time:{value:'2026-11-16T01:00:00Z'}, source:{url},
+  }));
+  const events=buildEvents([{records}],'live');
+  assert.equal(events.length,1);
+  assert.match(events[0].id,/^evt_[0-9a-f]{24}$/);
+  assert.deepEqual(events[0].records.map(record=>record.source.url),urls);
+  assert.equal(events[0].id,buildEvents([{records:[...records].reverse()}],'live')[0].id);
+});

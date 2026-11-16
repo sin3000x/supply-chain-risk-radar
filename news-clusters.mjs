@@ -13,6 +13,7 @@ const stop = new Set('the a an in on at of for to by with and or as is are was w
 const words = text => String(text ?? '').normalize('NFKC').match(/[\p{L}][\p{L}\p{N}-]*/gu) ?? [];
 const terms = text => new Set(words(text).map(w=>w.toLowerCase()).filter(w=>!stop.has(w)));
 const entities = text => new Set(words(text).slice(1).filter(w=>/^\p{Lu}/u.test(w) && w.length > 3).map(w=>w.toLowerCase()));
+const normalizedTitle = text => words(text).map(word=>word.toLowerCase()).join(' ');
 const intersection = (a,b) => [...a].filter(x=>b.has(x));
 const similarity = (a,b) => intersection(a,b).length / (new Set([...a,...b]).size || 1);
 const actions = [
@@ -30,7 +31,7 @@ export function clusterNews(records, findPlaces) {
     const body=`${title} ${summary ?? ''}`;
     return {
       record, at:Date.parse(record.time.value),
-      headline:terms(title), summary:terms(summary),
+      headline:terms(title), titleKey:normalizedTitle(title),
       places:new Set(findPlaces(record)), entities:entities(title),
       topic:topics.find(([,subject,change])=>subject.test(title) && change.test(title))?.[0],
       contextTopics:topics.filter(([,subject])=>subject.test(title)).map(([key])=>key),
@@ -47,6 +48,7 @@ export function clusterNews(records, findPlaces) {
       if (!recent(item,other) || item.scheduled !== other.scheduled ||
           item.action && other.action && item.action !== other.action ||
           item.places.size && other.places.size && !sharedPlace(item,other)) return false;
+      if (item.titleKey && item.titleKey === other.titleKey) return true;
       const overlap=intersection(item.headline,other.headline).length;
       if (overlap>=4 && similarity(item.headline,other.headline)>=.75) return true;
       const sameActor=intersection(item.entities,other.entities).length>0;
