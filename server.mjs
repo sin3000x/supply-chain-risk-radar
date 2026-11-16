@@ -1,14 +1,37 @@
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { feeds, normalize } from './feed.mjs';
+import { buildEvents } from './events.mjs';
+import { loadNetwork } from './network.mjs';
 import { samples } from './samples.mjs';
-const origin = process.env.WM_BASE_URL || 'https://www.worldmonitor.app';
+const networkDirectory = process.env.RISK_NETWORK_DATA_DIR || fileURLToPath(new URL('./data/',import.meta.url));
+const network = await loadNetwork(networkDirectory, process.env.RISK_NETWORK_DATA_DIR ? '自定义线路数据' : 'risk_network 默认线路');
+const origin = process.env.WM_BASE_URL;
+const exec = promisify(execFile);
 const key = process.env.WM_API_KEY;
 const routes = {'/':'index.html','/app.js':'app.js','/style.css':'style.css'};
 const mime = {html:'text/html',js:'text/javascript',css:'text/css'};
 async function getFeed(kind, path, mode) {
   try {
     let data = samples[kind];
+    if (mode === 'live' && !origin) {
+      if (kind !== 'news') return {kind,state:'not_configured',records:[]};
+      const {stdout} = await exec('python3', [fileURLToPath(new URL('./public-news.py', import.meta.url))], {
+        timeout: 12000, maxBuffer: 1024 * 1024,
+      });
+      const payload = JSON.parse(stdout);
+      const errors = Object.keys(payload.errors);
+      const records = normalize(kind, payload).map(record => ({
+        ...record,
+        id: record.id.replace(/^worldmonitor:/, 'rss:'),
+        source:{...record.source,provider:'Publisher RSS',endpoint:null},
+      }));
+      return {kind, records, state:errors.length === 3 ? 'unavailable' : errors.length ? 'partial' : records.length ? 'ok' : 'empty',
+        error:errors.length ? errors.join('、')+' 获取失败' : null};
+    }
     if (mode === 'live') {
       const response = await fetch(new URL(`/api/${path}`, origin), {
         headers:{accept:'application/json', ...(key ? {'X-WorldMonitor-Key':key} : {})},
@@ -37,7 +60,7 @@ const server = createServer(async (req,res) => {
       const mode = url.searchParams.get('mode') === 'live' ? 'live' : 'sample';
       const sources = await Promise.all(Object.entries(feeds).map(([kind,path]) => getFeed(kind,path,mode)));
       res.writeHead(200,{'content-type':'application/json; charset=utf-8','cache-control':'no-store'});
-      res.end(JSON.stringify({schemaVersion:'0.1',mode,fetchedAt:new Date().toISOString(),sources})); return;
+      res.end(JSON.stringify({schemaVersion:'0.2',mode,liveSource:origin ? 'self-hosted' : 'rss',fetchedAt:new Date().toISOString(),sources,network:network.summary,events:buildEvents(sources,mode).map(event=>network.annotate(event))})); return;
     }
     const file = routes[url.pathname];
     if (!file) {res.writeHead(404); res.end('Not found'); return;}

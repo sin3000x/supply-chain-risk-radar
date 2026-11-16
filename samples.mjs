@@ -1,10 +1,11 @@
 const now = Date.now();
 export const samples = {
   news: {categories:{shipping:{items:[
-    {source:'虚构媒体',title:'示例：工会计划周五在两座码头举行罢工',link:'https://example.com/demo/port-strike',publishedAt:now-3600000,snippet:'谈判仍在继续。工会公布拟停工时间，港方尚未公布最终作业安排。',threat:{category:'infrastructure'},storyMeta:{sourceCount:2}},
+    {source:'虚构媒体',title:'示例：鹿特丹港工会计划周五在两座码头举行罢工',link:'https://example.com/demo/port-strike',publishedAt:now-3600000,snippet:'谈判仍在继续。工会公布拟停工时间，港方尚未公布最终作业安排。',threat:{category:'infrastructure'},storyMeta:{sourceCount:2}},
     {source:'虚构媒体',title:'示例：监管机构公布新的海关申报要求',link:'https://example.com/demo/customs',publishedAt:now-7200000,snippet:'公告列出拟生效日期及适用货物。',threat:{category:'economic'}},
   ]}}},
   signal:{signals:[
+    {id:'sample-port-ops',type:'SHIPPING_DISRUPTION',theater:'西欧',summary:'港方更新作业安排：两座码头已减少周五的集装箱预约时段',detectedAt:now-1200000,severity:'MEDIUM',contributingTypes:['虚构港口作业通告']},
     {id:'sample-transit',type:'SHIPPING_DISRUPTION',theater:'红海',summary:'示例：过去一周通行量较基线下降',detectedAt:now-1800000,severity:'HIGH',contributingTypes:['船舶通行量']},
     {id:'sample-weather',type:'WEATHER_EXTREME',theater:'西太平洋',summary:'示例：台风预警覆盖多处沿海设施',detectedAt:now-2500000,severity:'MEDIUM',contributingTypes:['官方天气预警']},
   ]},

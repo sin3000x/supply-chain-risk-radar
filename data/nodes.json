@@ -1,0 +1,1830 @@
+[
+ {
+  "id": "CITY_SZ",
+  "type": "city",
+  "name_zh": "深圳",
+  "name_en": "Shenzhen",
+  "country": "CN",
+  "aliases": [
+   "Shenzhen",
+   "SZ"
+  ]
+ },
+ {
+  "id": "CITY_HK",
+  "type": "city",
+  "name_zh": "香港",
+  "name_en": "Hong Kong",
+  "country": "HK",
+  "aliases": [
+   "Hong Kong",
+   "HKG"
+  ]
+ },
+ {
+  "id": "CITY_GZ",
+  "type": "city",
+  "name_zh": "广州",
+  "name_en": "Guangzhou",
+  "country": "CN",
+  "aliases": [
+   "Guangzhou",
+   "GZ"
+  ]
+ },
+ {
+  "id": "CITY_DXB",
+  "type": "city",
+  "name_zh": "迪拜",
+  "name_en": "Dubai",
+  "country": "AE",
+  "aliases": [
+   "Dubai"
+  ]
+ },
+ {
+  "id": "CITY_AMS",
+  "type": "city",
+  "name_zh": "阿姆斯特丹",
+  "name_en": "Amsterdam",
+  "country": "NL",
+  "aliases": [
+   "Amsterdam"
+  ]
+ },
+ {
+  "id": "CITY_BUD",
+  "type": "city",
+  "name_zh": "布达佩斯",
+  "name_en": "Budapest",
+  "country": "HU",
+  "aliases": [
+   "Budapest"
+  ]
+ },
+ {
+  "id": "CITY_IST",
+  "type": "city",
+  "name_zh": "伊斯坦布尔",
+  "name_en": "Istanbul",
+  "country": "TR",
+  "aliases": [
+   "Istanbul"
+  ]
+ },
+ {
+  "id": "CITY_LON",
+  "type": "city",
+  "name_zh": "伦敦",
+  "name_en": "London",
+  "country": "GB",
+  "aliases": [
+   "London"
+  ]
+ },
+ {
+  "id": "CITY_MAD",
+  "type": "city",
+  "name_zh": "马德里",
+  "name_en": "Madrid",
+  "country": "ES",
+  "aliases": [
+   "Madrid"
+  ]
+ },
+ {
+  "id": "CITY_ROM",
+  "type": "city",
+  "name_zh": "罗马",
+  "name_en": "Rome",
+  "country": "IT",
+  "aliases": [
+   "Rome",
+   "Roma"
+  ]
+ },
+ {
+  "id": "CITY_WAW",
+  "type": "city",
+  "name_zh": "华沙",
+  "name_en": "Warsaw",
+  "country": "PL",
+  "aliases": [
+   "Warsaw"
+  ]
+ },
+ {
+  "id": "CITY_JNB",
+  "type": "city",
+  "name_zh": "约翰内斯堡",
+  "name_en": "Johannesburg",
+  "country": "ZA",
+  "aliases": [
+   "Johannesburg",
+   "Joburg"
+  ]
+ },
+ {
+  "id": "CITY_RUH",
+  "type": "city",
+  "name_zh": "利雅得",
+  "name_en": "Riyadh",
+  "country": "SA",
+  "aliases": [
+   "Riyadh"
+  ]
+ },
+ {
+  "id": "CITY_CAI",
+  "type": "city",
+  "name_zh": "开罗",
+  "name_en": "Cairo",
+  "country": "EG",
+  "aliases": [
+   "Cairo"
+  ]
+ },
+ {
+  "id": "CITY_KWI",
+  "type": "city",
+  "name_zh": "科威特城",
+  "name_en": "Kuwait City",
+  "country": "KW",
+  "aliases": [
+   "Kuwait City"
+  ]
+ },
+ {
+  "id": "CITY_DOH",
+  "type": "city",
+  "name_zh": "多哈",
+  "name_en": "Doha",
+  "country": "QA",
+  "aliases": [
+   "Doha"
+  ]
+ },
+ {
+  "id": "CITY_MEX",
+  "type": "city",
+  "name_zh": "墨西哥城",
+  "name_en": "Mexico City",
+  "country": "MX",
+  "aliases": [
+   "Mexico City",
+   "CDMX"
+  ]
+ },
+ {
+  "id": "CITY_BOG",
+  "type": "city",
+  "name_zh": "波哥大",
+  "name_en": "Bogota",
+  "country": "CO",
+  "aliases": [
+   "Bogota",
+   "Bogotá"
+  ]
+ },
+ {
+  "id": "CITY_SCL",
+  "type": "city",
+  "name_zh": "圣地亚哥",
+  "name_en": "Santiago",
+  "country": "CL",
+  "aliases": [
+   "Santiago de Chile"
+  ]
+ },
+ {
+  "id": "CITY_LIM",
+  "type": "city",
+  "name_zh": "利马",
+  "name_en": "Lima",
+  "country": "PE",
+  "aliases": [
+   "Lima"
+  ]
+ },
+ {
+  "id": "CITY_SAO",
+  "type": "city",
+  "name_zh": "圣保罗",
+  "name_en": "Sao Paulo",
+  "country": "BR",
+  "aliases": [
+   "São Paulo",
+   "Sao Paulo"
+  ]
+ },
+ {
+  "id": "CITY_MOW",
+  "type": "city",
+  "name_zh": "莫斯科",
+  "name_en": "Moscow",
+  "country": "RU",
+  "aliases": [
+   "Moscow"
+  ]
+ },
+ {
+  "id": "CITY_KUL",
+  "type": "city",
+  "name_zh": "吉隆坡",
+  "name_en": "Kuala Lumpur",
+  "country": "MY",
+  "aliases": [
+   "Kuala Lumpur",
+   "KL"
+  ]
+ },
+ {
+  "id": "CITY_MNL",
+  "type": "city",
+  "name_zh": "马尼拉",
+  "name_en": "Manila",
+  "country": "PH",
+  "aliases": [
+   "Manila"
+  ]
+ },
+ {
+  "id": "CITY_BKK",
+  "type": "city",
+  "name_zh": "曼谷",
+  "name_en": "Bangkok",
+  "country": "TH",
+  "aliases": [
+   "Bangkok"
+  ]
+ },
+ {
+  "id": "CITY_JKT",
+  "type": "city",
+  "name_zh": "雅加达",
+  "name_en": "Jakarta",
+  "country": "ID",
+  "aliases": [
+   "Jakarta"
+  ]
+ },
+ {
+  "id": "CITY_TYO",
+  "type": "city",
+  "name_zh": "东京",
+  "name_en": "Tokyo",
+  "country": "JP",
+  "aliases": [
+   "Tokyo"
+  ]
+ },
+ {
+  "id": "CITY_BTH",
+  "type": "city",
+  "name_zh": "巴淡岛",
+  "name_en": "Batam",
+  "country": "ID",
+  "aliases": [
+   "Batam",
+   "Batam Island"
+  ]
+ },
+ {
+  "id": "CTY_CN",
+  "type": "country",
+  "name_zh": "中国大陆",
+  "name_en": "China (mainland)",
+  "country": "CN",
+  "aliases": [
+   "China",
+   "中国"
+  ]
+ },
+ {
+  "id": "CTY_HK",
+  "type": "country",
+  "name_zh": "中国香港",
+  "name_en": "Hong Kong SAR",
+  "country": "HK",
+  "aliases": [
+   "Hong Kong"
+  ]
+ },
+ {
+  "id": "CTY_AE",
+  "type": "country",
+  "name_zh": "阿联酋",
+  "name_en": "UAE",
+  "country": "AE",
+  "aliases": [
+   "United Arab Emirates"
+  ]
+ },
+ {
+  "id": "CTY_NL",
+  "type": "country",
+  "name_zh": "荷兰",
+  "name_en": "Netherlands",
+  "country": "NL",
+  "aliases": []
+ },
+ {
+  "id": "CTY_HU",
+  "type": "country",
+  "name_zh": "匈牙利",
+  "name_en": "Hungary",
+  "country": "HU",
+  "aliases": []
+ },
+ {
+  "id": "CTY_TR",
+  "type": "country",
+  "name_zh": "土耳其",
+  "name_en": "Türkiye",
+  "country": "TR",
+  "aliases": [
+   "Turkey"
+  ]
+ },
+ {
+  "id": "CTY_GB",
+  "type": "country",
+  "name_zh": "英国",
+  "name_en": "United Kingdom",
+  "country": "GB",
+  "aliases": [
+   "UK",
+   "Britain"
+  ]
+ },
+ {
+  "id": "CTY_ES",
+  "type": "country",
+  "name_zh": "西班牙",
+  "name_en": "Spain",
+  "country": "ES",
+  "aliases": []
+ },
+ {
+  "id": "CTY_IT",
+  "type": "country",
+  "name_zh": "意大利",
+  "name_en": "Italy",
+  "country": "IT",
+  "aliases": []
+ },
+ {
+  "id": "CTY_PL",
+  "type": "country",
+  "name_zh": "波兰",
+  "name_en": "Poland",
+  "country": "PL",
+  "aliases": []
+ },
+ {
+  "id": "CTY_ZA",
+  "type": "country",
+  "name_zh": "南非",
+  "name_en": "South Africa",
+  "country": "ZA",
+  "aliases": []
+ },
+ {
+  "id": "CTY_SA",
+  "type": "country",
+  "name_zh": "沙特阿拉伯",
+  "name_en": "Saudi Arabia",
+  "country": "SA",
+  "aliases": [
+   "Saudi"
+  ]
+ },
+ {
+  "id": "CTY_EG",
+  "type": "country",
+  "name_zh": "埃及",
+  "name_en": "Egypt",
+  "country": "EG",
+  "aliases": []
+ },
+ {
+  "id": "CTY_KW",
+  "type": "country",
+  "name_zh": "科威特",
+  "name_en": "Kuwait",
+  "country": "KW",
+  "aliases": []
+ },
+ {
+  "id": "CTY_QA",
+  "type": "country",
+  "name_zh": "卡塔尔",
+  "name_en": "Qatar",
+  "country": "QA",
+  "aliases": []
+ },
+ {
+  "id": "CTY_MX",
+  "type": "country",
+  "name_zh": "墨西哥",
+  "name_en": "Mexico",
+  "country": "MX",
+  "aliases": []
+ },
+ {
+  "id": "CTY_CO",
+  "type": "country",
+  "name_zh": "哥伦比亚",
+  "name_en": "Colombia",
+  "country": "CO",
+  "aliases": []
+ },
+ {
+  "id": "CTY_CL",
+  "type": "country",
+  "name_zh": "智利",
+  "name_en": "Chile",
+  "country": "CL",
+  "aliases": []
+ },
+ {
+  "id": "CTY_PE",
+  "type": "country",
+  "name_zh": "秘鲁",
+  "name_en": "Peru",
+  "country": "PE",
+  "aliases": []
+ },
+ {
+  "id": "CTY_BR",
+  "type": "country",
+  "name_zh": "巴西",
+  "name_en": "Brazil",
+  "country": "BR",
+  "aliases": []
+ },
+ {
+  "id": "CTY_RU",
+  "type": "country",
+  "name_zh": "俄罗斯",
+  "name_en": "Russia",
+  "country": "RU",
+  "aliases": []
+ },
+ {
+  "id": "CTY_MY",
+  "type": "country",
+  "name_zh": "马来西亚",
+  "name_en": "Malaysia",
+  "country": "MY",
+  "aliases": []
+ },
+ {
+  "id": "CTY_PH",
+  "type": "country",
+  "name_zh": "菲律宾",
+  "name_en": "Philippines",
+  "country": "PH",
+  "aliases": []
+ },
+ {
+  "id": "CTY_TH",
+  "type": "country",
+  "name_zh": "泰国",
+  "name_en": "Thailand",
+  "country": "TH",
+  "aliases": []
+ },
+ {
+  "id": "CTY_ID",
+  "type": "country",
+  "name_zh": "印度尼西亚",
+  "name_en": "Indonesia",
+  "country": "ID",
+  "aliases": [
+   "Indonesia"
+  ]
+ },
+ {
+  "id": "CTY_JP",
+  "type": "country",
+  "name_zh": "日本",
+  "name_en": "Japan",
+  "country": "JP",
+  "aliases": []
+ },
+ {
+  "id": "CTY_KZ",
+  "type": "country",
+  "name_zh": "哈萨克斯坦",
+  "name_en": "Kazakhstan",
+  "country": "KZ",
+  "aliases": []
+ },
+ {
+  "id": "CTY_BY",
+  "type": "country",
+  "name_zh": "白俄罗斯",
+  "name_en": "Belarus",
+  "country": "BY",
+  "aliases": []
+ },
+ {
+  "id": "CTY_AZ",
+  "type": "country",
+  "name_zh": "阿塞拜疆",
+  "name_en": "Azerbaijan",
+  "country": "AZ",
+  "aliases": []
+ },
+ {
+  "id": "CTY_GE",
+  "type": "country",
+  "name_zh": "格鲁吉亚",
+  "name_en": "Georgia",
+  "country": "GE",
+  "aliases": []
+ },
+ {
+  "id": "CTY_SK",
+  "type": "country",
+  "name_zh": "斯洛伐克",
+  "name_en": "Slovakia",
+  "country": "SK",
+  "aliases": []
+ },
+ {
+  "id": "CTY_DE",
+  "type": "country",
+  "name_zh": "德国",
+  "name_en": "Germany",
+  "country": "DE",
+  "aliases": []
+ },
+ {
+  "id": "CTY_SI",
+  "type": "country",
+  "name_zh": "斯洛文尼亚",
+  "name_en": "Slovenia",
+  "country": "SI",
+  "aliases": []
+ },
+ {
+  "id": "CTY_GR",
+  "type": "country",
+  "name_zh": "希腊",
+  "name_en": "Greece",
+  "country": "GR",
+  "aliases": []
+ },
+ {
+  "id": "CTY_MK",
+  "type": "country",
+  "name_zh": "北马其顿",
+  "name_en": "North Macedonia",
+  "country": "MK",
+  "aliases": []
+ },
+ {
+  "id": "CTY_RS",
+  "type": "country",
+  "name_zh": "塞尔维亚",
+  "name_en": "Serbia",
+  "country": "RS",
+  "aliases": []
+ },
+ {
+  "id": "CTY_BG",
+  "type": "country",
+  "name_zh": "保加利亚",
+  "name_en": "Bulgaria",
+  "country": "BG",
+  "aliases": []
+ },
+ {
+  "id": "CTY_MZ",
+  "type": "country",
+  "name_zh": "莫桑比克",
+  "name_en": "Mozambique",
+  "country": "MZ",
+  "aliases": []
+ },
+ {
+  "id": "CTY_SG",
+  "type": "country",
+  "name_zh": "新加坡",
+  "name_en": "Singapore",
+  "country": "SG",
+  "aliases": []
+ },
+ {
+  "id": "CP_MALACCA",
+  "type": "chokepoint",
+  "name_zh": "马六甲海峡",
+  "name_en": "Strait of Malacca",
+  "country": "",
+  "aliases": [
+   "Malacca"
+  ]
+ },
+ {
+  "id": "CP_SINGAPORE",
+  "type": "chokepoint",
+  "name_zh": "新加坡海峡",
+  "name_en": "Singapore Strait",
+  "country": "",
+  "aliases": []
+ },
+ {
+  "id": "CP_SUNDA",
+  "type": "chokepoint",
+  "name_zh": "巽他海峡",
+  "name_en": "Sunda Strait",
+  "country": "",
+  "aliases": [
+   "Sunda"
+  ]
+ },
+ {
+  "id": "CP_KARIMATA",
+  "type": "chokepoint",
+  "name_zh": "卡里马塔海峡",
+  "name_en": "Karimata Strait",
+  "country": "",
+  "aliases": []
+ },
+ {
+  "id": "CP_TAIWAN",
+  "type": "chokepoint",
+  "name_zh": "台湾海峡",
+  "name_en": "Taiwan Strait",
+  "country": "",
+  "aliases": [
+   "Taiwan Strait"
+  ]
+ },
+ {
+  "id": "CP_LUZON",
+  "type": "chokepoint",
+  "name_zh": "巴士海峡/吕宋海峡",
+  "name_en": "Luzon Strait / Bashi Channel",
+  "country": "",
+  "aliases": [
+   "Bashi Channel"
+  ]
+ },
+ {
+  "id": "CP_KOREA",
+  "type": "chokepoint",
+  "name_zh": "朝鲜海峡/对马海峡",
+  "name_en": "Korea Strait",
+  "country": "",
+  "aliases": [
+   "Tsushima Strait"
+  ]
+ },
+ {
+  "id": "CP_BAB",
+  "type": "chokepoint",
+  "name_zh": "曼德海峡",
+  "name_en": "Bab-el-Mandeb",
+  "country": "",
+  "aliases": [
+   "Bab el-Mandeb",
+   "红海南口"
+  ]
+ },
+ {
+  "id": "CP_SUEZ",
+  "type": "chokepoint",
+  "name_zh": "苏伊士运河",
+  "name_en": "Suez Canal",
+  "country": "",
+  "aliases": [
+   "Suez"
+  ]
+ },
+ {
+  "id": "CP_HORMUZ",
+  "type": "chokepoint",
+  "name_zh": "霍尔木兹海峡",
+  "name_en": "Strait of Hormuz",
+  "country": "",
+  "aliases": [
+   "Hormuz",
+   "Ormuz"
+  ]
+ },
+ {
+  "id": "CP_GIBRALTAR",
+  "type": "chokepoint",
+  "name_zh": "直布罗陀海峡",
+  "name_en": "Strait of Gibraltar",
+  "country": "",
+  "aliases": [
+   "Gibraltar"
+  ]
+ },
+ {
+  "id": "CP_DOVER",
+  "type": "chokepoint",
+  "name_zh": "多佛尔海峡/英吉利海峡东口",
+  "name_en": "Dover Strait",
+  "country": "",
+  "aliases": [
+   "English Channel",
+   "Dover"
+  ]
+ },
+ {
+  "id": "CP_DANISH",
+  "type": "chokepoint",
+  "name_zh": "丹麦海峡/波罗的海入口",
+  "name_en": "Danish Straits",
+  "country": "",
+  "aliases": [
+   "Great Belt",
+   "Øresund",
+   "Oresund"
+  ]
+ },
+ {
+  "id": "CP_DARDANELLES",
+  "type": "chokepoint",
+  "name_zh": "达达尼尔海峡",
+  "name_en": "Dardanelles",
+  "country": "",
+  "aliases": []
+ },
+ {
+  "id": "CP_BOSPHORUS",
+  "type": "chokepoint",
+  "name_zh": "博斯普鲁斯海峡",
+  "name_en": "Bosphorus",
+  "country": "",
+  "aliases": [
+   "Bosporus"
+  ]
+ },
+ {
+  "id": "CP_PANAMA",
+  "type": "chokepoint",
+  "name_zh": "巴拿马运河",
+  "name_en": "Panama Canal",
+  "country": "",
+  "aliases": [
+   "Panama"
+  ]
+ },
+ {
+  "id": "CP_CAPE",
+  "type": "chokepoint",
+  "name_zh": "好望角（绕行）",
+  "name_en": "Cape of Good Hope",
+  "country": "",
+  "aliases": [
+   "Cape route",
+   "Cape of Good Hope"
+  ]
+ },
+ {
+  "id": "SEA_SCS",
+  "type": "sea_area",
+  "name_zh": "南海",
+  "name_en": "South China Sea",
+  "country": "",
+  "aliases": [
+   "SCS"
+  ]
+ },
+ {
+  "id": "SEA_PRD",
+  "type": "sea_area",
+  "name_zh": "珠江口水域",
+  "name_en": "Pearl River Estuary",
+  "country": "",
+  "aliases": [
+   "Pearl River Delta waters"
+  ]
+ },
+ {
+  "id": "SEA_RED",
+  "type": "sea_area",
+  "name_zh": "红海",
+  "name_en": "Red Sea",
+  "country": "",
+  "aliases": []
+ },
+ {
+  "id": "SEA_MED",
+  "type": "sea_area",
+  "name_zh": "地中海",
+  "name_en": "Mediterranean",
+  "country": "",
+  "aliases": []
+ },
+ {
+  "id": "SEA_BLACK",
+  "type": "sea_area",
+  "name_zh": "黑海",
+  "name_en": "Black Sea",
+  "country": "",
+  "aliases": []
+ },
+ {
+  "id": "SEA_PACIFIC",
+  "type": "sea_area",
+  "name_zh": "太平洋跨洋航线",
+  "name_en": "Trans-Pacific",
+  "country": "",
+  "aliases": [
+   "Pacific"
+  ]
+ },
+ {
+  "id": "SEA_CASPIAN",
+  "type": "sea_area",
+  "name_zh": "里海（阿克套–巴库渡运）",
+  "name_en": "Caspian Sea",
+  "country": "",
+  "aliases": [
+   "Transcaspian"
+  ]
+ },
+ {
+  "id": "AS_RUSSIA",
+  "type": "airspace",
+  "name_zh": "俄罗斯空域",
+  "name_en": "Russian airspace",
+  "country": "RU",
+  "aliases": []
+ },
+ {
+  "id": "AS_MIDEAST",
+  "type": "airspace",
+  "name_zh": "中东空域（海湾/伊朗/伊拉克/红海上空）",
+  "name_en": "Middle East airspace",
+  "country": "",
+  "aliases": [
+   "Gulf airspace"
+  ]
+ },
+ {
+  "id": "PORT_YANTIAN",
+  "type": "port",
+  "name_zh": "盐田港",
+  "name_en": "Yantian",
+  "country": "CN",
+  "aliases": [
+   "Yantian"
+  ]
+ },
+ {
+  "id": "PORT_SHEKOU",
+  "type": "port",
+  "name_zh": "蛇口港",
+  "name_en": "Shekou",
+  "country": "CN",
+  "aliases": [
+   "Shekou"
+  ]
+ },
+ {
+  "id": "PORT_NANSHA",
+  "type": "port",
+  "name_zh": "南沙港",
+  "name_en": "Nansha",
+  "country": "CN",
+  "aliases": [
+   "Nansha"
+  ]
+ },
+ {
+  "id": "PORT_KWAITSING",
+  "type": "port",
+  "name_zh": "香港葵涌货柜码头",
+  "name_en": "Hong Kong (Kwai Tsing)",
+  "country": "HK",
+  "aliases": [
+   "Kwai Tsing",
+   "HK port"
+  ]
+ },
+ {
+  "id": "PORT_JEBELALI",
+  "type": "port",
+  "name_zh": "杰贝阿里港",
+  "name_en": "Jebel Ali",
+  "country": "AE",
+  "aliases": [
+   "Jebel Ali"
+  ]
+ },
+ {
+  "id": "PORT_KHORFAKKAN",
+  "type": "port",
+  "name_zh": "豪尔费坎港（霍尔木兹外）",
+  "name_en": "Khor Fakkan",
+  "country": "AE",
+  "aliases": []
+ },
+ {
+  "id": "PORT_DAMMAM",
+  "type": "port",
+  "name_zh": "达曼港",
+  "name_en": "Dammam (King Abdulaziz Port)",
+  "country": "SA",
+  "aliases": [
+   "Dammam"
+  ]
+ },
+ {
+  "id": "PORT_JEDDAH",
+  "type": "port",
+  "name_zh": "吉达港",
+  "name_en": "Jeddah Islamic Port",
+  "country": "SA",
+  "aliases": [
+   "Jeddah"
+  ]
+ },
+ {
+  "id": "PORT_SHUWAIKH",
+  "type": "port",
+  "name_zh": "科威特舒威赫港",
+  "name_en": "Shuwaikh",
+  "country": "KW",
+  "aliases": [
+   "Shuwaikh",
+   "Shuaiba"
+  ]
+ },
+ {
+  "id": "PORT_HAMAD",
+  "type": "port",
+  "name_zh": "哈马德港",
+  "name_en": "Hamad Port",
+  "country": "QA",
+  "aliases": [
+   "Hamad"
+  ]
+ },
+ {
+  "id": "PORT_AINSOKHNA",
+  "type": "port",
+  "name_zh": "艾因苏赫纳港",
+  "name_en": "Ain Sokhna",
+  "country": "EG",
+  "aliases": [
+   "Sokhna"
+  ]
+ },
+ {
+  "id": "PORT_PORTSAID",
+  "type": "port",
+  "name_zh": "塞得港",
+  "name_en": "Port Said",
+  "country": "EG",
+  "aliases": []
+ },
+ {
+  "id": "PORT_AMBARLI",
+  "type": "port",
+  "name_zh": "安巴尔勒港（伊斯坦布尔）",
+  "name_en": "Ambarli",
+  "country": "TR",
+  "aliases": [
+   "Ambarlı"
+  ]
+ },
+ {
+  "id": "PORT_MERSIN",
+  "type": "port",
+  "name_zh": "梅尔辛港",
+  "name_en": "Mersin",
+  "country": "TR",
+  "aliases": []
+ },
+ {
+  "id": "PORT_ROTTERDAM",
+  "type": "port",
+  "name_zh": "鹿特丹港",
+  "name_en": "Rotterdam",
+  "country": "NL",
+  "aliases": [
+   "Rotterdam"
+  ]
+ },
+ {
+  "id": "PORT_FELIXSTOWE",
+  "type": "port",
+  "name_zh": "费利克斯托港",
+  "name_en": "Felixstowe",
+  "country": "GB",
+  "aliases": []
+ },
+ {
+  "id": "PORT_LONDONGATEWAY",
+  "type": "port",
+  "name_zh": "伦敦门户港",
+  "name_en": "London Gateway",
+  "country": "GB",
+  "aliases": []
+ },
+ {
+  "id": "PORT_SOUTHAMPTON",
+  "type": "port",
+  "name_zh": "南安普敦港",
+  "name_en": "Southampton",
+  "country": "GB",
+  "aliases": []
+ },
+ {
+  "id": "PORT_VALENCIA",
+  "type": "port",
+  "name_zh": "瓦伦西亚港",
+  "name_en": "Valencia",
+  "country": "ES",
+  "aliases": []
+ },
+ {
+  "id": "PORT_BARCELONA",
+  "type": "port",
+  "name_zh": "巴塞罗那港",
+  "name_en": "Barcelona",
+  "country": "ES",
+  "aliases": []
+ },
+ {
+  "id": "PORT_ALGECIRAS",
+  "type": "port",
+  "name_zh": "阿尔赫西拉斯港",
+  "name_en": "Algeciras",
+  "country": "ES",
+  "aliases": []
+ },
+ {
+  "id": "PORT_GENOA",
+  "type": "port",
+  "name_zh": "热那亚港",
+  "name_en": "Genoa",
+  "country": "IT",
+  "aliases": [
+   "Genova"
+  ]
+ },
+ {
+  "id": "PORT_CIVITAVECCHIA",
+  "type": "port",
+  "name_zh": "奇维塔韦基亚港",
+  "name_en": "Civitavecchia",
+  "country": "IT",
+  "aliases": []
+ },
+ {
+  "id": "PORT_GIOIATAURO",
+  "type": "port",
+  "name_zh": "焦亚陶罗港",
+  "name_en": "Gioia Tauro",
+  "country": "IT",
+  "aliases": []
+ },
+ {
+  "id": "PORT_KOPER",
+  "type": "port",
+  "name_zh": "科佩尔港",
+  "name_en": "Koper",
+  "country": "SI",
+  "aliases": []
+ },
+ {
+  "id": "PORT_PIRAEUS",
+  "type": "port",
+  "name_zh": "比雷埃夫斯港",
+  "name_en": "Piraeus",
+  "country": "GR",
+  "aliases": []
+ },
+ {
+  "id": "PORT_HAMBURG",
+  "type": "port",
+  "name_zh": "汉堡港",
+  "name_en": "Hamburg",
+  "country": "DE",
+  "aliases": []
+ },
+ {
+  "id": "PORT_GDANSK",
+  "type": "port",
+  "name_zh": "格但斯克港",
+  "name_en": "Gdansk",
+  "country": "PL",
+  "aliases": [
+   "Gdańsk"
+  ]
+ },
+ {
+  "id": "PORT_DURBAN",
+  "type": "port",
+  "name_zh": "德班港",
+  "name_en": "Durban",
+  "country": "ZA",
+  "aliases": []
+ },
+ {
+  "id": "PORT_MAPUTO",
+  "type": "port",
+  "name_zh": "马普托港",
+  "name_en": "Maputo",
+  "country": "MZ",
+  "aliases": []
+ },
+ {
+  "id": "PORT_MANZANILLO",
+  "type": "port",
+  "name_zh": "曼萨尼约港",
+  "name_en": "Manzanillo (MX)",
+  "country": "MX",
+  "aliases": []
+ },
+ {
+  "id": "PORT_LAZAROCARDENAS",
+  "type": "port",
+  "name_zh": "拉萨罗卡德纳斯港",
+  "name_en": "Lazaro Cardenas",
+  "country": "MX",
+  "aliases": []
+ },
+ {
+  "id": "PORT_VERACRUZ",
+  "type": "port",
+  "name_zh": "韦拉克鲁斯港",
+  "name_en": "Veracruz",
+  "country": "MX",
+  "aliases": []
+ },
+ {
+  "id": "PORT_BUENAVENTURA",
+  "type": "port",
+  "name_zh": "布埃纳文图拉港",
+  "name_en": "Buenaventura",
+  "country": "CO",
+  "aliases": []
+ },
+ {
+  "id": "PORT_CARTAGENA",
+  "type": "port",
+  "name_zh": "卡塔赫纳港",
+  "name_en": "Cartagena",
+  "country": "CO",
+  "aliases": []
+ },
+ {
+  "id": "PORT_SANANTONIO",
+  "type": "port",
+  "name_zh": "圣安东尼奥港（智利）",
+  "name_en": "San Antonio (CL)",
+  "country": "CL",
+  "aliases": []
+ },
+ {
+  "id": "PORT_VALPARAISO",
+  "type": "port",
+  "name_zh": "瓦尔帕莱索港",
+  "name_en": "Valparaiso",
+  "country": "CL",
+  "aliases": []
+ },
+ {
+  "id": "PORT_CALLAO",
+  "type": "port",
+  "name_zh": "卡亚俄港",
+  "name_en": "Callao",
+  "country": "PE",
+  "aliases": []
+ },
+ {
+  "id": "PORT_CHANCAY",
+  "type": "port",
+  "name_zh": "钱凯港",
+  "name_en": "Chancay",
+  "country": "PE",
+  "aliases": []
+ },
+ {
+  "id": "PORT_SANTOS",
+  "type": "port",
+  "name_zh": "桑托斯港",
+  "name_en": "Santos",
+  "country": "BR",
+  "aliases": []
+ },
+ {
+  "id": "PORT_KLANG",
+  "type": "port",
+  "name_zh": "巴生港",
+  "name_en": "Port Klang",
+  "country": "MY",
+  "aliases": [
+   "Klang"
+  ]
+ },
+ {
+  "id": "PORT_TPP",
+  "type": "port",
+  "name_zh": "丹戎帕拉帕斯港",
+  "name_en": "Tanjung Pelepas",
+  "country": "MY",
+  "aliases": [
+   "PTP"
+  ]
+ },
+ {
+  "id": "PORT_LAEMCHABANG",
+  "type": "port",
+  "name_zh": "林查班港",
+  "name_en": "Laem Chabang",
+  "country": "TH",
+  "aliases": []
+ },
+ {
+  "id": "PORT_BANGKOK",
+  "type": "port",
+  "name_zh": "曼谷港",
+  "name_en": "Bangkok Port",
+  "country": "TH",
+  "aliases": [
+   "Khlong Toei"
+  ]
+ },
+ {
+  "id": "PORT_TANJUNGPRIOK",
+  "type": "port",
+  "name_zh": "丹戎普瑞克港",
+  "name_en": "Tanjung Priok",
+  "country": "ID",
+  "aliases": []
+ },
+ {
+  "id": "PORT_MANILA",
+  "type": "port",
+  "name_zh": "马尼拉港",
+  "name_en": "Port of Manila",
+  "country": "PH",
+  "aliases": []
+ },
+ {
+  "id": "PORT_BATANGAS",
+  "type": "port",
+  "name_zh": "八打雁港",
+  "name_en": "Batangas",
+  "country": "PH",
+  "aliases": []
+ },
+ {
+  "id": "PORT_BATAM",
+  "type": "port",
+  "name_zh": "巴淡岛港（Batu Ampar）",
+  "name_en": "Batam (Batu Ampar)",
+  "country": "ID",
+  "aliases": []
+ },
+ {
+  "id": "PORT_SINGAPORE",
+  "type": "port",
+  "name_zh": "新加坡港（转运）",
+  "name_en": "Port of Singapore",
+  "country": "SG",
+  "aliases": []
+ },
+ {
+  "id": "PORT_YOKOHAMA",
+  "type": "port",
+  "name_zh": "横滨/东京港",
+  "name_en": "Yokohama / Tokyo",
+  "country": "JP",
+  "aliases": [
+   "Tokyo Bay"
+  ]
+ },
+ {
+  "id": "PORT_VOSTOCHNY",
+  "type": "port",
+  "name_zh": "符拉迪沃斯托克/东方港",
+  "name_en": "Vladivostok / Vostochny",
+  "country": "RU",
+  "aliases": [
+   "Vladivostok"
+  ]
+ },
+ {
+  "id": "PORT_STPETERSBURG",
+  "type": "port",
+  "name_zh": "圣彼得堡港",
+  "name_en": "St Petersburg",
+  "country": "RU",
+  "aliases": []
+ },
+ {
+  "id": "PORT_NOVOROSSIYSK",
+  "type": "port",
+  "name_zh": "新罗西斯克港",
+  "name_en": "Novorossiysk",
+  "country": "RU",
+  "aliases": []
+ },
+ {
+  "id": "AP_SZX",
+  "type": "airport",
+  "name_zh": "深圳宝安机场",
+  "name_en": "SZX",
+  "country": "CN",
+  "aliases": [
+   "Shenzhen Bao'an"
+  ]
+ },
+ {
+  "id": "AP_HKG",
+  "type": "airport",
+  "name_zh": "香港国际机场",
+  "name_en": "HKG",
+  "country": "HK",
+  "aliases": [
+   "Hong Kong Airport"
+  ]
+ },
+ {
+  "id": "AP_CAN",
+  "type": "airport",
+  "name_zh": "广州白云机场",
+  "name_en": "CAN",
+  "country": "CN",
+  "aliases": [
+   "Baiyun"
+  ]
+ },
+ {
+  "id": "AP_DXB",
+  "type": "airport",
+  "name_zh": "迪拜国际机场",
+  "name_en": "DXB",
+  "country": "AE",
+  "aliases": []
+ },
+ {
+  "id": "AP_DWC",
+  "type": "airport",
+  "name_zh": "迪拜阿勒马克图姆机场",
+  "name_en": "DWC",
+  "country": "AE",
+  "aliases": [
+   "Al Maktoum"
+  ]
+ },
+ {
+  "id": "AP_RUH",
+  "type": "airport",
+  "name_zh": "利雅得哈立德国王机场",
+  "name_en": "RUH",
+  "country": "SA",
+  "aliases": []
+ },
+ {
+  "id": "AP_KWI",
+  "type": "airport",
+  "name_zh": "科威特国际机场",
+  "name_en": "KWI",
+  "country": "KW",
+  "aliases": []
+ },
+ {
+  "id": "AP_DOH",
+  "type": "airport",
+  "name_zh": "多哈哈马德机场",
+  "name_en": "DOH",
+  "country": "QA",
+  "aliases": [
+   "Hamad International"
+  ]
+ },
+ {
+  "id": "AP_CAI",
+  "type": "airport",
+  "name_zh": "开罗国际机场",
+  "name_en": "CAI",
+  "country": "EG",
+  "aliases": []
+ },
+ {
+  "id": "AP_IST",
+  "type": "airport",
+  "name_zh": "伊斯坦布尔机场",
+  "name_en": "IST",
+  "country": "TR",
+  "aliases": []
+ },
+ {
+  "id": "AP_AMS",
+  "type": "airport",
+  "name_zh": "阿姆斯特丹史基浦机场",
+  "name_en": "AMS",
+  "country": "NL",
+  "aliases": [
+   "Schiphol"
+  ]
+ },
+ {
+  "id": "AP_LHR",
+  "type": "airport",
+  "name_zh": "伦敦希思罗机场",
+  "name_en": "LHR",
+  "country": "GB",
+  "aliases": [
+   "Heathrow"
+  ]
+ },
+ {
+  "id": "AP_MAD",
+  "type": "airport",
+  "name_zh": "马德里巴拉哈斯机场",
+  "name_en": "MAD",
+  "country": "ES",
+  "aliases": []
+ },
+ {
+  "id": "AP_FCO",
+  "type": "airport",
+  "name_zh": "罗马菲乌米奇诺机场",
+  "name_en": "FCO",
+  "country": "IT",
+  "aliases": [
+   "Fiumicino"
+  ]
+ },
+ {
+  "id": "AP_BUD",
+  "type": "airport",
+  "name_zh": "布达佩斯机场",
+  "name_en": "BUD",
+  "country": "HU",
+  "aliases": []
+ },
+ {
+  "id": "AP_WAW",
+  "type": "airport",
+  "name_zh": "华沙肖邦机场",
+  "name_en": "WAW",
+  "country": "PL",
+  "aliases": []
+ },
+ {
+  "id": "AP_JNB",
+  "type": "airport",
+  "name_zh": "约翰内斯堡OR坦博机场",
+  "name_en": "JNB",
+  "country": "ZA",
+  "aliases": [
+   "OR Tambo"
+  ]
+ },
+ {
+  "id": "AP_MEX",
+  "type": "airport",
+  "name_zh": "墨西哥城国际机场",
+  "name_en": "MEX",
+  "country": "MX",
+  "aliases": [
+   "AICM"
+  ]
+ },
+ {
+  "id": "AP_BOG",
+  "type": "airport",
+  "name_zh": "波哥大埃尔多拉多机场",
+  "name_en": "BOG",
+  "country": "CO",
+  "aliases": []
+ },
+ {
+  "id": "AP_SCL",
+  "type": "airport",
+  "name_zh": "圣地亚哥机场",
+  "name_en": "SCL",
+  "country": "CL",
+  "aliases": []
+ },
+ {
+  "id": "AP_LIM",
+  "type": "airport",
+  "name_zh": "利马豪尔赫查韦斯机场",
+  "name_en": "LIM",
+  "country": "PE",
+  "aliases": []
+ },
+ {
+  "id": "AP_GRU",
+  "type": "airport",
+  "name_zh": "圣保罗瓜鲁柳斯机场",
+  "name_en": "GRU",
+  "country": "BR",
+  "aliases": [
+   "Guarulhos"
+  ]
+ },
+ {
+  "id": "AP_VCP",
+  "type": "airport",
+  "name_zh": "坎皮纳斯维拉科波斯机场",
+  "name_en": "VCP",
+  "country": "BR",
+  "aliases": [
+   "Viracopos"
+  ]
+ },
+ {
+  "id": "AP_SVO",
+  "type": "airport",
+  "name_zh": "莫斯科谢列梅捷沃机场",
+  "name_en": "SVO",
+  "country": "RU",
+  "aliases": []
+ },
+ {
+  "id": "AP_DME",
+  "type": "airport",
+  "name_zh": "莫斯科多莫杰多沃机场",
+  "name_en": "DME",
+  "country": "RU",
+  "aliases": []
+ },
+ {
+  "id": "AP_KUL",
+  "type": "airport",
+  "name_zh": "吉隆坡国际机场",
+  "name_en": "KUL",
+  "country": "MY",
+  "aliases": []
+ },
+ {
+  "id": "AP_MNL",
+  "type": "airport",
+  "name_zh": "马尼拉尼诺伊·阿基诺机场",
+  "name_en": "MNL",
+  "country": "PH",
+  "aliases": [
+   "NAIA"
+  ]
+ },
+ {
+  "id": "AP_CRK",
+  "type": "airport",
+  "name_zh": "克拉克国际机场",
+  "name_en": "CRK",
+  "country": "PH",
+  "aliases": [
+   "Clark"
+  ]
+ },
+ {
+  "id": "AP_BKK",
+  "type": "airport",
+  "name_zh": "曼谷素万那普机场",
+  "name_en": "BKK",
+  "country": "TH",
+  "aliases": []
+ },
+ {
+  "id": "AP_CGK",
+  "type": "airport",
+  "name_zh": "雅加达苏加诺-哈达机场",
+  "name_en": "CGK",
+  "country": "ID",
+  "aliases": []
+ },
+ {
+  "id": "AP_NRT",
+  "type": "airport",
+  "name_zh": "东京成田机场",
+  "name_en": "NRT",
+  "country": "JP",
+  "aliases": [
+   "Narita"
+  ]
+ },
+ {
+  "id": "AP_HND",
+  "type": "airport",
+  "name_zh": "东京羽田机场",
+  "name_en": "HND",
+  "country": "JP",
+  "aliases": [
+   "Haneda"
+  ]
+ },
+ {
+  "id": "AP_BTH",
+  "type": "airport",
+  "name_zh": "巴淡岛哈迪姆机场",
+  "name_en": "BTH",
+  "country": "ID",
+  "aliases": [
+   "Hang Nadim"
+  ]
+ },
+ {
+  "id": "AP_SIN",
+  "type": "airport",
+  "name_zh": "新加坡樟宜机场（转运）",
+  "name_en": "SIN",
+  "country": "SG",
+  "aliases": [
+   "Changi"
+  ]
+ },
+ {
+  "id": "HUBAP_ADD",
+  "type": "hub_airport",
+  "name_zh": "亚的斯亚贝巴机场（转运）",
+  "name_en": "ADD",
+  "country": "ET",
+  "aliases": [
+   "Addis Ababa"
+  ]
+ },
+ {
+  "id": "HUBAP_US",
+  "type": "hub_airport",
+  "name_zh": "美国货运枢纽（安克雷奇/洛杉矶/迈阿密）",
+  "name_en": "US cargo hubs",
+  "country": "US",
+  "aliases": [
+   "ANC",
+   "LAX",
+   "MIA"
+  ]
+ },
+ {
+  "id": "HUBAP_EUR",
+  "type": "hub_airport",
+  "name_zh": "欧洲货运枢纽（阿姆斯特丹/法兰克福/列日）",
+  "name_en": "EU cargo hubs",
+  "country": "",
+  "aliases": [
+   "FRA",
+   "LGG"
+  ]
+ },
+ {
+  "id": "RAIL_SOUTHCHINA",
+  "type": "rail_origin",
+  "name_zh": "华南铁路始发站/集结",
+  "name_en": "South China rail origin",
+  "country": "CN",
+  "aliases": []
+ },
+ {
+  "id": "RB_ALASHANKOU",
+  "type": "rail_border",
+  "name_zh": "阿拉山口口岸（中哈）",
+  "name_en": "Alashankou",
+  "country": "CN",
+  "aliases": [
+   "阿拉山口",
+   "多斯特克"
+  ]
+ },
+ {
+  "id": "RB_KHORGOS",
+  "type": "rail_border",
+  "name_zh": "霍尔果斯口岸（中哈）",
+  "name_en": "Khorgos",
+  "country": "CN",
+  "aliases": [
+   "霍尔果斯",
+   "Altynkol"
+  ]
+ },
+ {
+  "id": "RB_MALASZEWICZE",
+  "type": "rail_border",
+  "name_zh": "马拉舍维奇/特雷斯波尔口岸（白波）",
+  "name_en": "Malaszewicze / Terespol",
+  "country": "PL",
+  "aliases": [
+   "Brest",
+   "布列斯特"
+  ]
+ },
+ {
+  "id": "RB_MANZHOULI",
+  "type": "rail_border",
+  "name_zh": "满洲里口岸（中俄）",
+  "name_en": "Manzhouli",
+  "country": "CN",
+  "aliases": [
+   "Zabaykalsk",
+   "后贝加尔斯克"
+  ]
+ },
+ {
+  "id": "RB_ZABAYKALSK",
+  "type": "rail_border",
+  "name_zh": "后贝加尔斯克（俄方）",
+  "name_en": "Zabaykalsk",
+  "country": "RU",
+  "aliases": []
+ },
+ {
+  "id": "CORR_TRANSSIB",
+  "type": "corridor",
+  "name_zh": "西伯利亚大铁路",
+  "name_en": "Trans-Siberian Railway",
+  "country": "RU",
+  "aliases": [
+   "Transsib"
+  ]
+ },
+ {
+  "id": "RAIL_DUISBURG",
+  "type": "hub",
+  "name_zh": "杜伊斯堡铁路枢纽",
+  "name_en": "Duisburg",
+  "country": "DE",
+  "aliases": [
+   "Duisburg"
+  ]
+ },
+ {
+  "id": "BORDER_SZ_HK",
+  "type": "border",
+  "name_zh": "深港陆路口岸（皇岗/落马洲/深圳湾）",
+  "name_en": "Shenzhen–HK land crossings",
+  "country": "",
+  "aliases": [
+   "Lok Ma Chau",
+   "Huanggang",
+   "Shenzhen Bay"
+  ]
+ },
+ {
+  "id": "BORDER_HZMB",
+  "type": "border",
+  "name_zh": "港珠澳大桥口岸",
+  "name_en": "HK–Zhuhai–Macao Bridge",
+  "country": "",
+  "aliases": [
+   "HZMB"
+  ]
+ },
+ {
+  "id": "CORR_DMM_RUH",
+  "type": "corridor",
+  "name_zh": "达曼–利雅得铁路/公路走廊",
+  "name_en": "Dammam–Riyadh corridor",
+  "country": "SA",
+  "aliases": []
+ },
+ {
+  "id": "CORR_JED_RUH",
+  "type": "corridor",
+  "name_zh": "吉达–利雅得陆桥（公路）",
+  "name_en": "Jeddah–Riyadh land bridge",
+  "country": "SA",
+  "aliases": []
+ },
+ {
+  "id": "CORR_N3",
+  "type": "corridor",
+  "name_zh": "德班–约翰内斯堡走廊（N3公路/Transnet铁路）",
+  "name_en": "Durban–Johannesburg N3 corridor",
+  "country": "ZA",
+  "aliases": [
+   "N3",
+   "Transnet"
+  ]
+ },
+ {
+  "id": "CORR_MAPUTO",
+  "type": "corridor",
+  "name_zh": "马普托–约翰内斯堡走廊",
+  "name_en": "Maputo corridor",
+  "country": "MZ",
+  "aliases": []
+ },
+ {
+  "id": "CORR_MX_PORT",
+  "type": "corridor",
+  "name_zh": "墨西哥港口–墨西哥城公路/铁路走廊",
+  "name_en": "MX port–CDMX corridor",
+  "country": "MX",
+  "aliases": []
+ },
+ {
+  "id": "CORR_BUENAVENTURA",
+  "type": "corridor",
+  "name_zh": "布埃纳文图拉–波哥大公路走廊",
+  "name_en": "Buenaventura–Bogota road",
+  "country": "CO",
+  "aliases": []
+ }
+]
