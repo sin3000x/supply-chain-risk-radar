@@ -1,3 +1,4 @@
+import {classifyByKeyword} from './vendor/worldmonitor/threat-keyword-classifier.ts';
 export const feeds = {
   news: 'news/v1/list-feed-digest?variant=full&lang=en',
   signal: 'intelligence/v1/list-cross-source-signals',
@@ -18,12 +19,14 @@ export function normalize(kind, payload) {
     const title = kind === 'signal' ? raw.summary : raw.title;
     if (!upstreamId || !title || seen.has(upstreamId)) return [];
     seen.add(upstreamId);
+    const classification = kind === 'news' ? raw.threat ?? classifyByKeyword(title) : null;
     return [{
       id: `worldmonitor:${kind}:${upstreamId}`,
       kind, title,
       summary: kind === 'news' ? raw.snippet : kind === 'forecast' ? raw.scenario || raw.feedSummary : null,
       region: raw.region || raw.theater || raw.locationName || null,
-      category: raw.domain || raw.threat?.category || raw.type || null,
+      category: raw.domain || classification?.category || raw.type || null,
+      classification,
       time: { kind: {news:'published',signal:'detected',forecast:'updated'}[kind], value:time(raw.publishedAt ?? raw.detectedAt ?? raw.updatedAt) },
       source: { provider:'WorldMonitor', endpoint:feeds[kind].split('?')[0], upstreamId, publisher:raw.source || null, url:raw.link || null },
       evidence: kind === 'forecast'

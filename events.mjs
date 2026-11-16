@@ -16,10 +16,10 @@ export function buildEvents(sources, mode, findPlaces = () => []) {
   if (mode === 'live') {
     const news = sources.flatMap(source=>source.records).filter(record=>record.kind === 'news');
     for (const group of clusterNews(news,findPlaces)) {
-      const {primary,topic,action,entities,records}=group;
+      const {primary,topic,action,corroborationCount,records}=group;
       const id = eventId(mode, primary.id);
       events.set(id,{id,title:primary.title,region:primary.region ?? null,
-        topic,action,entities,routeRelevant:routeTopics.has(topic),records});
+        topic,action,corroborationCount,routeRelevant:routeTopics.has(topic),records});
     }
   }
   for (const {records} of sources) for (const record of records) {
