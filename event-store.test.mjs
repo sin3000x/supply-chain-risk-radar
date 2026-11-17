@@ -32,3 +32,23 @@ test('event ID survives a new representative, repeat ingestion, and restart', as
     await rm(directory,{recursive:true,force:true});
   }
 });
+
+test('events later shown to be one story merge and leave redirects', async () => {
+  const directory=await mkdtemp(join(tmpdir(),'event-store-'));
+  try {
+    const store=await openEventStore(join(directory,'events.json'),()=>[]);
+    const make=(id,title,time)=>({id,kind:'news',title,time:{value:time},source:{}});
+    const a=make('a','US flight authority orders national ground stop','2026-11-13T21:00:00Z');
+    const b=make('b','US flights resume after nationwide ground stop lifted','2026-11-14T02:00:00Z');
+    // Seen separately first (e.g. by an older clustering rule).
+    const [first]=await store.update([{id:'evt_a',title:a.title,topic:'transport_disruption',records:[{...a,role:'report'}]}]);
+    const [second]=await store.update([{id:'evt_b',title:b.title,records:[{...b,role:'report'}]}]);
+    assert.notEqual(first.id,second.id);
+    const [merged]=await store.update(buildEvents([{records:[a,b]}],'live'));
+    assert.equal(merged.id,first.id);
+    assert.equal(merged.records.length,2);
+    assert.equal(store.get(second.id).id,first.id);
+  } finally {
+    await rm(directory,{recursive:true,force:true});
+  }
+});

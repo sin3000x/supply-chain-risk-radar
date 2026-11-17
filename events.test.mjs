@@ -39,3 +39,31 @@ test('identical short headlines share an event ID while retaining article links'
   assert.deepEqual(events[0].records.map(record=>record.source.url),urls);
   assert.equal(events[0].id,buildEvents([{records:[...records].reverse()}],'live')[0].id);
 });
+
+const article = (id,title,time) => ({id,kind:'news',title,time:{value:time},source:{}});
+
+test('follow-up reports on one disruption share an event', () => {
+  const titles = [
+    "US flight authority orders national ground stop over air traffic control 'communication issue'",
+    'Passengers face further disruption as US flights slowly resume after ground stop',
+    'US flights resume after nationwide ground stop lifted',
+    'US nationwide flight ground stop: "Our routers got overloaded with data"',
+    'US probes nationwide flights stoppage as travel disruptions persist',
+  ];
+  const records = titles.map((title,i)=>article(String(i),title,`2026-11-1${3+Math.floor(i/2)}T0${i}:00:00Z`));
+  const events = buildEvents([{records}],'live');
+  assert.equal(events.length,1);
+  assert.equal(events[0].title,titles[0]);
+  assert.equal(events[0].action,'closure');
+  assert.equal(events[0].records.length,5);
+});
+
+test('a shared phrase does not join incidents in different places or far apart in time', () => {
+  const events = buildEvents([{records:[
+    article('a','Oil tanker hit by mine in Strait of Hormuz','2026-11-16T01:00:00Z'),
+    article('b','Oil tanker hit by drone in the Red Sea','2026-11-16T02:00:00Z'),
+    article('c','Port closes after ground stop','2026-11-01T02:00:00Z'),
+    article('d','Airport flights resume after ground stop','2026-11-16T02:00:00Z'),
+  ]}],'live');
+  assert.equal(events.length,4);
+});

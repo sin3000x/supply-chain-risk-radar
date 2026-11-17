@@ -4,7 +4,13 @@ import {randomUUID} from 'node:crypto';
 import {clusterNews} from './news-clusters.mjs';
 
 const WINDOW = 48 * 3600_000;
-const reports = event => event.records.filter(record=>record.role !== 'background');
+const reports = event => event.records?.filter(record=>record.role !== 'background') ?? [];
+function resolve(events, id) {
+  let event = events.get(id);
+  for (let hops = 0; event?.mergedInto && hops < 16; hops++) event = events.get(event.mergedInto);
+  return event?.mergedInto ? undefined : event;
+}
+const firstReport = event => reports(event)[0]?.time.value ?? '';
 
 export async function openEventStore(path, findPlaces) {
   let stored;
@@ -46,16 +52,22 @@ export async function openEventStore(path, findPlaces) {
     for (const event of incoming) {
       const direct = new Set(reports(event).map(record=>owners.get(record.id)).filter(Boolean));
       if (direct.size > 1) {
-        // Keep already issued IDs separate when a later snapshot bridges two events.
-        for (const id of direct) put({...next.get(id),records:event.records.filter(record=>owners.get(record.id)===id)},id);
-        const unassigned = reports(event).filter(record=>!owners.has(record.id));
-        if (unassigned.length) put({...event,title:unassigned[0].title,records:unassigned},next.has(event.id) ? 'evt_'+randomUUID() : event.id);
+        // A later snapshot showed these issued events are one story. Keep the earliest ID and
+        // leave the others as redirects so links to them still resolve.
+        const [keep,...merged] = [...direct].sort((a,b)=>firstReport(next.get(a)).localeCompare(firstReport(next.get(b))) || a.localeCompare(b));
+        const records = merged.flatMap(id=>next.get(id).records);
+        for (const id of merged) {
+          const previous = next.get(id);
+          next.set(id,{id,mergedInto:keep,revision:previous.revision + 1});
+          dirty = true;
+        }
+        put({...event,records:[...records,...event.records]},keep);
         continue;
       }
       let id = [...direct][0];
       if (!id && event.topic) {
         const candidates = [...next.values()].filter(previous=>
-          previous.topic === event.topic &&
+          !previous.mergedInto && previous.topic === event.topic &&
           Math.abs(Date.parse(previous.updatedAt)-Date.parse(event.updatedAt)) <= WINDOW &&
           reports(event).some(a=>reports(previous).some(b=>clusterNews([a,b],findPlaces).some(group=>group.records.length===2))));
         if(candidates.length===1) id = candidates[0].id;
@@ -72,7 +84,13 @@ export async function openEventStore(path, findPlaces) {
       } finally {await unlink(temporary).catch(()=>{});}
       stored = next;
     }
-    return [...touched.values()].sort((a,b)=>(b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
+    // An event touched early in this batch may have been merged into another afterwards.
+    const result = new Map();
+    for (const id of touched.keys()) {
+      const event = resolve(next,id);
+      if (event) result.set(event.id,event);
+    }
+    return [...result.values()].sort((a,b)=>(b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
   }
   return {
     update(events) {
@@ -80,6 +98,7 @@ export async function openEventStore(path, findPlaces) {
       queue = result.catch(()=>{});
       return result;
     },
-    get(id) {return stored.get(id);},
+    /** An event by ID, following redirects left by merges. */
+    get(id) {return resolve(stored,id);},
   };
 }
