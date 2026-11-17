@@ -86,7 +86,9 @@ async function buildFeed(mode) {
     }
     events = lastLive.events;
   } else events = buildEvents(sources,mode,findPlaces).map(event=>network.annotate(event));
-  return {schemaVersion:'0.3',mode,liveSource:origin ? 'self-hosted' : 'rss',fetchedAt:new Date().toISOString(),sources,network:network.summary,events};
+  // Events carry every record they use; the full input batch would only bloat the response.
+  const status = sources.map(({records,...source})=>({...source,recordCount:records.length}));
+  return {schemaVersion:'0.4',mode,liveSource:origin ? 'self-hosted' : 'rss',fetchedAt:new Date().toISOString(),sources:status,network:network.summary,events};
 }
 
 function send(req, res, status, type, body, headers = {}) {
