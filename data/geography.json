@@ -1,0 +1,19 @@
+{
+  "maritimeTopicAliases": ["Red Sea", "Hormuz", "Bab el-Mandeb", "Bab el Mandeb", "Bab-el-Mandeb"],
+  "regions": {
+    "europe": {"label":"欧洲","lon":15,"lat":51,"aliases":["Europe","Western Europe","Southern Europe","Northern Europe","Eastern Europe","西欧","南欧","北欧","东欧","荷兰"],"countries":"BG BY DE ES GB GR HU IT MK NL PL RS RU SI SK","nodes":"CP_GIBRALTAR CP_DOVER CP_DANISH CP_DARDANELLES CP_BOSPHORUS SEA_MED SEA_BLACK HUBAP_EUR"},
+    "middleEast": {"label":"中东","lon":48,"lat":27,"aliases":["Middle East"],"countries":"AE EG KW QA SA TR","nodes":"CP_BAB CP_SUEZ CP_HORMUZ SEA_RED AS_MIDEAST"},
+    "northAmerica": {"label":"北美","lon":-98,"lat":43,"aliases":["North America"],"countries":"MX US","nodes":"CP_PANAMA"},
+    "southAmerica": {"label":"南美","lon":-60,"lat":-16,"aliases":["South America"],"countries":"BR CL CO PE"},
+    "eastAsia": {"label":"东亚","lon":117,"lat":38,"aliases":["East Asia"],"countries":"CN HK JP","nodes":"CP_TAIWAN CP_KOREA SEA_PRD BORDER_SZ_HK BORDER_HZMB"},
+    "southeastAsia": {"label":"东南亚","lon":106,"lat":10,"aliases":["Southeast Asia"],"countries":"ID MY PH SG TH","nodes":"CP_MALACCA CP_SINGAPORE CP_SUNDA CP_KARIMATA CP_LUZON SEA_SCS"},
+    "westernPacific": {"label":"西太平洋","lon":150,"lat":21,"aliases":["Pacific","Western Pacific"],"nodes":"SEA_PACIFIC"},
+    "southernAfrica": {"label":"南部非洲","lon":26,"lat":-25,"aliases":["Southern Africa"],"countries":"MZ ZA","nodes":"CP_CAPE"},
+    "asia": {"label":"亚洲","lon":91,"lat":37,"aliases":["Asia"],"countries":"AZ GE KZ","nodes":"SEA_CASPIAN"},
+    "africa": {"label":"非洲","lon":16,"lat":3,"aliases":["Africa"],"countries":"ET"},
+    "oceania": {"label":"大洋洲","lon":142,"lat":-28,"aliases":["Oceania"]},
+    "arctic": {"label":"北极","lon":0,"lat":74,"aliases":["Arctic"]},
+    "indianOcean": {"label":"印度洋","lon":75,"lat":-13,"aliases":["Indian Ocean"]},
+    "unknown": {"label":"地点待确认"}
+  }
+}

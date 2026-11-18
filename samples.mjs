@@ -1,4 +1,12 @@
 const now = Date.now();
+export const sampleStrike = {
+  id: 'sample:event:port-strike',
+  title: '鹿特丹港：两座码头拟罢工',
+  summary: '工会已公告拟停工日期，港方正在调整作业安排。未来 72 小时关注装卸是否暂停。',
+  region: '荷兰 · 鹿特丹港',
+  geoAnchors: ['PORT_ROTTERDAM'],
+};
+
 export const samples = {
   news: {categories:{shipping:{items:[
     {source:'虚构媒体',title:'示例：鹿特丹港工会计划周五在两座码头举行罢工',link:'https://example.com/demo/port-strike',publishedAt:now-3600000,snippet:'谈判仍在继续。工会公布拟停工时间，港方尚未公布最终作业安排。',threat:{category:'infrastructure'},storyMeta:{sourceCount:2}},

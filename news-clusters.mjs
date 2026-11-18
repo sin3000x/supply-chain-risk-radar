@@ -1,10 +1,15 @@
 import {CANDIDATE_STOPWORDS, clusterTexts, normalizeStoryText, stripAttributionSuffix} from './vendor/worldmonitor/story-identity.js';
 import {detectSyndication} from './vendor/worldmonitor/syndication.js';
 import {inferGeoHubsFromTitle} from './public/vendor/worldmonitor/geo-hub-index.mjs';
+import geography from './data/geography.json' with {type:'json'};
 
 const WINDOW_MS = 48 * 3600 * 1000;
+const escapePattern = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const maritimeSubject = new RegExp(
+  '\\b(?:shipping lanes?|commercial vessels?|tankers?|maritime|piracy|' +
+  geography.maritimeTopicAliases.map(escapePattern).join('|') + ')\\b','i');
 const topics = [
-  ['maritime_security', /\b(red sea|hormuz|bab el.mandeb|shipping lanes?|commercial vessels?|tankers?|maritime|piracy)\b/i, /\b(attacks?|mines?|seiz\w+|hit|(?<!traffic )control|retreat|blockad\w+|clos\w+|disrupt\w+)\b/i],
+  ['maritime_security', maritimeSubject, /\b(attacks?|mines?|seiz\w+|hit|(?<!traffic )control|retreat|blockad\w+|clos\w+|disrupt\w+)\b/i],
   ['transport_disruption', /\b(ports?|airports?|flights?|airspace|railways?|borders?|terminals?|shipping|crossings?|dockworkers|ground stop)\b/i, /\b(strikes?|clos\w+|cancell?\w+|delay\w+|congestion|suspend\w+|collision|ground stop|restrict\w+|reopen\w+|disrupt\w+)\b/i],
   ['trade_policy', /\b(tariffs?|sanctions?|export controls?|trade talks?|trade deal|trade agreement|customs|export ban|trade restrictions?)\b/i, /\b(impos\w+|announc\w+|agree\w+|fail\w*|sign\w*|lift\w*|rais\w+|cut\w*|ban\w*|consider\w+|talks?|deal)\b/i],
   ['security_development', /\b(houthis?|armed forces|military|troops|missiles?|drone|armed group|ceasefire|rebels?|carrier)\b/i, /\b(attack\w*|advance\w*|retreat\w*|(?<!traffic )control|strike\w*|deploy\w*|arriv\w+|ceasefire|defend|capture\w*)\b/i],

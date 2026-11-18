@@ -28,6 +28,9 @@ export function normalize(kind, payload) {
       kind, title,
       summary: kind === 'news' ? raw.snippet : kind === 'forecast' ? raw.scenario || raw.feedSummary : null,
       region: raw.region || raw.theater || raw.locationName || null,
+      ...(Array.isArray(raw.geoAnchors) && {
+        geoAnchors: raw.geoAnchors.filter(id=>typeof id === 'string' && id.trim()).map(id=>id.trim()),
+      }),
       category: raw.domain || classification?.category || raw.type || null,
       classification,
       time: { kind: {news:'published',signal:'detected',forecast:'updated'}[kind], value:time(raw.publishedAt ?? raw.detectedAt ?? raw.updatedAt) },

@@ -95,7 +95,7 @@ export function createFeedReader(feeds = FEEDS, {refreshAfterMs = FEED_REFRESH_A
     const feedStatus = feeds.map((feed, index) => {
       const {items, error} = results[index];
       (categories[feed.category] ??= {items:[]}).items.push(...items);
-      return {name:feed.name, category:feed.category, count:items.length, error};
+      return {name:feed.name, url:feed.url, category:feed.category, count:items.length, error};
     });
     return {categories, feedStatus};
   };

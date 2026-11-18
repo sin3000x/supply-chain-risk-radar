@@ -13,5 +13,5 @@ See the repository root `LICENSE` for the upstream AGPL v3 license. Keep these n
 
 The browser copies in `public/vendor/worldmonitor/` use the same pinned commit:
 
-- `geo-hub-index.mjs` and `keyword-match.mjs` come from `src/services/geo-hub-index.ts` and `src/utils/keyword-match.ts`. TypeScript types were stripped for direct browser use and the import path was adapted. The hub catalog and matcher are unchanged.
+- `geo-hub-index.mjs` and `keyword-match.mjs` come from `src/services/geo-hub-index.ts` and `src/utils/keyword-match.ts`. The hub catalog is stored in `data/geo-hubs.json`, with Radar display labels and links to transport nodes where available.
 - `countries.geojson` is copied verbatim from upstream `public/data/countries.geojson`.

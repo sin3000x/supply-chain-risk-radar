@@ -1,13 +1,6 @@
 import {createHash} from 'node:crypto';
 import {clusterNews,routeTopics} from './news-clusters.mjs';
-
-const sampleStrike = {
-  id: 'sample:event:port-strike',
-  title: '鹿特丹港：两座码头拟罢工',
-  summary: '工会已公告拟停工日期，港方正在调整作业安排。未来 72 小时关注装卸是否暂停。',
-  region: '荷兰 · 鹿特丹港',
-  geoAnchors: ['PORT_ROTTERDAM'],
-};
+import {sampleStrike} from './samples.mjs';
 const eventId = (mode, key) => `${mode === 'sample' ? 'demo' : 'evt'}_${createHash('sha256').update(key).digest('hex').slice(0,24)}`;
 const strikeRecords = new Set(['news:https://example.com/demo/port-strike', 'signal:sample-port-ops', 'forecast:sample-port']);
 
@@ -19,13 +12,17 @@ export function buildEvents(sources, mode, findPlaces = () => []) {
       const {primary,topic,action,corroborationCount,records}=group;
       const id = eventId(mode, primary.id);
       events.set(id,{id,title:primary.title,region:primary.region ?? null,
+        ...(primary.geoAnchors?.length && {geoAnchors:primary.geoAnchors}),
         topic,action,corroborationCount,routeRelevant:routeTopics.has(topic),records});
     }
   }
   for (const {records} of sources) for (const record of records) {
     if (mode === 'live' && record.kind === 'news') continue;
     const linked = mode === 'sample' && strikeRecords.has(record.kind + ':' + record.source.upstreamId);
-    const event = linked ? sampleStrike : {id:eventId(mode,record.id),title:record.title,region:record.region ?? null};
+    const event = linked ? sampleStrike : {
+      id:eventId(mode,record.id),title:record.title,region:record.region ?? null,
+      ...(record.geoAnchors?.length && {geoAnchors:record.geoAnchors}),
+    };
     if (!events.has(event.id)) events.set(event.id, {...event, records:[]});
     events.get(event.id).records.push(record);
   }

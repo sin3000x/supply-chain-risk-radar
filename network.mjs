@@ -8,7 +8,7 @@ const fold = text => String(text ?? '').normalize('NFKC').toLowerCase();
 const escape = text => text.replace(/[.*+?^$(){}|[\]\\]/g, '\\$&');
 
 export async function loadNetwork(directory, label) {
-  const [nodes, {lanes}] = await Promise.all(['nodes.json','lanes.json'].map(async file =>
+  const [nodes, {lanes, meta}] = await Promise.all(['nodes.json','lanes.json'].map(async file =>
     JSON.parse(await readFile(join(directory,file),'utf8'))));
   const byId = new Map(nodes.map(node=>[node.id,node]));
   const index = new Map();
@@ -28,28 +28,36 @@ export async function loadNetwork(directory, label) {
       });
     }
   }
-  const matchers = nodes.filter(node=>types.has(node.type) && index.has(node.id)).map(node=>({
-    node, patterns:[node.name_zh,node.name_en,...(node.aliases ?? [])].map(fold).filter(name=>
-      name.length >= 2 && (/\p{Script=Han}/u.test(name) || name.length >= 5 && /[a-z]/.test(name))
-    ).map(name=>new RegExp(/\p{Script=Han}/u.test(name) ? escape(name) : `\\b${escape(name)}\\b`,'u')),
-  }));
-  function matchPlaces(text, anchors) {
+  function placeMatchers(nodes, minLength) {
+    return nodes.map(node=>({
+      node, patterns:[node.name_zh,node.name_en,...(node.aliases ?? [])].map(fold).filter(name=>
+        name.length >= 2 && (/\p{Script=Han}/u.test(name) || name.length >= minLength && /[a-z]/.test(name))
+      ).map(name=>new RegExp(/\p{Script=Han}/u.test(name) ? escape(name) : `\\b${escape(name)}\\b`,'u')),
+    }));
+  }
+  const locationMatchers = placeMatchers(nodes,4);
+  const routeMatchers = placeMatchers(nodes.filter(node=>types.has(node.type) && index.has(node.id)),5);
+  function matchPlaces(text, anchors, candidates = routeMatchers) {
     const explicit = anchors?.length > 0;
     const mentioned = explicit ? '' : fold(text);
     const matched = explicit ? anchors.map(id=>byId.get(id)).filter(Boolean)
-      : matchers.filter(({patterns})=>patterns.some(pattern=>pattern.test(mentioned))).map(({node})=>node);
+      : candidates.filter(({patterns})=>patterns.some(pattern=>pattern.test(mentioned))).map(({node})=>node);
     const specific = matched.some(node=>node.type !== 'city');
     return {explicit, nodes:matched.filter(node=>explicit || !specific || node.type !== 'city')};
   }
   return {
+    snapshot:{nodes,lanes,meta},
+    getNode: id => byId.get(id),
+    findLocationNodes: text => matchPlaces(text,null,locationMatchers).nodes,
     summary:{label,nodeCount:nodes.length,laneCount:lanes.length,originCount:origins.size,destinationCount:destinations.size},
     /** Network node IDs a single report mentions (title and region only). */
     findPlaces(record) {
-      return matchPlaces([record.title,record.region].join(' ')).nodes.filter(node=>index.has(node.id)).map(node=>node.id);
+      return matchPlaces([record.title,record.region].join(' '),record.geoAnchors).nodes
+        .filter(node=>index.has(node.id)).map(node=>node.id);
     },
     annotate(event) {
       if (event.routeRelevant === false) return {...event,networkMatches:[]};
-      const {explicit,nodes} = matchPlaces([event.title,event.summary,...event.records.filter(r=>r.role !== 'background')
+      const {explicit,nodes} = matchPlaces([event.title,event.summary,event.region,...event.records.filter(r=>r.role !== 'background')
         .flatMap(r=>event.topic ? [r.title,r.region] : [r.title,r.summary,r.region])].join(' '), event.geoAnchors);
       return {...event,networkMatches:nodes.map(node=>({
         nodeId:node.id,nodeName:node.name_zh,nodeType:node.type,basis:explicit ? 'event_anchor' : 'place_mention',
