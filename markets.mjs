@@ -110,10 +110,9 @@ export function createMarketReader({ findPlaces = () => [], fetchFn = globalThis
   let lastCheckedAt = 0;
   let lastResult = null;
   let lastGoodRecords = [];
+  let inFlight = null;
 
-  return async function readLiveMarkets() {
-    if (lastResult && Date.now() - lastCheckedAt < CACHE_TTL_MS) return lastResult;
-
+  async function fetchMarkets() {
     const nowIso = new Date().toISOString();
     const settled = await Promise.allSettled(POLYMARKET_TAGS.map(async tag => {
       const params = new URLSearchParams({
@@ -161,14 +160,25 @@ export function createMarketReader({ findPlaces = () => [], fetchFn = globalThis
       : failedAll ? 'stale'
       : records.length ? 'ok' : 'empty';
 
-    lastCheckedAt = Date.now();
-    lastResult = {
+    const result = {
       kind: 'forecast',
       records,
       feedStatus,
       state,
       error: failedAll ? `Polymarket 获取失败（${firstError}）` : null,
     };
-    return lastResult;
+    if (!failedAll) {
+      lastCheckedAt = Date.now();
+      lastResult = result;
+    }
+    return result;
+  }
+
+  return async function readLiveMarkets() {
+    if (lastResult && Date.now() - lastCheckedAt < CACHE_TTL_MS) return lastResult;
+    if (!inFlight) {
+      inFlight = fetchMarkets().finally(() => { inFlight = null; });
+    }
+    return inFlight;
   };
 }

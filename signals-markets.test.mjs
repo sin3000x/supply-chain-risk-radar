@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parsePortWatchCsv, parseWmoAlerts } from './signals.mjs';
-import { normalizePolymarketEvents } from './markets.mjs';
+import { createSignalReader, parsePortWatchCsv, parseWmoAlerts } from './signals.mjs';
+import { createMarketReader, normalizePolymarketEvents } from './markets.mjs';
 import { buildEvents } from './events.mjs';
 
 test('parsePortWatchCsv detects chokepoint deviation against baseline', () => {
@@ -173,4 +173,82 @@ test('buildEvents drops unmatched live forecasts and classifies standalone signa
   assert.equal(portwatch.routeRelevant, true);
   assert.equal(wmo.topic, 'natural_hazard');
   assert.equal(wmo.routeRelevant, true);
+});
+
+test('createMarketReader does not cache total failures and caches successful responses', async () => {
+  let shouldFail = true;
+  let fetchCalls = 0;
+  const sampleEvent = [{
+    id: 'evt-tariff',
+    title: 'US tariffs on China above 60% in 2026?',
+    slug: 'us-tariffs-china-2026',
+    volume: 250000,
+    endDate: '2026-12-31T00:00:00Z',
+    markets: [{
+      id: 'm2',
+      question: 'US tariffs on China above 60% in 2026?',
+      outcomePrices: '["0.62","0.38"]',
+      oneDayPriceChange: 0.05,
+      volumeNum: 250000,
+    }],
+  }];
+
+  const readLiveMarkets = createMarketReader({
+    fetchFn: async () => {
+      fetchCalls += 1;
+      if (shouldFail) throw new Error('ECONNRESET');
+      return { ok: true, json: async () => sampleEvent };
+    },
+  });
+
+  // 1. Cold-start transient failure should not be cached.
+  const failed = await readLiveMarkets();
+  assert.equal(failed.state, 'unavailable');
+  assert.equal(failed.records.length, 0);
+  assert.match(failed.error, /ECONNRESET/);
+  const callsAfterFailure = fetchCalls;
+  assert.ok(callsAfterFailure > 0);
+
+  // 2. Subsequent call should retry and succeed immediately.
+  shouldFail = false;
+  const recovered = await readLiveMarkets();
+  assert.equal(recovered.state, 'ok');
+  assert.equal(recovered.records.length, 1);
+  assert.equal(recovered.error, null);
+  assert.ok(fetchCalls > callsAfterFailure);
+  const callsAfterSuccess = fetchCalls;
+
+  // 3. Subsequent call within TTL should reuse cached success.
+  const cached = await readLiveMarkets();
+  assert.equal(cached, recovered);
+  assert.equal(fetchCalls, callsAfterSuccess);
+});
+
+test('createSignalReader does not cache total failures and caches successful responses', async () => {
+  let shouldFail = true;
+  let fetchCalls = 0;
+  const readLiveSignals = createSignalReader({
+    fetchFn: async () => {
+      fetchCalls += 1;
+      if (shouldFail) throw new Error('ECONNRESET');
+      return { ok: true, text: async () => 'date,portname,n_total,n_container,n_tanker\n', json: async () => ({ items: [] }) };
+    },
+  });
+
+  const failed = await readLiveSignals();
+  assert.equal(failed.state, 'unavailable');
+  assert.equal(failed.records.length, 0);
+  const callsAfterFailure = fetchCalls;
+  assert.ok(callsAfterFailure > 0);
+
+  shouldFail = false;
+  const recovered = await readLiveSignals();
+  assert.equal(recovered.state, 'empty');
+  assert.equal(recovered.error, null);
+  assert.ok(fetchCalls > callsAfterFailure);
+  const callsAfterSuccess = fetchCalls;
+
+  const cached = await readLiveSignals();
+  assert.equal(cached, recovered);
+  assert.equal(fetchCalls, callsAfterSuccess);
 });

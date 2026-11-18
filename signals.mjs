@@ -299,10 +299,9 @@ export function createSignalReader({ findPlaces = () => [], fetchFn = globalThis
   const cache = new Map();
   let lastCheckedAt = 0;
   let lastResult = null;
+  let inFlight = null;
 
-  return async function readLiveSignals() {
-    if (lastResult && Date.now() - lastCheckedAt < CACHE_TTL_MS) return lastResult;
-
+  async function fetchSignals() {
     const results = await Promise.all(sources.map(async src => {
       try {
         const records = await src.load();
@@ -317,18 +316,30 @@ export function createSignalReader({ findPlaces = () => [], fetchFn = globalThis
     const records = results.flatMap(r => r.records);
     const feedStatus = results.map(({ name, url, count, error }) => ({ name, url, count, error }));
     const errors = feedStatus.filter(f => f.error);
-    const state = errors.length === feedStatus.length && !records.length ? 'unavailable'
+    const failedAll = errors.length === feedStatus.length;
+    const state = failedAll && !records.length ? 'unavailable'
       : errors.length ? 'partial'
       : records.length ? 'ok' : 'empty';
 
-    lastCheckedAt = Date.now();
-    lastResult = {
+    const result = {
       kind: 'signal',
       records,
       feedStatus,
       state,
       error: errors.length ? errors.map(f => f.name).join('、') + ' 获取失败' : null,
     };
-    return lastResult;
+    if (!failedAll) {
+      lastCheckedAt = Date.now();
+      lastResult = result;
+    }
+    return result;
+  }
+
+  return async function readLiveSignals() {
+    if (lastResult && Date.now() - lastCheckedAt < CACHE_TTL_MS) return lastResult;
+    if (!inFlight) {
+      inFlight = fetchSignals().finally(() => { inFlight = null; });
+    }
+    return inFlight;
   };
 }

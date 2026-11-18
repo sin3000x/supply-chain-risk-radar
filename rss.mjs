@@ -13,6 +13,9 @@ const ITEMS_PER_FEED = 30;
 const FETCH_TIMEOUT_MS = 8000;
 // Same refresh interval as WorldMonitor's FEED_REFRESH_AFTER_MS.
 export const FEED_REFRESH_AFTER_MS = 5 * 60_000;
+// Failed feeds use a shorter cooldown so transient/cold-start errors recover quickly
+// without hammering permanently broken feeds on every request.
+export const FEED_ERROR_RETRY_MS = 30_000;
 const USER_AGENT = 'SupplyChainRiskRadar/0.2';
 const isAggregator = url => new URL(url).hostname === 'news.google.com';
 
@@ -68,12 +71,17 @@ async function fetchFeed(feed, validators) {
  * callers share one in-flight refresh. A failed refresh keeps the last good
  * items and reports the error alongside them.
  */
-export function createFeedReader(feeds = FEEDS, {refreshAfterMs = FEED_REFRESH_AFTER_MS, now = Date.now} = {}) {
+export function createFeedReader(feeds = FEEDS, {
+  refreshAfterMs = FEED_REFRESH_AFTER_MS,
+  errorRetryMs = FEED_ERROR_RETRY_MS,
+  now = Date.now,
+} = {}) {
   const cache = new Map();
   async function refresh(feed, force) {
     const entry = cache.get(feed.url);
     if (entry?.inFlight) return entry.inFlight;
-    if (entry && !force && now() - entry.checkedAt < refreshAfterMs) return entry;
+    const ttl = entry?.error ? Math.min(refreshAfterMs, errorRetryMs) : refreshAfterMs;
+    if (entry && !force && now() - entry.checkedAt < ttl) return entry;
     const inFlight = fetchFeed(feed, entry?.validators).then(result => {
       const next = result.notModified
         ? {...entry, checkedAt:now(), error:null}
