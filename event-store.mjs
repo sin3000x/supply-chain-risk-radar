@@ -23,6 +23,20 @@ export async function openEventStore(path, findPlaces) {
     stored = new Map();
   }
   let queue = Promise.resolve();
+  const serialize = task => {
+    const result = queue.then(task);
+    queue = result.catch(()=>{});
+    return result;
+  };
+  async function persist(next) {
+    await mkdir(dirname(path),{recursive:true});
+    const temporary = path+'.'+randomUUID()+'.tmp';
+    try {
+      await writeFile(temporary,JSON.stringify({version:1,events:[...next.values()]}),{mode:0o600,flag:'wx'});
+      await rename(temporary,path);
+    } finally {await unlink(temporary).catch(()=>{});}
+    stored = next;
+  }
   async function reconcile(incoming) {
     const next = new Map(stored);
     const owners = new Map();
@@ -38,7 +52,9 @@ export async function openEventStore(path, findPlaces) {
         records.set(record.id,record);
         if(record.role !== 'background') owners.set(record.id,id);
       }
-      const updated = {...event,id,records:[...records.values()].sort((a,b)=>
+      // Model-written titles and progress belong to the issued event, not to one snapshot.
+      const updated = {...event,...(previous?.presentation && {presentation:previous.presentation}),
+        id,records:[...records.values()].sort((a,b)=>
         (a.time.value ?? '').localeCompare(b.time.value ?? '') || a.id.localeCompare(b.id))};
       updated.updatedAt = reports(updated).at(-1)?.time.value ?? null;
       const previousVersion = previous?.revision ?? 0;
@@ -75,15 +91,7 @@ export async function openEventStore(path, findPlaces) {
       // The proposed ID matches the old release for its first observed article.
       put(event,id ?? event.id);
     }
-    if (dirty) {
-      await mkdir(dirname(path),{recursive:true});
-      const temporary = path+'.'+randomUUID()+'.tmp';
-      try {
-        await writeFile(temporary,JSON.stringify({version:1,events:[...next.values()]}),{mode:0o600,flag:'wx'});
-        await rename(temporary,path);
-      } finally {await unlink(temporary).catch(()=>{});}
-      stored = next;
-    }
+    if (dirty) await persist(next);
     // An event touched early in this batch may have been merged into another afterwards.
     const result = new Map();
     for (const id of touched.keys()) {
@@ -93,10 +101,21 @@ export async function openEventStore(path, findPlaces) {
     return [...result.values()].sort((a,b)=>(b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
   }
   return {
-    update(events) {
-      const result = queue.then(()=>reconcile(events));
-      queue = result.catch(()=>{});
-      return result;
+    update(events) {return serialize(()=>reconcile(events));},
+    /**
+     * Replace the presentation of an issued event. `change` receives the current presentation and
+     * returns the next one, or undefined to leave it alone. Events merged away are skipped.
+     */
+    setPresentation(id, change) {
+      return serialize(async ()=>{
+        const event = stored.get(id);
+        if (!event || event.mergedInto) return undefined;
+        const presentation = change(event.presentation);
+        if (presentation === undefined || JSON.stringify(presentation) === JSON.stringify(event.presentation)) return event;
+        const updated = {...event,presentation,revision:(event.revision ?? 0) + 1};
+        await persist(new Map(stored).set(id,updated));
+        return updated;
+      });
     },
     /** An event by ID, following redirects left by merges. */
     get(id) {return resolve(stored,id);},

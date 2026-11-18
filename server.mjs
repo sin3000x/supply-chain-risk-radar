@@ -1,36 +1,53 @@
 import {fileURLToPath} from 'node:url';
 import {createServer} from 'node:http';
-import {readFile} from 'node:fs/promises';
+import {readFile, stat} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {brotliCompressSync, gzipSync, constants as zlib} from 'node:zlib';
 import {feeds, normalize} from './feed.mjs';
 import {openEventStore} from './event-store.mjs';
 import {buildEvents} from './events.mjs';
+import {applyPresentation, presentEvent} from './event-presentation.mjs';
+import {createPresentationQueue} from './model-presentation.mjs';
+import {openModelSettings} from './model-settings.mjs';
 import {loadNetwork} from './network.mjs';
+import {createEventLocator, regions} from './geography.mjs';
 import {createFeedReader} from './rss.mjs';
 import {samples} from './samples.mjs';
 
 const networkDirectory = process.env.RISK_NETWORK_DATA_DIR || fileURLToPath(new URL('./data/',import.meta.url));
 const network = await loadNetwork(networkDirectory, process.env.RISK_NETWORK_DATA_DIR ? '自定义线路数据' : 'risk_network 默认线路');
 const findPlaces = record => network.findPlaces(record);
+const locateEvent = createEventLocator(network);
+const present = event => presentEvent({...network.annotate(event),geo:locateEvent(event)});
+const modelSettings = await openModelSettings();
 const eventStore = await openEventStore(process.env.EVENT_STORE_PATH || fileURLToPath(new URL('./var/events.json',import.meta.url)),findPlaces);
+// Chinese event titles and progress are written in the background and stored with each event.
+const presenter = createPresentationQueue({store:eventStore,getProfile:()=>modelSettings.read()});
+const withPresentation = event => applyPresentation(event,eventStore.get(event.id)?.presentation);
 const origin = process.env.WM_BASE_URL;
 const key = process.env.WM_API_KEY;
 const readRss = createFeedReader();
 
-const assets = ['index.html','app.js','geography.mjs','style.css','vendor/worldmonitor/countries.geojson',
-  'vendor/worldmonitor/geo-hub-index.mjs','vendor/worldmonitor/keyword-match.mjs'];
+const assets = ['index.html','app.js','style.css','vendor/worldmonitor/countries.geojson'];
 const mime = {html:'text/html; charset=utf-8',js:'text/javascript; charset=utf-8',mjs:'text/javascript; charset=utf-8',
   css:'text/css; charset=utf-8',geojson:'application/geo+json; charset=utf-8'};
-// Static files are small and fixed for the life of the process: read and compress them once.
-const routes = new Map(await Promise.all(assets.map(async file => {
-  const body = await readFile(new URL(`./public/${file}`,import.meta.url));
-  return [file === 'index.html' ? '/' : '/'+file, {
-    type:mime[file.split('.').at(-1)], body,
+const routes = new Map(assets.map(file => [file === 'index.html' ? '/' : '/'+file, {
+  url:new URL(`./public/${file}`,import.meta.url),
+  type:mime[file.split('.').at(-1)],
+}]));
+
+async function readAsset(route) {
+  const {ino, size, mtimeNs, ctimeNs} = await stat(route.url,{bigint:true});
+  const version = `${ino}:${size}:${mtimeNs}:${ctimeNs}`;
+  if (route.cached?.version === version) return route.cached;
+  const body = await readFile(route.url);
+  route.cached = {
+    version, type:route.type, body,
     etag:`"${createHash('sha256').update(body).digest('base64url').slice(0,22)}"`,
-    br:brotliCompressSync(body,{params:{[zlib.BROTLI_PARAM_QUALITY]:11}}), gzip:gzipSync(body,{level:9}),
-  }];
-})));
+    br:brotliCompressSync(body,{params:{[zlib.BROTLI_PARAM_QUALITY]:5}}), gzip:gzipSync(body),
+  };
+  return route.cached;
+}
 
 async function readLiveNews() {
   const payload = await readRss();
@@ -78,17 +95,24 @@ let lastLive = {fingerprint:null,events:[]};
 async function buildFeed(mode) {
   const sources = await Promise.all(Object.entries(feeds).map(([kind,path]) => getFeed(kind,path,mode)));
   let events;
+  let presentationPending = 0;
   if (mode === 'live') {
-    const fingerprint = createHash('sha256').update(JSON.stringify(sources.map(source=>source.records.map(record=>[record.id,record.time.value,record.title,record.summary])))).digest('hex');
+    const fingerprint = createHash('sha256').update(JSON.stringify(sources.map(source=>source.records.map(record=>
+      [record.id,record.time.value,record.title,record.summary,record.region,record.geoAnchors])))).digest('hex');
     if (fingerprint !== lastLive.fingerprint) {
-      const annotated = (await eventStore.update(buildEvents(sources,mode,findPlaces))).map(event=>network.annotate(event));
+      const annotated = (await eventStore.update(buildEvents(sources,mode,findPlaces))).map(present);
       lastLive = {fingerprint,events:annotated};
     }
-    events = lastLive.events;
-  } else events = buildEvents(sources,mode,findPlaces).map(event=>network.annotate(event));
+    // Only queues events still missing a presentation; the response never waits for the model.
+    const ids = lastLive.events.map(event=>event.id);
+    presenter.schedule(ids);
+    presentationPending = presenter.pending(ids);
+    events = lastLive.events.map(withPresentation);
+  } else events = buildEvents(sources,mode,findPlaces).map(present);
   // Events carry every record they use; the full input batch would only bloat the response.
   const status = sources.map(({records,...source})=>({...source,recordCount:records.length}));
-  return {schemaVersion:'0.4',mode,liveSource:origin ? 'self-hosted' : 'rss',fetchedAt:new Date().toISOString(),sources:status,network:network.summary,events};
+  return {schemaVersion:'0.5',mode,liveSource:origin ? 'self-hosted' : 'rss',fetchedAt:new Date().toISOString(),sources:status,network:network.summary,regions,
+    ...(mode === 'live' && {presentationPending}),events};
 }
 
 function send(req, res, status, type, body, headers = {}) {
@@ -103,6 +127,38 @@ const server = createServer(async (req,res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
     const json = 'application/json; charset=utf-8';
+    if (url.pathname === '/api/model-settings') {
+      const reply = (status, value) => send(req,res,status,json,Buffer.from(JSON.stringify(value)),{'cache-control':'no-store'});
+      const host = req.headers.host ?? '';
+      if (!/^(?:127\.0\.0\.1|localhost)(?::\d+)?$/i.test(host) ||
+          (req.headers.origin && req.headers.origin !== 'http://'+host)) {
+        reply(403,{error:'仅可从本机雷达页面修改模型配置。'}); return;
+      }
+      if (req.method === 'GET') {reply(200,modelSettings.describe()); return;}
+      if (req.method !== 'PUT') {reply(405,{error:'不支持的请求。'}); return;}
+      if (req.headers['content-type']?.split(';')[0] !== 'application/json') {
+        reply(415,{error:'模型配置需要 JSON。'}); return;
+      }
+      try {
+        let body = '';
+        for await (const chunk of req) {
+          body += chunk;
+          if (body.length > 8192) throw Error('配置过长。');
+        }
+        const result = await modelSettings.update(JSON.parse(body));
+        // A newly enabled model picks up events still showing source headlines.
+        presenter.schedule(lastLive.events.map(event=>event.id));
+        reply(200,result);
+      } catch (error) {
+        const message = error instanceof SyntaxError ? '无法读取模型配置。'
+          : error.code ? '无法保存模型配置。' : error.message;
+        reply(400,{error:message});
+      }
+      return;
+    }
+    if (url.pathname === '/api/network') {
+      send(req,res,200,json,Buffer.from(JSON.stringify(network.snapshot)),{'cache-control':'no-store'}); return;
+    }
     if (url.pathname === '/api/feed') {
       const mode = url.searchParams.get('mode') === 'live' ? 'live' : 'sample';
       let result;
@@ -115,10 +171,12 @@ const server = createServer(async (req,res) => {
     const eventPath = url.pathname.match(/^\/api\/events\/(evt_[a-f0-9-]+)$/);
     if (eventPath) {
       const event = eventStore.get(eventPath[1]);
-      send(req,res,event ? 200 : 404,json,Buffer.from(JSON.stringify(event ? network.annotate(event) : {error:'event_not_found'})),{'cache-control':'no-store'}); return;
+      const result = event ? applyPresentation(present(event),event.presentation) : null;
+      send(req,res,event ? 200 : 404,json,Buffer.from(JSON.stringify(result ?? {error:'event_not_found'})),{'cache-control':'no-store'}); return;
     }
-    const asset = routes.get(url.pathname);
-    if (!asset) {res.writeHead(404); res.end('Not found'); return;}
+    const route = routes.get(url.pathname);
+    if (!route) {res.writeHead(404); res.end('Not found'); return;}
+    const asset = await readAsset(route);
     const headers = {'content-type':asset.type,etag:asset.etag,'cache-control':'no-cache',vary:'accept-encoding'};
     if (req.headers['if-none-match'] === asset.etag) {res.writeHead(304,headers); res.end(); return;}
     const accepts = req.headers['accept-encoding'] ?? '';
