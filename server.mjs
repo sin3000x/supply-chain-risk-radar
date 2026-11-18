@@ -7,7 +7,7 @@ import {feeds, normalize} from './feed.mjs';
 import {openEventStore} from './event-store.mjs';
 import {buildEvents} from './events.mjs';
 import {applyPresentation, presentEvent} from './event-presentation.mjs';
-import {createPresentationQueue} from './model-presentation.mjs';
+import {createForecastTranslator, createPresentationQueue} from './model-presentation.mjs';
 import {openModelSettings} from './model-settings.mjs';
 import {loadNetwork} from './network.mjs';
 import {createEventLocator, regions} from './geography.mjs';
@@ -25,7 +25,28 @@ const modelSettings = await openModelSettings();
 const eventStore = await openEventStore(process.env.EVENT_STORE_PATH || fileURLToPath(new URL('./var/events.json',import.meta.url)),findPlaces);
 // Chinese event titles and progress are written in the background and stored with each event.
 const presenter = createPresentationQueue({store:eventStore,getProfile:()=>modelSettings.read()});
-const withPresentation = event => applyPresentation(event,eventStore.get(event.id)?.presentation);
+const forecastTranslator = await createForecastTranslator({
+  getProfile: () => modelSettings.read(),
+  cachePath: process.env.MARKET_TRANSLATIONS_PATH || fileURLToPath(new URL('./var/market-translations.json',import.meta.url)),
+});
+function withPresentation(event) {
+  let result = applyPresentation(event,eventStore.get(event.id)?.presentation);
+  if (!result.records?.some(record => record.kind === 'forecast')) return result;
+  let changed = false;
+  const records = result.records.map(record => {
+    if (record.kind !== 'forecast') return record;
+    const zh = forecastTranslator.get(record.title);
+    if (!zh) return record;
+    changed = true;
+    return {...record,title:zh};
+  });
+  if (!changed) return result;
+  result = {...result,records};
+  if (!result.displayTitle && records.length === 1 && records[0].kind === 'forecast') {
+    result.displayTitle = records[0].title;
+  }
+  return result;
+}
 const origin = process.env.WM_BASE_URL;
 const key = process.env.WM_API_KEY;
 const readRss = createFeedReader();
@@ -114,8 +135,11 @@ async function buildFeed(mode) {
     }
     // Only queues events still missing a presentation; the response never waits for the model.
     const ids = lastLive.events.map(event=>event.id);
+    const forecastTitles = lastLive.events.flatMap(event =>
+      event.records.filter(record => record.kind === 'forecast').map(record => record.title));
     presenter.schedule(ids);
-    presentationPending = presenter.pending(ids);
+    forecastTranslator.schedule(forecastTitles);
+    presentationPending = presenter.pending(ids) + forecastTranslator.pending(forecastTitles);
     events = lastLive.events.map(withPresentation);
   } else events = buildEvents(sources,mode,findPlaces).map(present);
   // Events carry every record they use; the full input batch would only bloat the response.
@@ -183,7 +207,7 @@ const server = createServer(async (req,res) => {
     const eventPath = url.pathname.match(/^\/api\/events\/(evt_[a-f0-9-]+)$/);
     if (eventPath) {
       const event = eventStore.get(eventPath[1]);
-      const result = event ? applyPresentation(present(event),event.presentation) : null;
+      const result = event ? withPresentation(present(event)) : null;
       send(req,res,event ? 200 : 404,json,Buffer.from(JSON.stringify(result ?? {error:'event_not_found'})),{'cache-control':'no-store'}); return;
     }
     const route = routes.get(url.pathname);

@@ -1,4 +1,6 @@
-import {createHash} from 'node:crypto';
+import {createHash, randomUUID} from 'node:crypto';
+import {mkdir, readFile, rename, writeFile} from 'node:fs/promises';
+import {dirname} from 'node:path';
 import {canUseModel} from './model-settings.mjs';
 import {eventReports} from './event-presentation.mjs';
 
@@ -11,6 +13,9 @@ export const CREATE_PROMPT = `你为供应链风险雷达撰写事件卡的简�
 只返回 JSON，例如 {"title":"某机场暂停航班起飞","titleQuote":"原文","update":{"text":"航班已恢复起飞","at":"2026-11-13","report":1,"quote":"原文"}}`;
 export const UPDATE_PROMPT = `你为供应链风险雷达更新事件卡的简体中文最新进展。[0] 号报道是事件起点，只作背景；已知进展之后没有新变化时 update 为 null。${rules}
 只返回 JSON，例如 {"update":{"text":"航班已恢复起飞","at":"2026-11-13T12:00Z","report":1,"quote":"原文"}}`;
+export const TRANSLATE_FORECAST_PROMPT = `你将供应链与地缘政治预测市场的问题标题翻译为简洁自然的简体中文。
+保留专有名词、人名、地名、机构、货币和日期的准确含义，不要扩写或添加解释。
+输入是一个 JSON 字符串数组，按原顺序返回 JSON 对象 {"translations":["..."]}，数组长度必须与输入一致。`;
 
 const MAX_FOLLOW_UPS = 3;
 const MAX_ATTEMPTS = 2;
@@ -122,7 +127,7 @@ function createClient({apiKey,baseUrl,modelId}, fetchImpl) {
   const openAI = hostname === 'api.openai.com';
   const reasoning = openAI && /^(o\d|gpt-5)/i.test(modelId);
   const deepSeek = hostname === 'api.deepseek.com';
-  return async function complete(mode, system, user) {
+  return async function complete(mode, system, user, {maxTokens = 300} = {}) {
     let response;
     try {
       response = await fetchImpl(baseUrl + '/chat/completions',{
@@ -136,7 +141,7 @@ function createClient({apiKey,baseUrl,modelId}, fetchImpl) {
           // Reasoning tokens count toward the completion limit; keep them small but leave room.
           ...(reasoning && {reasoning_effort:'low'}),
           response_format:{type:'json_object'},
-          [openAI ? 'max_completion_tokens' : 'max_tokens']:reasoning ? 2000 : 300,
+          [openAI ? 'max_completion_tokens' : 'max_tokens']:reasoning ? Math.max(maxTokens,2000) : maxTokens,
           messages:[{role:'system',content:system},{role:'user',content:user}],
         }),
       });
@@ -251,6 +256,127 @@ export function createPresentationQueue({store, getProfile, concurrency = 2, fet
     /** Resolves once no call is running. */
     async idle() {
       while (active.size) await Promise.allSettled([...active.values()]);
+    },
+  };
+}
+
+/**
+ * Translates English forecast market questions to Chinese in the background and caches results
+ * on disk so restarts do not re-translate the same markets.
+ */
+export async function createForecastTranslator({getProfile, cachePath = null, fetchImpl = fetch, now = Date.now}) {
+  const MAX_CACHE = 500;
+  const BATCH_SIZE = 20;
+  const cache = new Map();
+  const attempts = new Map();
+  const queued = new Set();
+  const clients = new WeakMap();
+  let running = null;
+  let pausedUntil = 0, pause = 0, pausedProfile = null, timer = null;
+
+  if (cachePath) {
+    try {
+      const saved = JSON.parse(await readFile(cachePath,'utf8'));
+      if (saved && typeof saved === 'object') {
+        for (const [k,v] of Object.entries(saved)) {
+          if (typeof v === 'string' && containsHan(v)) cache.set(k,v);
+        }
+      }
+    } catch (error) {
+      if (error.code !== 'ENOENT') console.warn('Forecast translation cache load failed:',error.message);
+    }
+  }
+
+  async function saveCache() {
+    if (!cachePath) return;
+    await mkdir(dirname(cachePath),{recursive:true});
+    const temp = `${cachePath}.${randomUUID()}.tmp`;
+    await writeFile(temp,JSON.stringify(Object.fromEntries(cache),null,2));
+    await rename(temp,cachePath);
+  }
+
+  const ready = () => canUseModel(getProfile());
+  const needsWork = title => typeof title === 'string' && /[a-z]{2}/i.test(title) && !containsHan(title)
+    && !cache.has(title) && (attempts.get(title) ?? 0) < MAX_ATTEMPTS;
+
+  function wake(at) {
+    if (timer) return;
+    timer = setTimeout(() => {timer = null; pump();},Math.max(0,at - now()));
+    timer.unref?.();
+  }
+
+  async function translateBatch(batch, profile) {
+    if (!clients.has(profile)) clients.set(profile,createClient(profile,fetchImpl));
+    const data = await clients.get(profile)('forecast',TRANSLATE_FORECAST_PROMPT,JSON.stringify(batch),{maxTokens:1500});
+    const list = data?.translations;
+    if (!Array.isArray(list) || list.length !== batch.length) throw new ResponseError('translation count mismatch');
+    let changed = false;
+    for (let i = 0; i < batch.length; i++) {
+      const zh = typeof list[i] === 'string' ? list[i].trim() : '';
+      if (containsHan(zh) && zh.length <= 120) {
+        if (cache.size >= MAX_CACHE) cache.delete(cache.keys().next().value);
+        cache.set(batch[i],zh);
+        attempts.delete(batch[i]);
+        changed = true;
+      } else {
+        attempts.set(batch[i],(attempts.get(batch[i]) ?? 0) + 1);
+      }
+    }
+    if (changed) await saveCache().catch(err => console.warn('Forecast translation cache save failed:',err.message));
+  }
+
+  function pump() {
+    if (running || !ready() || !queued.size) return;
+    if (getProfile() !== pausedProfile) pausedUntil = 0;
+    if (now() < pausedUntil) {wake(pausedUntil); return;}
+    const batch = [];
+    for (const title of queued) {
+      queued.delete(title);
+      if (needsWork(title)) batch.push(title);
+      if (batch.length >= BATCH_SIZE) break;
+    }
+    if (!batch.length) return;
+    const profile = getProfile();
+    running = translateBatch(batch,profile).then(() => {
+      pause = 0;
+    }, error => {
+      if (error instanceof TransportError) {
+        pause = Math.min(MAX_PAUSE_MS,pause ? pause * 2 : RETRY_MS);
+        pausedUntil = now() + pause;
+        pausedProfile = profile;
+        for (const title of batch) queued.add(title);
+        console.warn('Forecast translation unavailable:',error.message);
+      } else {
+        for (const title of batch) attempts.set(title,(attempts.get(title) ?? 0) + 1);
+        console.warn('Forecast translation rejected:',error.message);
+      }
+    }).finally(() => {
+      running = null;
+      pump();
+    });
+  }
+
+  return {
+    get(title) {
+      return cache.get(title) ?? null;
+    },
+    schedule(titles) {
+      for (const title of titles) if (needsWork(title)) queued.add(title);
+      pump();
+    },
+    pending(titles) {
+      if (!ready()) return 0;
+      const seen = new Set();
+      let count = 0;
+      for (const title of titles) {
+        if (seen.has(title)) continue;
+        seen.add(title);
+        if (needsWork(title)) count++;
+      }
+      return count;
+    },
+    async idle() {
+      while (running) await running;
     },
   };
 }

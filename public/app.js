@@ -94,6 +94,23 @@ function drawMap() {
   ctx.setTransform(1,0,0,1,0,0);
   ctx.clearRect(0,0,w,h);
   ctx.setTransform(scale,0,0,h / BASE_H,0,0);
+  const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--grid-line').trim();
+  if (gridColor) {
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 0.5 * ratio / scale;
+    ctx.beginPath();
+    for (let lon = -150; lon <= 150; lon += 30) {
+      const [x] = project(lon,0);
+      ctx.moveTo(x * BASE_W,0);
+      ctx.lineTo(x * BASE_W,BASE_H);
+    }
+    for (let lat = -60; lat <= 60; lat += 30) {
+      const [,y] = project(0,lat);
+      ctx.moveTo(0,y * BASE_H);
+      ctx.lineTo(BASE_W,y * BASE_H);
+    }
+    ctx.stroke();
+  }
   ctx.fillStyle = style.color;
   ctx.strokeStyle = style.borderTopColor;
   ctx.lineWidth = 0.6 * ratio / scale;

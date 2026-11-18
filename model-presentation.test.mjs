@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {buildEvents} from './events.mjs';
 import {openEventStore} from './event-store.mjs';
 import {applyPresentation,presentEvent} from './event-presentation.mjs';
-import {CREATE_PROMPT,UPDATE_PROMPT,createPresentationQueue,planRequest} from './model-presentation.mjs';
+import {CREATE_PROMPT,UPDATE_PROMPT,createForecastTranslator,createPresentationQueue,planRequest} from './model-presentation.mjs';
 
 const profile = {baseUrl:'https://llm.example/v1',modelId:'test-model',apiKey:'k'};
 const article = (id,title,time,summary) => ({id:'rss:https://news.example/'+id,kind:'news',title,summary,time:{value:time},source:{}});
@@ -137,4 +137,62 @@ test('provider errors pause the queue without giving up', async t => {
   queue.schedule([event.id]);
   await settle();
   assert.equal(store.get(event.id).presentation.title,'美国全国航班地面停飞');
+});
+
+test('forecast translator batches English questions, caches to disk, and survives restarts', async t => {
+  const directory = await mkdtemp(join(tmpdir(),'forecast-trans-'));
+  t.after(() => rm(directory,{recursive:true,force:true}));
+  const cachePath = join(directory,'market-translations.json');
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls++;
+    return new Response(JSON.stringify({
+      choices:[{message:{content:JSON.stringify({translations:[
+        '2026年美中关税是否会进一步上调？',
+        '霍尔木兹海峡今年是否会关闭？',
+      ]})}}],
+    }),{status:200,headers:{'content-type':'application/json'}});
+  };
+
+  const titles = [
+    'Will US raise China tariffs in 2026?',
+    'Will Strait of Hormuz close this year?',
+    '已有中文标题',
+  ];
+  const translator = await createForecastTranslator({getProfile:() => profile,cachePath,fetchImpl});
+  assert.equal(translator.pending(titles),2);
+  translator.schedule(titles);
+  await translator.idle();
+  assert.equal(calls,1);
+  assert.equal(translator.pending(titles),0);
+  assert.equal(translator.get(titles[0]),'2026年美中关税是否会进一步上调？');
+  assert.equal(translator.get(titles[1]),'霍尔木兹海峡今年是否会关闭？');
+  assert.equal(translator.get(titles[2]),null);
+
+  // A new instance loads the cached translations without calling the model again.
+  const reloaded = await createForecastTranslator({getProfile:() => profile,cachePath,fetchImpl});
+  assert.equal(reloaded.pending(titles),0);
+  assert.equal(reloaded.get(titles[0]),'2026年美中关税是否会进一步上调？');
+  assert.equal(calls,1);
+});
+
+test('forecast translator stops retrying after invalid replies', async () => {
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls++;
+    return new Response(JSON.stringify({
+      choices:[{message:{content:JSON.stringify({translations:['not chinese']})}}],
+    }),{status:200,headers:{'content-type':'application/json'}});
+  };
+  const translator = await createForecastTranslator({getProfile:() => profile,fetchImpl});
+  const titles = ['Will Red Sea shipping resume?'];
+  translator.schedule(titles);
+  await translator.idle();
+  translator.schedule(titles);
+  await translator.idle();
+  translator.schedule(titles);
+  await translator.idle();
+  assert.equal(calls,2);
+  assert.equal(translator.pending(titles),0);
+  assert.equal(translator.get(titles[0]),null);
 });
