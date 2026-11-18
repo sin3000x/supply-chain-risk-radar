@@ -165,6 +165,9 @@ const server = createServer(async (req,res) => {
       }
       return;
     }
+    if (url.pathname === '/api/health') {
+      send(req,res,200,json,Buffer.from(JSON.stringify({ok:true,uptime:Math.round(process.uptime())})),{'cache-control':'no-store'}); return;
+    }
     if (url.pathname === '/api/network') {
       send(req,res,200,json,Buffer.from(JSON.stringify(network.snapshot)),{'cache-control':'no-store'}); return;
     }
@@ -197,5 +200,22 @@ const server = createServer(async (req,res) => {
     res.end('Server error');
   }
 });
-const port = Number(process.env.PORT || 4179);
-server.listen(port,'127.0.0.1',()=>console.log(`Supply Chain Risk Radar: http://127.0.0.1:${port}`));
+function readArg(name) {
+  const index = process.argv.indexOf(name);
+  if (index !== -1 && index + 1 < process.argv.length) return process.argv[index + 1];
+  const prefix = `${name}=`;
+  return process.argv.find(arg => arg.startsWith(prefix))?.slice(prefix.length);
+}
+const host = readArg('--host') || process.env.HOST || '127.0.0.1';
+const port = Number(readArg('--port') || process.env.PORT || 4179);
+server.listen(port,host,()=>console.log(`Supply Chain Risk Radar: http://${host}:${port}`));
+
+function shutdown(signal) {
+  console.log(`Received ${signal}, shutting down...`);
+  const forceExit = setTimeout(()=>process.exit(1),8000);
+  forceExit.unref();
+  server.close(()=>{clearTimeout(forceExit); process.exit(0);});
+  server.closeIdleConnections?.();
+}
+process.on('SIGINT',()=>shutdown('SIGINT'));
+process.on('SIGTERM',()=>shutdown('SIGTERM'));
