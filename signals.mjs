@@ -168,6 +168,62 @@ function parseWmoDate(value) {
   return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
 }
 
+const WMO_URGENCY = { 4: '立即', 3: '预期', 2: '未来', 1: '已过去' };
+const WMO_CERTAINTY = { 4: '已观测', 3: '很可能', 2: '可能', 1: '不太可能' };
+const WMO_HAZARD_RULES = [
+  [/flash\s*flood/i, '山洪'],
+  [/coastal\s*flood/i, '沿海洪水'],
+  [/flood/i, '洪水'],
+  [/wind\s+and\s+waves/i, '大风巨浪'],
+  [/heavy\s+freezing\s+spray/i, '强冰冻浪花'],
+  [/winter\s+storm/i, '冬季风暴'],
+  [/blizzard/i, '暴风雪'],
+  [/high\s+wind|strong\s+gale|violent\s+storm\s+gusts|severe\s+wind/i, '强风'],
+  [/storm/i, '风暴'],
+  [/freezing\s+rain|icing/i, '冻雨结冰'],
+  [/freeze/i, '霜冻'],
+  [/snowfall|snow/i, '强降雪'],
+  [/dense\s+fog|fog/i, '大雾'],
+  [/heavy.*rain|orange\s+rain|aviso\s+de\s+lluvias|rain/i, '强降雨'],
+  [/thunderstorm|tormenta/i, '雷暴'],
+  [/landslide/i, '山体滑坡'],
+  [/forest\s*fire|fire\s+weather|red\s+flag/i, '森林火险'],
+  [/extreme\s+heat|canicule/i, '极端高温'],
+  [/avalanch/i, '雪崩'],
+  [/coastal|costeros/i, '沿海灾害'],
+  [/special\s+marine/i, '海上危险天气'],
+  [/severe\s+weather/i, '恶劣天气'],
+  [/wind/i, '大风'],
+];
+
+const isGenericWmoHeadline = value => !value || /^(cap\s*alert|aviso\s*cap|alert|warning)$/i.test(value.trim());
+
+function formatWmoHazard(event, headline) {
+  const raw = (event && !/^(awareness_type=|other\s+dangers$)/i.test(event.trim()))
+    ? event.trim()
+    : (!isGenericWmoHeadline(headline) ? headline.trim() : '');
+  for (const [pattern, label] of WMO_HAZARD_RULES) {
+    if (pattern.test(raw)) return label;
+  }
+  return raw || '恶劣天气';
+}
+
+function buildWmoSummary(item, expiresIso) {
+  const parts = [];
+  if (item.event) parts.push(`类型：${item.event}`);
+  if (!isGenericWmoHeadline(item.headline) && item.headline !== item.event) {
+    parts.push(`说明：${item.headline}`);
+  }
+  if (WMO_URGENCY[item.u]) parts.push(`紧迫度：${WMO_URGENCY[item.u]}`);
+  if (WMO_CERTAINTY[item.c]) parts.push(`确定性：${WMO_CERTAINTY[item.c]}`);
+  if (item.areaDesc) {
+    const area = item.areaDesc.length > 180 ? `${item.areaDesc.slice(0, 178)}…` : item.areaDesc;
+    parts.push(`影响区域：${area}`);
+  }
+  if (expiresIso) parts.push(`有效至 ${expiresIso.slice(0, 16).replace('T', ' ')} UTC`);
+  return parts.join('｜') || null;
+}
+
 export function parseWmoAlerts(payload, findPlaces, nowMs = Date.now()) {
   const items = Array.isArray(payload?.items) ? payload.items : [];
   const seen = new Set();
@@ -190,13 +246,15 @@ export function parseWmoAlerts(payload, findPlaces, nowMs = Date.now()) {
     const sentIso = parseWmoDate(item.sent ?? item.effective) ?? new Date(nowMs).toISOString();
     const severity = item.s >= 4 ? 'HIGH' : 'MEDIUM';
     const levelLabel = item.s >= 4 ? '极端' : '严重';
+    const hazardLabel = formatWmoHazard(item.event, item.headline);
     const rawArea = item.areaDesc || primaryNode;
     const areaLabel = rawArea.length > 50 ? rawArea.slice(0, 48) + '…' : rawArea;
+    const relUrl = item.url || item.capURL;
     signals.push({
       id: `signal:wmo:${item.id || dedupKey}`,
       kind: 'signal',
-      title: `${levelLabel}气象预警：${item.headline || item.event}（${areaLabel}）`,
-      summary: null,
+      title: `${levelLabel}气象预警：${hazardLabel}（${areaLabel}）`,
+      summary: buildWmoSummary(item, expiresIso),
       region: null,
       geoAnchors: places.slice(0, 3),
       category: 'WEATHER_EXTREME',
@@ -207,7 +265,7 @@ export function parseWmoAlerts(payload, findPlaces, nowMs = Date.now()) {
         endpoint: null,
         upstreamId: item.id || dedupKey,
         publisher: 'WMO 气象预警',
-        url: item.url ? `https://severeweather.wmo.int/${item.url.replace(/^\//, '')}` : 'https://severeweather.wmo.int/',
+        url: relUrl ? `https://severeweather.wmo.int/${relUrl.replace(/^\//, '')}` : 'https://severeweather.wmo.int/',
       },
       evidence: { contributingTypes: ['官方天气预警'], severity },
       forecast: null,

@@ -30,13 +30,29 @@ test('parseWmoAlerts filters severe unexpired alerts matching network nodes', ()
   const signals = parseWmoAlerts({
     items: [
       { id: '1', event: 'Wind', headline: 'Minor wind in Rotterdam', s: 1, sent: '2026-11-17 12:00:00', expires: '2026-11-19 12:00:00' },
-      { id: '2', event: 'Storm', headline: 'Severe storm in Rotterdam', areaDesc: 'Rotterdam', s: 4, sent: '2026-11-17 12:00:00', expires: '2026-11-19 12:00:00' },
+      {
+        id: '2',
+        event: 'Flash flood probability watch',
+        headline: 'CAP Alert',
+        areaDesc: 'Rotterdam port area',
+        s: 4,
+        u: 2,
+        c: 3,
+        capURL: 'nl-knmi/2026/11/17/alert.xml',
+        sent: '2026-11-17 12:00:00',
+        expires: '2026-11-19 12:00:00',
+      },
       { id: '3', event: 'Flood', headline: 'Severe flood in Nowhere', areaDesc: 'Nowhere', s: 3, sent: '2026-11-17 12:00:00', expires: '2026-11-19 12:00:00' },
     ],
   }, findPlaces, now);
   assert.equal(signals.length, 1);
   assert.equal(signals[0].geoAnchors[0], 'PORT_ROTTERDAM');
   assert.equal(signals[0].evidence.severity, 'HIGH');
+  assert.match(signals[0].title, /^极端气象预警：山洪（Rotterdam port area）$/);
+  assert.match(signals[0].summary, /Flash flood probability watch/);
+  assert.match(signals[0].summary, /紧迫度：未来/);
+  assert.match(signals[0].summary, /确定性：很可能/);
+  assert.equal(signals[0].source.url, 'https://severeweather.wmo.int/nl-knmi/2026/11/17/alert.xml');
 });
 
 test('normalizePolymarketEvents extracts relevant supply-chain probabilities', () => {
