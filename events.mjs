@@ -39,6 +39,18 @@ function findMatchingEvent(record, newsEvents, findPlaces) {
   return best;
 }
 
+function signalMeta(record) {
+  const topic = record.topic ?? (
+    record.id?.startsWith('signal:wmo:') || record.source?.provider === 'WMO' ? 'natural_hazard'
+      : record.id?.startsWith('signal:portwatch:') || record.source?.provider === 'IMF PortWatch' ? 'transport_disruption'
+        : null
+  );
+  return {
+    ...(topic && { topic }),
+    routeRelevant: topic ? routeTopics.has(topic) : true,
+  };
+}
+
 export function buildEvents(sources, mode, findPlaces = () => []) {
   const events = new Map();
   const newsIndex = [];
@@ -67,11 +79,14 @@ export function buildEvents(sources, mode, findPlaces = () => []) {
         matched.records.push(record);
         continue;
       }
+      // Forecasts without a matching news event are market expectations, not observed disruptions.
+      if (record.kind === 'forecast') continue;
     }
     const linked = mode === 'sample' && strikeRecords.has(record.kind + ':' + record.source.upstreamId);
     const event = linked ? sampleStrike : {
       id:eventId(mode,record.id),title:record.title,region:record.region ?? null,
       ...(record.geoAnchors?.length && {geoAnchors:record.geoAnchors}),
+      ...(record.kind === 'signal' && signalMeta(record)),
     };
     if (!events.has(event.id)) events.set(event.id, {...event, records:[]});
     events.get(event.id).records.push(record);

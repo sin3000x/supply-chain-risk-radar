@@ -129,3 +129,48 @@ test('buildEvents attaches matching live signals and forecasts to news events', 
   assert.equal(events[0].records.length, 3);
   assert.deepEqual(events[0].records.map(r => r.kind).sort(), ['forecast', 'news', 'signal']);
 });
+
+test('buildEvents drops unmatched live forecasts and classifies standalone signals', () => {
+  const events = buildEvents([
+    {
+      kind: 'signal',
+      records: [
+        {
+          id: 'signal:portwatch:CP_HORMUZ:2026-11-18',
+          kind: 'signal',
+          title: '霍尔木兹海峡船舶通行量异动',
+          geoAnchors: ['CP_HORMUZ'],
+          time: { kind: 'detected', value: '2026-11-18T00:00:00.000Z' },
+          source: { provider: 'IMF PortWatch' },
+        },
+        {
+          id: 'signal:wmo:flood-1',
+          kind: 'signal',
+          title: '极端气象预警：山洪',
+          geoAnchors: ['PORT_ROTTERDAM'],
+          time: { kind: 'detected', value: '2026-11-18T01:00:00.000Z' },
+          source: { provider: 'WMO' },
+        },
+      ],
+    },
+    {
+      kind: 'forecast',
+      records: [{
+        id: 'forecast:polymarket:tariffs',
+        kind: 'forecast',
+        title: 'US tariffs on China above 60% in 2026?',
+        geoAnchors: ['CITY_SZ'],
+        time: { kind: 'updated', value: '2026-11-18T02:00:00.000Z' },
+        source: { provider: 'Polymarket' },
+      }],
+    },
+  ], 'live');
+
+  assert.equal(events.length, 2);
+  const portwatch = events.find(e => e.id.startsWith('evt_') && e.records[0].id.includes('portwatch'));
+  const wmo = events.find(e => e.id.startsWith('evt_') && e.records[0].id.includes('wmo'));
+  assert.equal(portwatch.topic, 'transport_disruption');
+  assert.equal(portwatch.routeRelevant, true);
+  assert.equal(wmo.topic, 'natural_hazard');
+  assert.equal(wmo.routeRelevant, true);
+});

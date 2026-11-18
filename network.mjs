@@ -6,6 +6,20 @@ const levels = {must:'所有候选路径经过',main:'所有主要路径经过�
 const types = new Set(['port','airport','chokepoint','sea_area','city']);
 const fold = text => String(text ?? '').normalize('NFKC').toLowerCase();
 const escape = text => text.replace(/[.*+?^$(){}|[\]\\]/g, '\\$&');
+const AIR_SUBJECT = /\b(airports?|flights?|airspace|ground stop|airline\w*)\b/i;
+const SEA_SUBJECT = /\b(ports?|shipping|vessels?|tankers?|maritime|dockworkers?|container\w*)\b/i;
+const RAIL_SUBJECT = /\b(railways?|trains?|rail)\b/i;
+
+function allowedModes(event, text) {
+  if (event.topic === 'maritime_security') return new Set(['sea']);
+  if (event.topic !== 'transport_disruption') return null;
+  const matched = [
+    AIR_SUBJECT.test(text) && 'air',
+    SEA_SUBJECT.test(text) && 'sea',
+    RAIL_SUBJECT.test(text) && 'rail',
+  ].filter(Boolean);
+  return matched.length === 1 ? new Set(matched) : null;
+}
 
 export async function loadNetwork(directory, label) {
   const [nodes, {lanes, meta}] = await Promise.all(['nodes.json','lanes.json'].map(async file =>
@@ -57,11 +71,13 @@ export async function loadNetwork(directory, label) {
     },
     annotate(event) {
       if (event.routeRelevant === false) return {...event,networkMatches:[]};
-      const {explicit,nodes} = matchPlaces([event.title,event.summary,event.region,...event.records.filter(r=>r.role !== 'background')
-        .flatMap(r=>event.topic ? [r.title,r.region] : [r.title,r.summary,r.region])].join(' '), event.geoAnchors);
+      const text = [event.title,event.summary,event.region,...(event.records ?? []).filter(r=>r.role !== 'background')
+        .flatMap(r=>event.topic ? [r.title,r.region] : [r.title,r.summary,r.region])].join(' ');
+      const {explicit,nodes} = matchPlaces(text, event.geoAnchors);
+      const modeFilter = allowedModes(event, text);
       return {...event,networkMatches:nodes.map(node=>({
         nodeId:node.id,nodeName:node.name_zh,nodeType:node.type,basis:explicit ? 'event_anchor' : 'place_mention',
-        routes:index.get(node.id) ?? [],
+        routes:(index.get(node.id) ?? []).filter(route=>!modeFilter || modeFilter.has(route.mode)),
       })).filter(match=>match.routes.length)};
     },
   };

@@ -359,7 +359,9 @@ function render() {
   if (!data) {el('stats').replaceChildren(); return;}
   const selectedRegion = regionControl.value;
   const list = rows.filter(row => !selectedRegion || row.geo.region === selectedRegion);
-  if (el('sort').value === 'routes') list.sort((a,b) => b.lanes.size - a.lanes.size);
+  if (el('sort').value === 'routes') {
+    list.sort((a,b) => Number(a.event.action === 'reopening') - Number(b.event.action === 'reopening') || b.lanes.size - a.lanes.size);
+  }
   el('export').disabled = !list.length;
   renderStats(list.map(row => row.event));
   if (!list.length) {add(items,'p','没有匹配的事件。','empty'); return;}
@@ -477,6 +479,7 @@ function renderEvent(parent, {event, kinds, topic, dimension, lanes, reports}) {
   const metadata = add(headline,'span','','event-metadata');
   const category = topic ? topics[topic] : dimension === 'mixed' ? '多类信息' : labels[dimension];
   if (category) add(metadata,'span',category,'event-category');
+  if (event.action === 'reopening') add(metadata,'span','恢复/重开','event-action');
   if (kinds.length > 1) add(metadata,'span',kinds.map(kind => labels[kind]).join(' / '));
   if (reports > 1) add(metadata,'span',`${reports} 条记录`);
   if (event.corroborationCount > 1) add(metadata,'span',`${event.corroborationCount} 个独立来源`);

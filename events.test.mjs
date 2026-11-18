@@ -67,3 +67,28 @@ test('a shared phrase does not join incidents in different places or far apart i
   ]}],'live');
   assert.equal(events.length,4);
 });
+
+test('network.annotate narrows matched routes by transport mode', async () => {
+  const network = await loadNetwork(new URL('./data/',import.meta.url).pathname,'demo');
+  const airEvent = network.annotate({
+    title: 'Flights cancelled at Dubai airport after fog',
+    topic: 'transport_disruption',
+    routeRelevant: true,
+    records: [],
+  });
+  assert.ok(airEvent.networkMatches.length > 0);
+  for (const match of airEvent.networkMatches) {
+    assert.ok(match.routes.every(route => route.mode === 'air'));
+  }
+
+  const seaEvent = network.annotate({
+    title: 'Tanker attacked near Strait of Hormuz',
+    topic: 'maritime_security',
+    routeRelevant: true,
+    records: [],
+  });
+  assert.ok(seaEvent.networkMatches.length > 0);
+  for (const match of seaEvent.networkMatches) {
+    assert.ok(match.routes.every(route => route.mode === 'sea'));
+  }
+});
