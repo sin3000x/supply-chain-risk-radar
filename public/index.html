@@ -10,10 +10,37 @@
       <label><input type="radio" name="mode" value="sample" checked><span>样例</span></label>
       <label><input type="radio" name="mode" value="live"><span>实时</span></label>
     </div>
+    <button id="open-intake-settings" type="button" aria-label="采集配置">采集配置</button>
     <button id="open-model-settings" type="button" aria-label="模型配置">模型配置</button>
     <label class="theme-control"><span class="visually-hidden">主题</span><select id="theme" aria-label="主题"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></label>
   </div>
 </header>
+<dialog id="intake-settings" aria-labelledby="intake-settings-title">
+  <form id="intake-settings-form">
+    <h2 id="intake-settings-title">采集与时间窗配置</h2>
+    <p class="meta">自定义后端抓取时间窗、事件归并跨度及信号过滤阈值（保存后实时模式立即按新规则计算）。</p>
+    <label for="intake-google-news-days">Google News 抓取时间窗（天，0 = 沿用各源默认 1–7 天）</label>
+    <input id="intake-google-news-days" type="number" min="0" max="30" step="1" required>
+    <label for="intake-news-max-age">新闻最大保留时长（小时，0 = 不限制）</label>
+    <input id="intake-news-max-age" type="number" min="0" max="720" step="1" required>
+    <label for="intake-cluster-hours">同事件归并时间窗（小时，6–336）</label>
+    <input id="intake-cluster-hours" type="number" min="6" max="336" step="1" required>
+    <label for="intake-portwatch-days">PortWatch 航运对比窗口（天，3–30）</label>
+    <input id="intake-portwatch-days" type="number" min="3" max="30" step="1" required>
+    <label for="intake-portwatch-pct">PortWatch 通行量异动阈值（%，5–80）</label>
+    <input id="intake-portwatch-pct" type="number" min="5" max="80" step="1" required>
+    <label for="intake-market-horizon">预测市场到期上限（天，0 = 不限制）</label>
+    <input id="intake-market-horizon" type="number" min="0" max="730" step="1" required>
+    <label for="intake-market-volume">预测市场最低成交量（美元，1000–5000000）</label>
+    <input id="intake-market-volume" type="number" min="1000" max="5000000" step="1000" required>
+    <p id="intake-settings-status" class="meta" role="status"></p>
+    <div class="model-settings-actions">
+      <button id="close-intake-settings" type="button">关闭</button>
+      <button id="reset-intake-settings" type="button">恢复默认</button>
+      <button id="save-intake-settings" type="submit">保存</button>
+    </div>
+  </form>
+</dialog>
 <dialog id="model-settings" aria-labelledby="model-settings-title">
   <form id="model-settings-form">
     <h2 id="model-settings-title">模型配置</h2>
@@ -45,11 +72,34 @@
   <section class="toolbar" aria-label="数据筛选">
     <input id="search" type="search" placeholder="搜索事件、地点、线路或类别" aria-label="搜索">
     <select id="region" aria-label="区域"><option value="">全部区域</option></select>
+    <select id="time-window" aria-label="时间范围">
+      <option value="">全部时间</option>
+      <option value="24h">24 小时内</option>
+      <option value="72h">3 天内</option>
+      <option value="168h">7 天内</option>
+      <option value="720h">30 天内</option>
+      <option value="custom-hours">自定义时长…</option>
+      <option value="custom-dates">自定义日期…</option>
+    </select>
     <select id="sort" aria-label="排序"><option value="spatial">地理走廊</option><option value="newest">最新更新</option><option value="routes">关联线路最多</option></select>
     <button id="refresh" type="button">刷新</button>
     <button id="translate" type="button" aria-pressed="false" hidden>翻译成中文</button>
     <button id="export" type="button" disabled>导出 JSON</button>
   </section>
+  <div id="custom-time-bar" class="custom-time-bar" hidden>
+    <div id="custom-hours-group" class="custom-time-group" hidden>
+      <span>最近</span>
+      <input id="custom-time-value" type="number" min="1" max="8760" step="1" value="48" aria-label="自定义时长数值">
+      <select id="custom-time-unit" aria-label="自定义时长单位">
+        <option value="hours">小时内</option>
+        <option value="days">天内</option>
+      </select>
+    </div>
+    <div id="custom-dates-group" class="custom-time-group" hidden>
+      <label>从 <input id="custom-date-from" type="date" aria-label="开始日期"></label>
+      <label>至 <input id="custom-date-to" type="date" aria-label="结束日期"></label>
+    </div>
+  </div>
   <section class="summary" aria-label="概况">
     <dl id="stats"></dl>
     <p id="status" role="status"></p>
@@ -67,7 +117,7 @@
       <div id="risk-map"><canvas width="960" height="440" aria-hidden="true"></canvas><div id="map-markers"></div><div class="map-controls" role="group" aria-label="地图缩放控制"><button id="map-zoom-in" type="button" class="map-ctrl-btn" title="放大地图" aria-label="放大地图">+</button><button id="map-zoom-out" type="button" class="map-ctrl-btn" title="缩小地图" aria-label="缩小地图">−</button><button id="map-reset" type="button" class="map-ctrl-btn map-reset-btn" title="重置全球视图" hidden>重置</button></div></div>
       <p id="map-note"></p>
       <details id="sources" hidden>
-        <summary>数据来源</summary>
+        <summary id="sources-label">数据来源</summary>
         <ul id="source-status"></ul>
       </details>
     </aside>

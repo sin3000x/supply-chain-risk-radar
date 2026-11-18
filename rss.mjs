@@ -19,6 +19,39 @@ export const FEED_ERROR_RETRY_MS = 30_000;
 const USER_AGENT = 'SupplyChainRiskRadar/0.2';
 const isAggregator = url => new URL(url).hostname === 'news.google.com';
 
+/** Resolve effective feed URL, time window label, and human-readable query scope. */
+export function resolveFeedMeta(feed, {googleNewsWindowDays = 0} = {}) {
+  const parsed = new URL(feed.url);
+  if (parsed.hostname !== 'news.google.com') {
+    const host = parsed.hostname.replace(/^(www|feeds|rss)\./i, '');
+    return {
+      url: feed.url,
+      window: '直连 RSS',
+      defaultWindow: '直连 RSS',
+      scope: host,
+    };
+  }
+  const rawQ = parsed.searchParams.get('q') ?? '';
+  const defaultMatch = rawQ.match(/\bwhen:(\d+[dh])\b/i);
+  const defaultWindow = defaultMatch ? defaultMatch[1].toLowerCase() : '默认';
+  let effectiveUrl = feed.url;
+  let window = defaultWindow;
+  if (Number.isFinite(googleNewsWindowDays) && googleNewsWindowDays > 0) {
+    const nextWindow = `${Math.round(googleNewsWindowDays)}d`;
+    const nextQ = defaultMatch
+      ? rawQ.replace(/\bwhen:\d+[dh]\b/i, `when:${nextWindow}`)
+      : `${rawQ} when:${nextWindow}`.trim();
+    const cloned = new URL(feed.url);
+    cloned.searchParams.set('q', nextQ);
+    effectiveUrl = cloned.toString();
+    window = nextWindow;
+  }
+  const stripped = rawQ.replace(/\bwhen:\d+[dh]\b/gi, '').replace(/\s+/g, ' ').trim();
+  const unwrapped = stripped.replace(/^\(([^()]+)\)$/, '$1').trim();
+  const scope = (unwrapped.replace(/\s+OR\s+/g, ' / ') || 'Google News').trim();
+  return {url: effectiveUrl, window, defaultWindow, scope};
+}
+
 /** One feed body into digest-shaped items. Mirrors the per-item steps of upstream parseRssXml. */
 export function parseFeed(xml, feed) {
   const lower = asciiLower(xml);
@@ -75,6 +108,7 @@ export function createFeedReader(feeds = FEEDS, {
   refreshAfterMs = FEED_REFRESH_AFTER_MS,
   errorRetryMs = FEED_ERROR_RETRY_MS,
   now = Date.now,
+  getSettings = () => ({}),
 } = {}) {
   const cache = new Map();
   async function refresh(feed, force) {
@@ -98,12 +132,25 @@ export function createFeedReader(feeds = FEEDS, {
     return inFlight;
   }
   return async function read({force = false} = {}) {
-    const results = await Promise.all(feeds.map(feed => refresh(feed, force)));
+    const {googleNewsWindowDays = 0, newsMaxAgeHours = 0} = getSettings() ?? {};
+    const resolved = feeds.map(feed => ({feed, meta: resolveFeedMeta(feed, {googleNewsWindowDays})}));
+    const results = await Promise.all(resolved.map(({feed, meta}) => refresh({...feed, url: meta.url}, force)));
+    const cutoffMs = newsMaxAgeHours > 0 ? now() - newsMaxAgeHours * 3600_000 : null;
     const categories = {};
-    const feedStatus = feeds.map((feed, index) => {
+    const feedStatus = resolved.map(({feed, meta}, index) => {
       const {items, error} = results[index];
-      (categories[feed.category] ??= {items:[]}).items.push(...items);
-      return {name:feed.name, url:feed.url, category:feed.category, count:items.length, error};
+      const filteredItems = cutoffMs === null ? items : items.filter(item => item.publishedAt >= cutoffMs);
+      (categories[feed.category] ??= {items:[]}).items.push(...filteredItems);
+      return {
+        name: feed.name,
+        url: meta.url,
+        category: feed.category,
+        count: filteredItems.length,
+        error,
+        window: meta.window,
+        defaultWindow: meta.defaultWindow,
+        scope: meta.scope,
+      };
     });
     return {categories, feedStatus};
   };

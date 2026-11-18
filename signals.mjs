@@ -24,27 +24,29 @@ const toArcgisTimestamp = epochMs => `timestamp '${formatDay(epochMs)} 00:00:00'
 const mean = values => values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : null;
 const pctDelta = (current, base) => (base && Number.isFinite(current)) ? Math.round(((current - base) / base) * 1000) / 10 : null;
 
-export function buildPortWatchSignals(recentByNode, baselineByNode) {
+export function buildPortWatchSignals(recentByNode, baselineByNode, { windowDays = 7, thresholdPct = 15 } = {}) {
   const signals = [];
   for (const cp of CHOKEPOINTS) {
     const rows = (recentByNode.get(cp.nodeId) ?? []).sort((a, b) => b.date.localeCompare(a.date));
-    if (rows.length < 14) continue;
-    const thisWeek = mean(rows.slice(0, 7).map(r => r.total));
-    const lastWeek = mean(rows.slice(7, 14).map(r => r.total));
+    if (rows.length < windowDays * 2) continue;
+    const thisWindow = mean(rows.slice(0, windowDays).map(r => r.total));
+    const prevWindow = mean(rows.slice(windowDays, windowDays * 2).map(r => r.total));
     const baseline = baselineByNode.get(cp.nodeId) ?? null;
-    const wowPct = pctDelta(thisWeek, lastWeek);
-    const basePct = pctDelta(thisWeek, baseline);
-    if (Math.abs(basePct ?? 0) < 15 && Math.abs(wowPct ?? 0) < 15) continue;
+    const wowPct = pctDelta(thisWindow, prevWindow);
+    const basePct = pctDelta(thisWindow, baseline);
+    if (Math.abs(basePct ?? 0) < thresholdPct && Math.abs(wowPct ?? 0) < thresholdPct) continue;
 
     const latestDate = rows[0].date;
     const parts = [];
-    if (basePct != null && Math.abs(basePct) >= 15) {
-      parts.push(`近 7 日日均通行 ${Math.round(thisWeek)} 艘，较去年同期基线${basePct > 0 ? '上升' : '下降'} ${Math.abs(basePct)}%`);
+    if (basePct != null && Math.abs(basePct) >= thresholdPct) {
+      parts.push(`近 ${windowDays} 日日均通行 ${Math.round(thisWindow)} 艘，较去年同期基线${basePct > 0 ? '上升' : '下降'} ${Math.abs(basePct)}%`);
     }
-    if (wowPct != null && Math.abs(wowPct) >= 15) {
-      parts.push(`环比上周${wowPct > 0 ? '上升' : '下降'} ${Math.abs(wowPct)}%`);
+    if (wowPct != null && Math.abs(wowPct) >= thresholdPct) {
+      const prevLabel = windowDays === 7 ? '上周' : `前 ${windowDays} 日`;
+      parts.push(`环比${prevLabel}${wowPct > 0 ? '上升' : '下降'} ${Math.abs(wowPct)}%`);
     }
-    const severity = Math.abs(basePct ?? 0) >= 35 || Math.abs(wowPct ?? 0) >= 30 ? 'HIGH' : 'MEDIUM';
+    const severity = Math.abs(basePct ?? 0) >= Math.max(35, thresholdPct * 2) ||
+      Math.abs(wowPct ?? 0) >= Math.max(30, thresholdPct * 2) ? 'HIGH' : 'MEDIUM';
 
     signals.push({
       id: `signal:portwatch:${cp.nodeId}:${latestDate}`,
@@ -70,7 +72,8 @@ export function buildPortWatchSignals(recentByNode, baselineByNode) {
   return signals;
 }
 
-export function parsePortWatchCsv(text, nowMs = Date.now()) {
+export function parsePortWatchCsv(text, nowMs = Date.now(), options = {}) {
+  const windowDays = options.windowDays ?? 7;
   const lines = text.replace(/^\uFEFF/, '').split('\n');
   const header = lines[0]?.trim().split(',');
   if (!header?.length) throw new Error('PortWatch CSV header missing');
@@ -79,7 +82,7 @@ export function parsePortWatchCsv(text, nowMs = Date.now()) {
     if (!(required in col)) throw new Error(`PortWatch CSV missing column ${required}`);
   }
 
-  const recentSince = formatDay(nowMs - 30 * DAY_MS);
+  const recentSince = formatDay(nowMs - Math.max(30, windowDays * 3) * DAY_MS);
   const baseFrom = formatDay(nowMs - 730 * DAY_MS);
   const baseTo = formatDay(nowMs - 365 * DAY_MS);
   const recentRows = new Map();
@@ -111,13 +114,15 @@ export function parsePortWatchCsv(text, nowMs = Date.now()) {
   }
 
   const baselineByNode = new Map([...baselineTotals.entries()].map(([id, vals]) => [id, mean(vals)]));
-  return buildPortWatchSignals(recentRows, baselineByNode);
+  return buildPortWatchSignals(recentRows, baselineByNode, options);
 }
 
-async function fetchPortWatchArcgis(fetchFn, nowMs = Date.now()) {
+async function fetchPortWatchArcgis(fetchFn, nowMs = Date.now(), options = {}) {
+  const windowDays = options.windowDays ?? 7;
+  const recentDays = Math.max(30, windowDays * 3);
   const namesList = CHOKEPOINTS.map(cp => `'${cp.name.replace(/'/g, "''")}'`).join(',');
   const recentParams = new URLSearchParams({
-    where: `portname IN (${namesList}) AND date >= ${toArcgisTimestamp(nowMs - 30 * DAY_MS)}`,
+    where: `portname IN (${namesList}) AND date >= ${toArcgisTimestamp(nowMs - recentDays * DAY_MS)}`,
     outFields: 'date,portname,n_total,n_container,n_tanker',
     orderByFields: 'date DESC',
     resultRecordCount: '1000',
@@ -158,7 +163,7 @@ async function fetchPortWatchArcgis(fetchFn, nowMs = Date.now()) {
       if (cp && Number.isFinite(a.avg_total)) baselineByNode.set(cp.nodeId, Number(a.avg_total));
     }
   }
-  return buildPortWatchSignals(recentByNode, baselineByNode);
+  return buildPortWatchSignals(recentByNode, baselineByNode, options);
 }
 
 function parseWmoDate(value) {
@@ -275,46 +280,56 @@ export function parseWmoAlerts(payload, findPlaces, nowMs = Date.now()) {
   return signals;
 }
 
-export function createSignalReader({ findPlaces = () => [], fetchFn = globalThis.fetch } = {}) {
-  const sources = [
-    {
-      name: 'IMF PortWatch 航运通行量',
-      url: 'https://portwatch.imf.org/',
-      load: () => fetchPortWatchArcgis(fetchFn),
-    },
-    {
-      name: 'WMO 极端天气预警',
-      url: 'https://severeweather.wmo.int/',
-      load: async () => {
-        const res = await fetchFn(WMO_SWIC_URL, {
-          headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' },
-          signal: AbortSignal.timeout(15_000),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return parseWmoAlerts(await res.json(), findPlaces);
-      },
-    },
-  ];
-
+export function createSignalReader({ findPlaces = () => [], fetchFn = globalThis.fetch, getSettings = () => ({}) } = {}) {
   const cache = new Map();
   let lastCheckedAt = 0;
+  let lastSettingsKey = '';
   let lastResult = null;
   let inFlight = null;
 
-  async function fetchSignals() {
+  function buildSources(windowDays, thresholdPct) {
+    return [
+      {
+        name: 'IMF PortWatch 航运通行量',
+        url: 'https://portwatch.imf.org/',
+        category: 'chokepoint',
+        window: `近 ${windowDays} 日均值 vs 上期 / 去年同期 (≥${thresholdPct}%)`,
+        scope: `11 个关键海峡/运河（${CHOKEPOINTS.slice(0, 4).map(c => c.label).join('、')}等）`,
+        load: () => fetchPortWatchArcgis(fetchFn, Date.now(), { windowDays, thresholdPct }),
+      },
+      {
+        name: 'WMO 极端天气预警',
+        url: 'https://severeweather.wmo.int/',
+        category: 'weather',
+        window: '实时未过期预警',
+        scope: '严重级别 ≥3（严重/极端）且匹配网络节点或地理枢纽（最多 15 条）',
+        load: async () => {
+          const res = await fetchFn(WMO_SWIC_URL, {
+            headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' },
+            signal: AbortSignal.timeout(15_000),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return parseWmoAlerts(await res.json(), findPlaces);
+        },
+      },
+    ];
+  }
+
+  async function fetchSignals(windowDays, thresholdPct, settingsKey) {
+    const sources = buildSources(windowDays, thresholdPct);
     const results = await Promise.all(sources.map(async src => {
       try {
         const records = await src.load();
         cache.set(src.name, records);
-        return { name: src.name, url: src.url, count: records.length, error: null, records };
+        return { name: src.name, url: src.url, category: src.category, window: src.window, scope: src.scope, count: records.length, error: null, records };
       } catch (error) {
         const prior = cache.get(src.name) ?? [];
-        return { name: src.name, url: src.url, count: prior.length, error: error.message || 'fetch failed', records: prior };
+        return { name: src.name, url: src.url, category: src.category, window: src.window, scope: src.scope, count: prior.length, error: error.message || 'fetch failed', records: prior };
       }
     }));
 
     const records = results.flatMap(r => r.records);
-    const feedStatus = results.map(({ name, url, count, error }) => ({ name, url, count, error }));
+    const feedStatus = results.map(({ name, url, category, window, scope, count, error }) => ({ name, url, category, window, scope, count, error }));
     const errors = feedStatus.filter(f => f.error);
     const failedAll = errors.length === feedStatus.length;
     const state = failedAll && !records.length ? 'unavailable'
@@ -330,15 +345,18 @@ export function createSignalReader({ findPlaces = () => [], fetchFn = globalThis
     };
     if (!failedAll) {
       lastCheckedAt = Date.now();
+      lastSettingsKey = settingsKey;
       lastResult = result;
     }
     return result;
   }
 
   return async function readLiveSignals() {
-    if (lastResult && Date.now() - lastCheckedAt < CACHE_TTL_MS) return lastResult;
+    const { portWatchWindowDays = 7, portWatchThresholdPct = 15 } = getSettings() ?? {};
+    const settingsKey = `${portWatchWindowDays}:${portWatchThresholdPct}`;
+    if (lastResult && lastSettingsKey === settingsKey && Date.now() - lastCheckedAt < CACHE_TTL_MS) return lastResult;
     if (!inFlight) {
-      inFlight = fetchSignals().finally(() => { inFlight = null; });
+      inFlight = fetchSignals(portWatchWindowDays, portWatchThresholdPct, settingsKey).finally(() => { inFlight = null; });
     }
     return inFlight;
   };

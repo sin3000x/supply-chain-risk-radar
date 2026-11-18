@@ -30,9 +30,15 @@ function formatHorizon(endDate) {
   return endDate.slice(0, 10) + ' 前';
 }
 
-export function normalizePolymarketEvents(events, findPlaces = () => [], nowMs = Date.now()) {
+export function normalizePolymarketEvents(
+  events,
+  findPlaces = () => [],
+  nowMs = Date.now(),
+  { minVolume = 25_000, horizonDays = 0 } = {},
+) {
   const seen = new Set();
   const candidates = [];
+  const maxEndMs = horizonDays > 0 ? nowMs + horizonDays * 86_400_000 : null;
 
   for (const ev of events) {
     if (!ev?.title || EXCLUDE_PATTERN.test(ev.title)) continue;
@@ -50,7 +56,13 @@ export function normalizePolymarketEvents(events, findPlaces = () => [], nowMs =
     const { market, yesPrice } = active[0];
     const title = market.question || ev.title;
     const volume = Number(ev.volume ?? market.volumeNum ?? market.volume ?? 0);
-    if (volume < 25_000) continue;
+    if (volume < minVolume) continue;
+
+    const endDate = market.endDate || ev.endDate;
+    if (maxEndMs !== null) {
+      const endMs = endDate ? Date.parse(endDate) : NaN;
+      if (!Number.isFinite(endMs) || endMs <= nowMs || endMs > maxEndMs) continue;
+    }
 
     const geoAnchors = findPlaces({ title, summary: ev.description });
     if (!SUPPLY_CHAIN_PATTERN.test(title) && !geoAnchors.length) continue;
@@ -63,7 +75,6 @@ export function normalizePolymarketEvents(events, findPlaces = () => [], nowMs =
     const hasDelta = Number.isFinite(delta) && Math.abs(delta) >= 0.001;
     const priorProbability = hasDelta ? Math.max(0, Math.min(1, Math.round((yesPrice - delta) * 1000) / 1000)) : null;
     const direction = !hasDelta ? 'stable' : delta > 0.01 ? 'rising' : delta < -0.01 ? 'falling' : 'stable';
-    const endDate = market.endDate || ev.endDate;
     const horizon = formatHorizon(endDate);
     const updatedAt = market.updatedAt || ev.updatedAt || new Date(nowMs).toISOString();
     const url = ev.slug ? `https://polymarket.com/event/${ev.slug}` : 'https://polymarket.com/';
@@ -106,13 +117,14 @@ export function normalizePolymarketEvents(events, findPlaces = () => [], nowMs =
   return candidates.slice(0, 20).map(c => c.record);
 }
 
-export function createMarketReader({ findPlaces = () => [], fetchFn = globalThis.fetch } = {}) {
+export function createMarketReader({ findPlaces = () => [], fetchFn = globalThis.fetch, getSettings = () => ({}) } = {}) {
   let lastCheckedAt = 0;
+  let lastSettingsKey = '';
   let lastResult = null;
   let lastGoodRecords = [];
   let inFlight = null;
 
-  async function fetchMarkets() {
+  async function fetchMarkets(minVolume, horizonDays, settingsKey) {
     const nowIso = new Date().toISOString();
     const settled = await Promise.allSettled(POLYMARKET_TAGS.map(async tag => {
       const params = new URLSearchParams({
@@ -147,12 +159,16 @@ export function createMarketReader({ findPlaces = () => [], fetchFn = globalThis
     }
 
     const failedAll = failures === POLYMARKET_TAGS.length;
-    const records = failedAll ? lastGoodRecords : normalizePolymarketEvents(events, findPlaces);
+    const records = failedAll ? lastGoodRecords : normalizePolymarketEvents(events, findPlaces, Date.now(), { minVolume, horizonDays });
     if (!failedAll) lastGoodRecords = records;
 
+    const minVolLabel = minVolume >= 1_000_000 ? `$${(minVolume / 1_000_000).toFixed(1)}M` : `$${Math.round(minVolume / 1000)}K`;
     const feedStatus = [{
       name: 'Polymarket 预测市场',
       url: 'https://polymarket.com/',
+      category: 'market',
+      window: horizonDays > 0 ? `未来 ${horizonDays} 天内到期` : '全部未到期盘口',
+      scope: `标签: ${POLYMARKET_TAGS.join(', ')} · 成交量 ≥${minVolLabel}（取前 20 条）`,
       count: records.length,
       error: failedAll ? firstError : null,
     }];
@@ -169,15 +185,18 @@ export function createMarketReader({ findPlaces = () => [], fetchFn = globalThis
     };
     if (!failedAll) {
       lastCheckedAt = Date.now();
+      lastSettingsKey = settingsKey;
       lastResult = result;
     }
     return result;
   }
 
   return async function readLiveMarkets() {
-    if (lastResult && Date.now() - lastCheckedAt < CACHE_TTL_MS) return lastResult;
+    const { marketMinVolume = 25_000, marketHorizonDays = 0 } = getSettings() ?? {};
+    const settingsKey = `${marketMinVolume}:${marketHorizonDays}`;
+    if (lastResult && lastSettingsKey === settingsKey && Date.now() - lastCheckedAt < CACHE_TTL_MS) return lastResult;
     if (!inFlight) {
-      inFlight = fetchMarkets().finally(() => { inFlight = null; });
+      inFlight = fetchMarkets(marketMinVolume, marketHorizonDays, settingsKey).finally(() => { inFlight = null; });
     }
     return inFlight;
   };

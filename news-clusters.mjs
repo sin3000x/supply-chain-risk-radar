@@ -44,7 +44,7 @@ function incidentPhrases(headline) {
   return {phrases, hubs:hubs.map(({hubId})=>hubId)};
 }
 
-export function clusterNews(records, findPlaces) {
+export function clusterNews(records, findPlaces, { windowMs = WINDOW_MS } = {}) {
   const articles = records.map(record=>{
     const {title}=record;
     return {
@@ -56,7 +56,7 @@ export function clusterNews(records, findPlaces) {
       background:backgroundTitle.test(title), action:actionFor(title),
     };
   }).sort((a,b)=> a.at - b.at || a.record.id.localeCompare(b.record.id));
-  const recent = (a,b)=>Number.isFinite(a.at) && Number.isFinite(b.at) && Math.abs(a.at-b.at)<=WINDOW_MS;
+  const recent = (a,b)=>Number.isFinite(a.at) && Number.isFinite(b.at) && Math.abs(a.at-b.at)<=windowMs;
   const sharedPlace = (a,b)=>intersection(a.places,b.places).length;
   const candidates = articles.filter(item=>item.topic && !item.background);
   const copies = clusterTexts(candidates.map(item=>item.headline)).flatMap(indices=>{

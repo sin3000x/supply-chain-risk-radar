@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
-import {createFeedReader, parseFeed} from './rss.mjs';
+import {createFeedReader, parseFeed, resolveFeedMeta} from './rss.mjs';
 import {normalize} from './feed.mjs';
 
 const rss = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Feed</title>
@@ -98,6 +98,54 @@ test('feed reader uses shorter retry cooldown after failure', async () => {
     assert.equal(recovered.feedStatus[0].error,null);
     assert.equal(recovered.feedStatus[0].count,1);
     assert.equal(hits,2);
+  } finally {
+    server.close();
+  }
+});
+
+test('resolveFeedMeta parses Google News window/scope and applies custom window override', () => {
+  const gnews = {
+    name: 'Trade & Tariffs',
+    category: 'trade',
+    url: 'https://news.google.com/rss/search?q=(tariff+OR+%22trade+war%22)+when:2d&hl=en-US&gl=US&ceid=US:en',
+  };
+  const defMeta = resolveFeedMeta(gnews);
+  assert.equal(defMeta.window, '2d');
+  assert.equal(defMeta.defaultWindow, '2d');
+  assert.equal(defMeta.scope, 'tariff / "trade war"');
+  assert.equal(defMeta.url, gnews.url);
+
+  const customMeta = resolveFeedMeta(gnews, {googleNewsWindowDays: 10});
+  assert.equal(customMeta.window, '10d');
+  assert.match(customMeta.url, /when%3A10d|when:10d/);
+
+  const directMeta = resolveFeedMeta({name: 'BBC', category: 'world', url: 'https://feeds.bbci.co.uk/news/world/rss.xml'});
+  assert.equal(directMeta.window, '直连 RSS');
+  assert.equal(directMeta.scope, 'bbci.co.uk');
+});
+
+test('createFeedReader filters stale items by newsMaxAgeHours', async () => {
+  const nowMs = Date.parse('2026-11-18T12:00:00Z');
+  const agedRss = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>
+    <item><title>Recent port delay</title><link>https://example.com/recent</link><pubDate>Wed, 18 Nov 2026 08:00:00 GMT</pubDate></item>
+    <item><title>Old port delay</title><link>https://example.com/old</link><pubDate>Mon, 16 Nov 2026 08:00:00 GMT</pubDate></item>
+  </channel></rss>`;
+  const server = createServer((_req, res) => {
+    res.writeHead(200, {'content-type': 'application/rss+xml'});
+    res.end(agedRss);
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    let maxAgeHours = 24;
+    const feed = {name: 'Local', category: 'shipping', url: `http://127.0.0.1:${server.address().port}/feed`};
+    const read = createFeedReader([feed], {now: () => nowMs, getSettings: () => ({newsMaxAgeHours: maxAgeHours})});
+    const filtered = await read();
+    assert.equal(filtered.feedStatus[0].count, 1);
+    assert.equal(filtered.categories.shipping.items[0].title, 'Recent port delay');
+
+    maxAgeHours = 0;
+    const unfiltered = await read();
+    assert.equal(unfiltered.feedStatus[0].count, 2);
   } finally {
     server.close();
   }

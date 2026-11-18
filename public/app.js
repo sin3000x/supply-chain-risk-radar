@@ -12,6 +12,7 @@ function add(parent, tag, value, cls) {
 }
 
 const labels = {news:'新闻',signal:'观测信号',forecast:'预测'};
+const feedCategories = {world:'全球',regional:'区域',trade:'贸易',shipping:'航运',official:'官方',chokepoint:'航道',weather:'气象',market:'盘口'};
 const topics = {maritime_security:'航道安全',transport_disruption:'运输运行',trade_policy:'经贸政策',security_development:'地缘安全',natural_hazard:'灾害',market_change:'市场变化',infrastructure_incident:'设施事故'};
 const states = {ok:'已获取',empty:'无记录',stale:'缓存数据',unavailable:'暂不可用',partial:'部分可用',not_configured:'待接自建 WorldMonitor'};
 const directions = {rising:'上升',falling:'下降',stable:'平稳'};
@@ -84,6 +85,14 @@ const mapZoomOut = el('map-zoom-out');
 const mapReset = el('map-reset');
 const regionControl = el('region');
 const sortControl = el('sort');
+const timeWindowControl = el('time-window');
+const customTimeBar = el('custom-time-bar');
+const customHoursGroup = el('custom-hours-group');
+const customTimeValue = el('custom-time-value');
+const customTimeUnit = el('custom-time-unit');
+const customDatesGroup = el('custom-dates-group');
+const customDateFrom = el('custom-date-from');
+const customDateTo = el('custom-date-to');
 const BASE_W = 960, BASE_H = 440;
 const GLOBAL_CAMERA = {minLon:-180, maxLon:180, minLat:-62, maxLat:78, zoomed:false};
 const WORLD_LON_SPAN = GLOBAL_CAMERA.maxLon - GLOBAL_CAMERA.minLon;
@@ -658,11 +667,42 @@ try {
   if (saved?.mode === 'live' && Array.isArray(saved.events) && Array.isArray(saved.sources)) cache.set('live',saved);
 } catch {}
 
+function matchesTimeWindow(event) {
+  const mode = timeWindowControl.value;
+  if (!mode) return true;
+  const rawTime = event.updatedAt ?? event.records?.at(-1)?.time?.value;
+  const ts = Date.parse(rawTime ?? '');
+  if (!Number.isFinite(ts)) return false;
+  if (/^\d+h$/.test(mode)) {
+    const hours = Number.parseInt(mode, 10);
+    return ts >= Date.now() - hours * 3600_000;
+  }
+  if (mode === 'custom-hours') {
+    const val = Number(customTimeValue.value);
+    if (!Number.isFinite(val) || val <= 0) return true;
+    const unitMs = customTimeUnit.value === 'days' ? 86_400_000 : 3600_000;
+    return ts >= Date.now() - val * unitMs;
+  }
+  if (mode === 'custom-dates') {
+    if (customDateFrom.value) {
+      const fromMs = new Date(`${customDateFrom.value}T00:00:00`).getTime();
+      if (Number.isFinite(fromMs) && ts < fromMs) return false;
+    }
+    if (customDateTo.value) {
+      const toMs = new Date(`${customDateTo.value}T23:59:59.999`).getTime();
+      if (Number.isFinite(toMs) && ts > toMs) return false;
+    }
+    return true;
+  }
+  return true;
+}
+
 function visible(applyRegion = true) {
   const query = el('search').value.trim().toLowerCase();
   return (data?.events ?? []).filter(event => {
     const meta = info(event);
     return (!applyRegion || !regionControl.value || meta.geo.region === regionControl.value) &&
+      matchesTimeWindow(event) &&
       (!query || meta.search.includes(query));
   });
 }
@@ -692,6 +732,15 @@ function renderStats(list) {
   }
 }
 
+function formatFeedWindow(windowValue) {
+  if (!windowValue) return '';
+  const dayMatch = /^(\d+)d$/i.exec(windowValue);
+  if (dayMatch) return `近 ${dayMatch[1]} 天`;
+  const hourMatch = /^(\d+)h$/i.exec(windowValue);
+  if (hourMatch) return `近 ${hourMatch[1]} 小时`;
+  return windowValue;
+}
+
 function renderStatus(loading, error) {
   const status = el('status');
   status.replaceChildren();
@@ -713,23 +762,51 @@ function renderStatus(loading, error) {
   ].filter(Boolean);
   for (const note of notes) add(status,'span',note,error && note.startsWith('更新失败') ? 'status-error' : 'status-note');
 
+  const feedCount = data.sources.reduce((sum, source) => sum + (source.feedStatus?.length ?? 0), 0);
+  const clusterHours = data.intake?.settings?.clusterWindowHours ?? 48;
+  el('sources-label').textContent = data.mode === 'sample'
+    ? '数据来源与采集规则 · 虚构样例'
+    : data.liveSource === 'self-hosted'
+      ? '数据来源与采集规则 · 自建 WorldMonitor'
+      : `数据来源与采集规则 · ${feedCount} 个源 · 5–15 分钟刷新 · ${clusterHours} 小时事件归并`;
+
   const sourceStatus = el('source-status');
   sourceStatus.replaceChildren();
   const sourceLabel = data.mode === 'sample' ? '虚构样例'
-    : data.liveSource === 'self-hosted' ? '自建 WorldMonitor' : '公开新闻 RSS';
-  add(sourceStatus,'li',sourceLabel,'source-heading');
+    : data.liveSource === 'self-hosted' ? '自建 WorldMonitor' : '公开直连源（RSS + PortWatch + WMO + Polymarket）';
+  const headingRow = add(sourceStatus,'li','','source-heading-row');
+  add(headingRow,'span',sourceLabel,'source-heading');
+  if (data.mode === 'live' && data.liveSource !== 'self-hosted') {
+    const configBtn = add(headingRow,'button','调整采集与时间窗','source-config-btn');
+    configBtn.type = 'button';
+    configBtn.onclick = () => openIntakeDialog();
+  }
   for (const source of data.sources) {
-    add(sourceStatus,'li',`${labels[source.kind]} · ${source.recordCount ?? 0} 条输入记录 · ${states[source.state]}${source.error ? '（'+source.error+'）' : ''}`);
+    add(sourceStatus,'li',`${labels[source.kind]} · ${source.recordCount ?? 0} 条输入记录 · ${states[source.state]}${source.error ? '（'+source.error+'）' : ''}`,'source-kind-row');
+    if (source.ruleSummary) {
+      add(sourceStatus,'li',source.ruleSummary,'source-rule meta');
+    }
     for (const feed of source.feedStatus ?? []) {
-      const row = add(sourceStatus,'li','','feed-row');
+      const row = add(sourceStatus,'li','','feed-row feed-item');
       row.dataset.state = feed.error ? (feed.count ? 'warn' : 'bad') : 'ok';
+      const mainLine = add(row,'div','','feed-main');
+      const titleGroup = add(mainLine,'span','','feed-title-group');
+      if (feed.category) {
+        add(titleGroup,'span',feedCategories[feed.category] ?? feed.category,'feed-badge feed-category');
+      }
       if (/^https?:\/\//i.test(feed.url ?? '')) {
-        const link = add(row,'a',feed.name);
+        const link = add(titleGroup,'a',feed.name);
         link.href = feed.url;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
-      } else add(row,'span',feed.name);
-      add(row,'span',feed.error ? `${feed.count ? feed.count+' 条（上次结果）' : '失败'} · ${feed.error}` : `${feed.count} 条`,'meta');
+      } else add(titleGroup,'span',feed.name);
+      if (feed.window) {
+        add(titleGroup,'span',formatFeedWindow(feed.window),'feed-badge feed-window');
+      }
+      add(mainLine,'span',feed.error ? `${feed.count ? feed.count+' 条（上次结果）' : '失败'} · ${feed.error}` : `${feed.count} 条`,'meta feed-count');
+      if (feed.scope) {
+        add(row,'div',`范围：${feed.scope}`,'feed-scope meta');
+      }
     }
   }
   const {label,nodeCount,laneCount,originCount,destinationCount} = data.network;
@@ -1195,6 +1272,7 @@ async function refresh() {
         const available = result.sources.some(source => ['ok','partial','stale','empty'].includes(source.state));
         if (!available && cache.has(mode)) throw Error('数据来源暂不可用');
         cache.set(mode,result);
+        if (result.intake) setIntakeSettings(result.intake);
         if (mode === 'live' && available) rememberLive(result);
         if (mode === 'live') followPresentation(result);
       } catch (error) {
@@ -1365,10 +1443,123 @@ modelForm.onsubmit = event => {
     clearKey:clearModelKey.checked,
   });
 };
+const intakeDialog = el('intake-settings');
+const intakeForm = el('intake-settings-form');
+const intakeOpen = el('open-intake-settings');
+const intakeClose = el('close-intake-settings');
+const intakeReset = el('reset-intake-settings');
+const intakeSave = el('save-intake-settings');
+const intakeStatus = el('intake-settings-status');
+const intakeFields = {
+  googleNewsWindowDays: el('intake-google-news-days'),
+  newsMaxAgeHours: el('intake-news-max-age'),
+  clusterWindowHours: el('intake-cluster-hours'),
+  portWatchWindowDays: el('intake-portwatch-days'),
+  portWatchThresholdPct: el('intake-portwatch-pct'),
+  marketHorizonDays: el('intake-market-horizon'),
+  marketMinVolume: el('intake-market-volume'),
+};
+let intakeState;
+
+function setIntakeSettings(descriptor) {
+  if (!descriptor?.settings) return;
+  intakeState = descriptor;
+  intakeOpen.textContent = descriptor.isCustom ? '采集配置（已自定义）' : '采集配置';
+  intakeOpen.title = descriptor.isCustom ? '当前使用自定义采集时间窗与阈值' : '查看或自定义采集时间窗与阈值';
+}
+
+function populateIntakeForm(settings) {
+  for (const [key, input] of Object.entries(intakeFields)) {
+    input.value = String(settings?.[key] ?? '');
+  }
+}
+
+async function readIntakeSettings() {
+  const response = await fetch('/api/intake-settings');
+  const result = await response.json().catch(() => null);
+  if (!response.ok) throw Error(result?.error ?? '无法读取采集配置，请关闭后重试。');
+  setIntakeSettings(result);
+  return result;
+}
+readIntakeSettings().catch(() => {});
+
+async function openIntakeDialog() {
+  intakeSave.disabled = true;
+  intakeReset.disabled = true;
+  intakeStatus.textContent = '正在读取配置…';
+  intakeDialog.showModal();
+  try {
+    const result = await readIntakeSettings();
+    populateIntakeForm(result.settings);
+    intakeStatus.textContent = '';
+    intakeSave.disabled = false;
+    intakeReset.disabled = !result.isCustom;
+  } catch (error) {
+    intakeStatus.textContent = error.message || '无法读取采集配置，请关闭后重试。';
+    intakeSave.disabled = false;
+    intakeReset.disabled = false;
+  }
+}
+
+intakeOpen.onclick = openIntakeDialog;
+intakeClose.onclick = () => intakeDialog.close();
+
+async function submitIntakeSettings(payload) {
+  intakeSave.disabled = true;
+  intakeReset.disabled = true;
+  intakeStatus.textContent = '正在保存…';
+  try {
+    const response = await fetch('/api/intake-settings', {
+      method: 'PUT',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok) throw Error(result?.error ?? '无法保存采集配置。');
+    setIntakeSettings(result);
+    populateIntakeForm(result.settings);
+    intakeStatus.textContent = payload.action === 'reset' ? '已恢复默认采集配置。' : '采集配置已保存。';
+    intakeSave.disabled = false;
+    intakeReset.disabled = !result.isCustom;
+    if (currentMode() === 'live') {
+      await pending.get('live');
+      if (currentMode() === 'live') refresh();
+    }
+  } catch (error) {
+    intakeStatus.textContent = error.message;
+    intakeSave.disabled = false;
+    intakeReset.disabled = false;
+  }
+}
+
+intakeReset.onclick = () => submitIntakeSettings({action: 'reset'});
+intakeForm.onsubmit = event => {
+  event.preventDefault();
+  const settings = {};
+  for (const [key, input] of Object.entries(intakeFields)) {
+    settings[key] = Number(input.value);
+  }
+  submitIntakeSettings({action: 'save', settings});
+};
+
+function syncCustomTimeBar() {
+  const mode = timeWindowControl.value;
+  const isHours = mode === 'custom-hours';
+  const isDates = mode === 'custom-dates';
+  customTimeBar.hidden = !(isHours || isDates);
+  customHoursGroup.hidden = !isHours;
+  customDatesGroup.hidden = !isDates;
+}
+
 let searchTimer;
 el('search').oninput = () => {clearTimeout(searchTimer); searchTimer = setTimeout(render,120);};
 el('sort').onchange = render;
 regionControl.onchange = render;
+timeWindowControl.onchange = () => {syncCustomTimeBar(); render();};
+customTimeValue.oninput = render;
+customTimeUnit.onchange = render;
+customDateFrom.onchange = render;
+customDateTo.onchange = render;
 el('export').onclick = () => {
   const blob = new Blob([JSON.stringify({schemaVersion:data.schemaVersion,mode:data.mode,fetchedAt:data.fetchedAt,network:data.network,events:visible()},null,2)],{type:'application/json'});
   const url = URL.createObjectURL(blob);
@@ -1376,5 +1567,6 @@ el('export').onclick = () => {
   link.href = url; link.download = 'external-intelligence.json'; link.click();
   setTimeout(() => URL.revokeObjectURL(url),1000);
 };
+syncCustomTimeBar();
 applyTheme(theme.value);
 refresh();

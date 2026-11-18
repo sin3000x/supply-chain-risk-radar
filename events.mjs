@@ -51,12 +51,13 @@ function signalMeta(record) {
   };
 }
 
-export function buildEvents(sources, mode, findPlaces = () => []) {
+export function buildEvents(sources, mode, findPlaces = () => [], { clusterWindowMs } = {}) {
   const events = new Map();
   const newsIndex = [];
   if (mode === 'live') {
     const news = sources.flatMap(source=>source.records).filter(record=>record.kind === 'news');
-    for (const group of clusterNews(news,findPlaces)) {
+    const clusterOptions = clusterWindowMs ? { windowMs: clusterWindowMs } : undefined;
+    for (const group of clusterNews(news, findPlaces, clusterOptions)) {
       const {primary,topic,action,corroborationCount,records}=group;
       const id = eventId(mode, primary.id);
       const event = {id,title:primary.title,region:primary.region ?? null,

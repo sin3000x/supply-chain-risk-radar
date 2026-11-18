@@ -22,6 +22,7 @@ import {buildEvents} from './events.mjs';
 import {applyPresentation, presentEvent} from './event-presentation.mjs';
 import {createForecastTranslator, createPresentationQueue} from './model-presentation.mjs';
 import {openModelSettings} from './model-settings.mjs';
+import {openIntakeSettings} from './intake-settings.mjs';
 import {loadNetwork} from './network.mjs';
 import {createEventLocator, regions} from './geography.mjs';
 import {createFeedReader} from './rss.mjs';
@@ -35,7 +36,12 @@ const findPlaces = record => network.findPlaces(record);
 const locateEvent = createEventLocator(network);
 const present = event => presentEvent({...network.annotate(event),geo:locateEvent(event)});
 const modelSettings = await openModelSettings();
-const eventStore = await openEventStore(process.env.EVENT_STORE_PATH || fileURLToPath(new URL('./var/events.json',import.meta.url)),findPlaces);
+const intakeSettings = await openIntakeSettings();
+const eventStore = await openEventStore(
+  process.env.EVENT_STORE_PATH || fileURLToPath(new URL('./var/events.json',import.meta.url)),
+  findPlaces,
+  {getWindowMs: () => intakeSettings.read().clusterWindowHours * 3600_000},
+);
 // Chinese event titles and progress are written in the background and stored with each event.
 const presenter = createPresentationQueue({store:eventStore,getProfile:()=>modelSettings.read()});
 const forecastTranslator = await createForecastTranslator({
@@ -62,9 +68,9 @@ function withPresentation(event) {
 }
 const origin = process.env.WM_BASE_URL;
 const key = process.env.WM_API_KEY;
-const readRss = createFeedReader();
-const readLiveSignals = createSignalReader({findPlaces});
-const readLiveMarkets = createMarketReader({findPlaces});
+const readRss = createFeedReader(undefined, {getSettings: () => intakeSettings.read()});
+const readLiveSignals = createSignalReader({findPlaces, getSettings: () => intakeSettings.read()});
+const readLiveMarkets = createMarketReader({findPlaces, getSettings: () => intakeSettings.read()});
 
 const assets = ['index.html','app.js','style.css','vendor/worldmonitor/countries.geojson'];
 const mime = {html:'text/html; charset=utf-8',js:'text/javascript; charset=utf-8',mjs:'text/javascript; charset=utf-8',
@@ -132,18 +138,46 @@ async function getFeed(kind, path, mode) {
   }
 }
 
+function describeSourceRule(kind, mode, intake) {
+  if (mode === 'sample') return '虚构演示样例，仅用于界面预览与功能验证';
+  if (origin) return '通过自建 WorldMonitor API 拉取';
+  if (kind === 'news') {
+    const gnewsRule = intake.googleNewsWindowDays > 0
+      ? `Google News 统一抓近 ${intake.googleNewsWindowDays} 天`
+      : 'Google News 按各源默认 1–7 天';
+    const ageRule = intake.newsMaxAgeHours > 0 ? ` · 仅保留近 ${intake.newsMaxAgeHours} 小时` : '';
+    return `每 5 分钟刷新 · 单源最多 30 条 · ${gnewsRule}${ageRule} · ${intake.clusterWindowHours} 小时内同事件归并`;
+  }
+  if (kind === 'signal') {
+    return `每 15 分钟刷新 · PortWatch 近 ${intake.portWatchWindowDays} 日均值对比上期/去年同期（异动 ≥${intake.portWatchThresholdPct}%）· WMO 严重/极端且未过期预警（最多 15 条）`;
+  }
+  if (kind === 'forecast') {
+    const minVol = intake.marketMinVolume >= 1_000_000
+      ? `$${(intake.marketMinVolume / 1_000_000).toFixed(1)}M`
+      : `$${Math.round(intake.marketMinVolume / 1000)}K`;
+    const horizonRule = intake.marketHorizonDays > 0 ? ` · 未来 ${intake.marketHorizonDays} 天内到期` : '';
+    return `每 10 分钟刷新 · Polymarket 6 个地缘/贸易标签 · 成交量 ≥${minVol}${horizonRule} · 命中供应链词或地理节点（前 20 条）`;
+  }
+  return null;
+}
+
 // Concurrent page loads share one build; an unchanged batch reuses the last result.
 let liveBuild = null;
 let lastLive = {fingerprint:null,events:[]};
 async function buildFeed(mode) {
+  const intake = intakeSettings.read();
   const sources = await Promise.all(Object.entries(feeds).map(([kind,path]) => getFeed(kind,path,mode)));
   let events;
   let presentationPending = 0;
   if (mode === 'live') {
-    const fingerprint = createHash('sha256').update(JSON.stringify(sources.map(source=>source.records.map(record=>
-      [record.id,record.time.value,record.title,record.summary,record.region,record.geoAnchors])))).digest('hex');
+    const fingerprint = createHash('sha256').update(JSON.stringify({
+      intake,
+      records: sources.map(source=>source.records.map(record=>
+        [record.id,record.time.value,record.title,record.summary,record.region,record.geoAnchors])),
+    })).digest('hex');
     if (fingerprint !== lastLive.fingerprint) {
-      const annotated = (await eventStore.update(buildEvents(sources,mode,findPlaces))).map(present);
+      const clusterWindowMs = intake.clusterWindowHours * 3600_000;
+      const annotated = (await eventStore.update(buildEvents(sources,mode,findPlaces,{clusterWindowMs}))).map(present);
       lastLive = {fingerprint,events:annotated};
     }
     // Only queues events still missing a presentation; the response never waits for the model.
@@ -156,8 +190,13 @@ async function buildFeed(mode) {
     events = lastLive.events.map(withPresentation);
   } else events = buildEvents(sources,mode,findPlaces).map(present);
   // Events carry every record they use; the full input batch would only bloat the response.
-  const status = sources.map(({records,...source})=>({...source,recordCount:records.length}));
-  return {schemaVersion:'0.5',mode,liveSource:origin ? 'self-hosted' : 'rss',fetchedAt:new Date().toISOString(),sources:status,network:network.summary,regions,
+  const status = sources.map(({records,...source})=>({
+    ...source,
+    recordCount:records.length,
+    ruleSummary:describeSourceRule(source.kind,mode,intake),
+  }));
+  return {schemaVersion:'0.5',mode,liveSource:origin ? 'self-hosted' : 'rss',fetchedAt:new Date().toISOString(),sources:status,
+    intake:intakeSettings.describe(),network:network.summary,regions,
     ...(mode === 'live' && {presentationPending}),events};
 }
 
@@ -169,45 +208,67 @@ function send(req, res, status, type, body, headers = {}) {
   res.end(payload);
 }
 
+async function handleJsonSettings(req, res, json, {label, onGet, onPut}) {
+  const reply = (status, value) => send(req,res,status,json,Buffer.from(JSON.stringify(value)),{'cache-control':'no-store'});
+  const host = req.headers.host ?? '';
+  let sameOrigin = Boolean(host);
+  if (sameOrigin && req.headers.origin) {
+    try {
+      const originUrl = new URL(req.headers.origin);
+      sameOrigin = (originUrl.protocol === 'http:' || originUrl.protocol === 'https:') && originUrl.host === host;
+    } catch {
+      sameOrigin = false;
+    }
+  }
+  if (!sameOrigin) {
+    reply(403,{error:`仅可从雷达页面修改${label}。`}); return;
+  }
+  if (req.method === 'GET') {reply(200,onGet()); return;}
+  if (req.method !== 'PUT') {reply(405,{error:'不支持的请求。'}); return;}
+  if (req.headers['content-type']?.split(';')[0] !== 'application/json') {
+    reply(415,{error:`${label}需要 JSON。`}); return;
+  }
+  try {
+    let body = '';
+    for await (const chunk of req) {
+      body += chunk;
+      if (body.length > 8192) throw Error('配置过长。');
+    }
+    reply(200, await onPut(JSON.parse(body)));
+  } catch (error) {
+    const message = error instanceof SyntaxError ? `无法读取${label}。`
+      : error.code ? `无法保存${label}。` : error.message;
+    reply(400,{error:message});
+  }
+}
+
 const server = createServer(async (req,res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
     const json = 'application/json; charset=utf-8';
     if (url.pathname === '/api/model-settings') {
-      const reply = (status, value) => send(req,res,status,json,Buffer.from(JSON.stringify(value)),{'cache-control':'no-store'});
-      const host = req.headers.host ?? '';
-      let sameOrigin = Boolean(host);
-      if (sameOrigin && req.headers.origin) {
-        try {
-          const originUrl = new URL(req.headers.origin);
-          sameOrigin = (originUrl.protocol === 'http:' || originUrl.protocol === 'https:') && originUrl.host === host;
-        } catch {
-          sameOrigin = false;
-        }
-      }
-      if (!sameOrigin) {
-        reply(403,{error:'仅可从雷达页面修改模型配置。'}); return;
-      }
-      if (req.method === 'GET') {reply(200,modelSettings.describe()); return;}
-      if (req.method !== 'PUT') {reply(405,{error:'不支持的请求。'}); return;}
-      if (req.headers['content-type']?.split(';')[0] !== 'application/json') {
-        reply(415,{error:'模型配置需要 JSON。'}); return;
-      }
-      try {
-        let body = '';
-        for await (const chunk of req) {
-          body += chunk;
-          if (body.length > 8192) throw Error('配置过长。');
-        }
-        const result = await modelSettings.update(JSON.parse(body));
-        // A newly enabled model picks up events still showing source headlines.
-        presenter.schedule(lastLive.events.map(event=>event.id));
-        reply(200,result);
-      } catch (error) {
-        const message = error instanceof SyntaxError ? '无法读取模型配置。'
-          : error.code ? '无法保存模型配置。' : error.message;
-        reply(400,{error:message});
-      }
+      await handleJsonSettings(req, res, json, {
+        label: '模型配置',
+        onGet: () => modelSettings.describe(),
+        onPut: async payload => {
+          const result = await modelSettings.update(payload);
+          // A newly enabled model picks up events still showing source headlines.
+          presenter.schedule(lastLive.events.map(event=>event.id));
+          return result;
+        },
+      });
+      return;
+    }
+    if (url.pathname === '/api/intake-settings') {
+      await handleJsonSettings(req, res, json, {
+        label: '采集配置',
+        onGet: () => intakeSettings.describe(),
+        onPut: async payload => {
+          const result = await intakeSettings.update(payload);
+          lastLive = {fingerprint:null, events:[]};
+          return result;
+        },
+      });
       return;
     }
     if (url.pathname === '/api/health') {

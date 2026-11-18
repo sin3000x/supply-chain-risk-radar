@@ -12,7 +12,7 @@ function resolve(events, id) {
 }
 const firstReport = event => reports(event)[0]?.time.value ?? '';
 
-export async function openEventStore(path, findPlaces) {
+export async function openEventStore(path, findPlaces, { getWindowMs = () => WINDOW } = {}) {
   let stored;
   try {
     const file = JSON.parse(await readFile(path,'utf8'));
@@ -82,10 +82,11 @@ export async function openEventStore(path, findPlaces) {
       }
       let id = [...direct][0];
       if (!id && event.topic) {
+        const windowMs = getWindowMs() || WINDOW;
         const candidates = [...next.values()].filter(previous=>
           !previous.mergedInto && previous.topic === event.topic &&
-          Math.abs(Date.parse(previous.updatedAt)-Date.parse(event.updatedAt)) <= WINDOW &&
-          reports(event).some(a=>reports(previous).some(b=>clusterNews([a,b],findPlaces).some(group=>group.records.length===2))));
+          Math.abs(Date.parse(previous.updatedAt)-Date.parse(event.updatedAt)) <= windowMs &&
+          reports(event).some(a=>reports(previous).some(b=>clusterNews([a,b],findPlaces,{windowMs}).some(group=>group.records.length===2))));
         if(candidates.length===1) id = candidates[0].id;
       }
       // The proposed ID matches the old release for its first observed article.

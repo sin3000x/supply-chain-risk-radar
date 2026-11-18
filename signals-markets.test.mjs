@@ -252,3 +252,42 @@ test('createSignalReader does not cache total failures and caches successful res
   assert.equal(cached, recovered);
   assert.equal(fetchCalls, callsAfterSuccess);
 });
+
+test('parsePortWatchCsv and normalizePolymarketEvents honor custom windows and thresholds', () => {
+  const now = Date.parse('2026-11-18T00:00:00Z');
+  const rows = ['date,portname,n_total,n_container,n_tanker'];
+  // 4 recent days: 80 ships/day; 4 prior days: 100 ships/day (-20% vs prior 4 days)
+  for (let i = 0; i < 4; i++) {
+    const d = new Date(now - (i + 1) * 86_400_000).toISOString().slice(0, 10);
+    rows.push(`${d},Suez Canal,80,40,20`);
+  }
+  for (let i = 4; i < 8; i++) {
+    const d = new Date(now - (i + 1) * 86_400_000).toISOString().slice(0, 10);
+    rows.push(`${d},Suez Canal,100,50,25`);
+  }
+  assert.equal(parsePortWatchCsv(rows.join('\n'), now, { windowDays: 4, thresholdPct: 25 }).length, 0);
+  const pwSignals = parsePortWatchCsv(rows.join('\n'), now, { windowDays: 4, thresholdPct: 15 });
+  assert.equal(pwSignals.length, 1);
+  assert.match(pwSignals[0].title, /环比前 4 日下降 20%/);
+
+  const marketInputs = [
+    {
+      id: 'evt-soon',
+      title: 'US tariffs on China this month?',
+      volume: 100000,
+      endDate: '2026-12-01T00:00:00Z',
+      markets: [{ id: 'm-soon', question: 'US tariffs on China this month?', outcomePrices: '["0.5","0.5"]', volumeNum: 100000 }],
+    },
+    {
+      id: 'evt-far',
+      title: 'Suez blockade in 2027?',
+      volume: 400000,
+      endDate: '2027-06-01T00:00:00Z',
+      markets: [{ id: 'm-far', question: 'Suez blockade in 2027?', outcomePrices: '["0.3","0.7"]', volumeNum: 400000 }],
+    },
+  ];
+  assert.equal(normalizePolymarketEvents(marketInputs, () => [], now, { minVolume: 200000 }).length, 1);
+  const shortHorizon = normalizePolymarketEvents(marketInputs, () => [], now, { minVolume: 50000, horizonDays: 30 });
+  assert.equal(shortHorizon.length, 1);
+  assert.equal(shortHorizon[0].source.upstreamId, 'm-soon');
+});
