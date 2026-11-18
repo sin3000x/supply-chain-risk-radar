@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildEvents} from './events.mjs';
+import {createEventLocator} from './geography.mjs';
 import {loadNetwork} from './network.mjs';
 
 test('live intake groups coverage, attaches commentary, and filters unrelated news', async () => {
@@ -91,4 +92,28 @@ test('network.annotate narrows matched routes by transport mode', async () => {
   for (const match of seaEvent.networkMatches) {
     assert.ok(match.routes.every(route => route.mode === 'sea'));
   }
+});
+
+test('createEventLocator resolves coordinates supporting West-to-East spatial ordering within regions', async () => {
+  const network = await loadNetwork(new URL('./data/',import.meta.url).pathname,'demo');
+  const locate = createEventLocator(network);
+
+  for (const node of network.snapshot.nodes) {
+    const loc = locate({geoAnchors:[node.id]});
+    assert.notEqual(loc.region, 'unknown', `${node.id} should map to a region`);
+    assert.ok(Number.isFinite(loc.lon) && Number.isFinite(loc.lat), `${node.id} should have coordinates`);
+  }
+
+  const sortWestToEast = ids => ids.map(id => locate({geoAnchors:[id]}))
+    .sort((a,b) => a.lon - b.lon || b.lat - a.lat)
+    .map(loc => loc.id);
+
+  assert.deepEqual(
+    sortWestToEast(['CP_HORMUZ', 'CP_SUEZ', 'CP_BAB']),
+    ['CP_SUEZ', 'CP_BAB', 'CP_HORMUZ']
+  );
+  assert.deepEqual(
+    sortWestToEast(['CP_BOSPHORUS', 'PORT_ROTTERDAM', 'PORT_ALGECIRAS', 'PORT_VALENCIA']),
+    ['PORT_ALGECIRAS', 'PORT_VALENCIA', 'PORT_ROTTERDAM', 'CP_BOSPHORUS']
+  );
 });

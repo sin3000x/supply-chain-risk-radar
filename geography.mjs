@@ -6,6 +6,11 @@ const fold = text => text.trim().toLowerCase();
 const regionsByName = new Map();
 const regionsByCountry = new Map();
 const regionsByNode = new Map();
+const coordinates = geography.coordinates ?? {};
+const hubsByNetworkId = new Map(
+  GEO_HUBS.filter(hub => hub.networkId && Number.isFinite(hub.lon) && Number.isFinite(hub.lat))
+    .map(hub => [hub.networkId, hub])
+);
 
 export const regions = Object.fromEntries(Object.entries(geography.regions).map(([id, area]) => {
   for (const name of [id, area.label, ...(area.aliases ?? [])]) regionsByName.set(fold(name), id);
@@ -19,21 +24,45 @@ const unknown = {id:'unknown',label:regions.unknown.label,region:'unknown',basis
 const strategicNodeTypes = new Set(['chokepoint','sea_area']);
 
 export function createEventLocator(network) {
+  function nodeCoordinates(node, region) {
+    if (Number.isFinite(node.lon) && Number.isFinite(node.lat)) return [node.lon, node.lat];
+    const direct = coordinates[node.id];
+    if (Array.isArray(direct) && Number.isFinite(direct[0]) && Number.isFinite(direct[1])) return direct;
+    const hub = hubsByNetworkId.get(node.id);
+    if (hub) return [hub.lon, hub.lat];
+    const countryCoords = node.country ? coordinates[`CTY_${node.country}`] : null;
+    if (Array.isArray(countryCoords) && Number.isFinite(countryCoords[0]) && Number.isFinite(countryCoords[1])) {
+      return countryCoords;
+    }
+    const fallback = regions[region];
+    return fallback?.lon != null && fallback?.lat != null ? [fallback.lon, fallback.lat] : null;
+  }
+
   function networkLocation(node, basis) {
+    const region = regionsByName.get(fold(node.region ?? '')) ?? regionsByNode.get(node.id) ??
+      regionsByCountry.get(node.country) ?? 'unknown';
+    const coords = nodeCoordinates(node, region);
     return {
       id:node.id, nodeId:node.id, label:node.name_zh || node.name_en || node.id, basis,
-      region:regionsByName.get(fold(node.region ?? '')) ?? regionsByNode.get(node.id) ??
-        regionsByCountry.get(node.country) ?? 'unknown',
+      region,
+      ...(coords && {lon:coords[0], lat:coords[1]}),
     };
   }
 
   function hubLocation(hub, basis) {
     const linked = network.getNode(hub.networkId);
-    if (linked) return networkLocation(linked,basis);
+    if (linked) {
+      const location = networkLocation(linked,basis);
+      if (location.lon == null && Number.isFinite(hub.lon) && Number.isFinite(hub.lat)) {
+        return {...location, lon:hub.lon, lat:hub.lat};
+      }
+      return location;
+    }
     return {
       id:hub.id, basis,
       label:hub.label ?? (hub.type === 'capital' ? hub.country : hub.name),
       region:regionsByName.get(fold(hub.region)) ?? 'unknown',
+      ...(Number.isFinite(hub.lon) && Number.isFinite(hub.lat) && {lon:hub.lon, lat:hub.lat}),
     };
   }
 
@@ -81,7 +110,13 @@ export function createEventLocator(network) {
     const declared = event.region?.trim();
     if (declared) {
       const region = regionsByName.get(fold(declared));
-      if (region) return {id:region,label:regions[region].label,region,basis:'reported'};
+      if (region) {
+        const area = regions[region];
+        return {
+          id:region, label:area.label, region, basis:'reported',
+          ...(area.lon != null && area.lat != null && {lon:area.lon, lat:area.lat}),
+        };
+      }
       const location = locationById(declared,'reported');
       if (location) return location;
       const matches = namedLocations(declared,'reported');

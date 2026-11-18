@@ -74,49 +74,344 @@ function info(event) {
   return value;
 }
 
-// ── Map ──────────────────────────────────────────────────────────────────
+// ── Map & Spatial State ──────────────────────────────────────────────────
 const mapView = el('map-view');
+const riskMap = el('risk-map');
 const canvas = mapView.querySelector('canvas');
+const mapRegions = el('map-regions');
+const mapZoomIn = el('map-zoom-in');
+const mapZoomOut = el('map-zoom-out');
+const mapReset = el('map-reset');
+const regionControl = el('region');
+const sortControl = el('sort');
 const BASE_W = 960, BASE_H = 440;
-const project = (lon, lat) => [(lon + 180) / 360, (80 - lat) / 165];
+const GLOBAL_CAMERA = {minLon:-180, maxLon:180, minLat:-62, maxLat:78, zoomed:false};
+const WORLD_LON_SPAN = GLOBAL_CAMERA.maxLon - GLOBAL_CAMERA.minLon;
+const WORLD_LAT_SPAN = GLOBAL_CAMERA.maxLat - GLOBAL_CAMERA.minLat;
+const WORLD_ASPECT = WORLD_LON_SPAN / WORLD_LAT_SPAN;
+const MIN_LON_SPAN = 12;
+let mapCamera = {...GLOBAL_CAMERA};
+const project = (lon, lat, camera = mapCamera) => [
+  (lon - camera.minLon) / (camera.maxLon - camera.minLon),
+  (camera.maxLat - lat) / (camera.maxLat - camera.minLat),
+];
+
+let landRings = null;
 let landPath = null;
+let landPathKey = '';
 let mapState = 'loading';
+let selectedPlaceId = null;
+let hoveredPlaceId = null;
+let hoveredRegionId = null;
+let lastAutoFramedRegion = '';
+let currentRegionGroups = [];
+let mapPlaces = [];
+let mapCorridors = [];
+
+const hasCoords = geo => Number.isFinite(geo?.lon) && Number.isFinite(geo?.lat);
+function formatCoord(lon, lat) {
+  if (!Number.isFinite(lon) || !Number.isFinite(lat)) return '';
+  return `${Math.abs(lat).toFixed(1)}°${lat >= 0 ? 'N' : 'S'} ${Math.abs(lon).toFixed(1)}°${lon >= 0 ? 'E' : 'W'}`;
+}
+function compareSpatial(aGeo, bGeo) {
+  const aLon = Number.isFinite(aGeo?.lon) ? aGeo.lon : 999;
+  const bLon = Number.isFinite(bGeo?.lon) ? bGeo.lon : 999;
+  if (aLon !== bLon) return aLon - bLon;
+  const aLat = Number.isFinite(aGeo?.lat) ? aGeo.lat : -999;
+  const bLat = Number.isFinite(bGeo?.lat) ? bGeo.lat : -999;
+  if (aLat !== bLat) return bLat - aLat;
+  return (aGeo?.label ?? '').localeCompare(bGeo?.label ?? '', 'zh-CN');
+}
+
+function buildLandPath() {
+  if (!landRings) return null;
+  const key = `${mapCamera.minLon}:${mapCamera.maxLon}:${mapCamera.minLat}:${mapCamera.maxLat}`;
+  if (landPath && landPathKey === key) return landPath;
+  const path = new Path2D();
+  for (const ring of landRings) {
+    ring.forEach(([lon, lat], index) => {
+      const [x, y] = project(lon, lat);
+      path[index ? 'lineTo' : 'moveTo'](x * BASE_W, y * BASE_H);
+    });
+    path.closePath();
+  }
+  landPath = path;
+  landPathKey = key;
+  return path;
+}
+
+function clampSpan(min, max, span, limitMin, limitMax) {
+  const total = limitMax - limitMin;
+  if (span >= total) return [limitMin, limitMax];
+  const center = (min + max) / 2;
+  let start = center - span / 2;
+  let end = center + span / 2;
+  if (start < limitMin) {end += limitMin - start; start = limitMin;}
+  if (end > limitMax) {start -= end - limitMax; end = limitMax;}
+  return [Math.max(limitMin, start), Math.min(limitMax, end)];
+}
+
+function setCameraBounds(minLon, maxLon, minLat, maxLat) {
+  let lonSpan = Math.min(WORLD_LON_SPAN, Math.max(MIN_LON_SPAN, maxLon - minLon));
+  let latSpan = lonSpan / WORLD_ASPECT;
+  if (latSpan > WORLD_LAT_SPAN) {
+    latSpan = WORLD_LAT_SPAN;
+    lonSpan = latSpan * WORLD_ASPECT;
+  }
+  const [clampedMinLon, clampedMaxLon] = clampSpan(minLon, maxLon, lonSpan, GLOBAL_CAMERA.minLon, GLOBAL_CAMERA.maxLon);
+  const [clampedMinLat, clampedMaxLat] = clampSpan(minLat, maxLat, latSpan, GLOBAL_CAMERA.minLat, GLOBAL_CAMERA.maxLat);
+  mapCamera = {
+    minLon:clampedMinLon,
+    maxLon:clampedMaxLon,
+    minLat:clampedMinLat,
+    maxLat:clampedMaxLat,
+    zoomed:lonSpan < WORLD_LON_SPAN - 0.5,
+  };
+}
+
+function updateMapCamera(regionGroups, selectedRegion) {
+  if (!selectedRegion || selectedRegion === 'unknown') {
+    mapCamera = {...GLOBAL_CAMERA};
+    return;
+  }
+  const points = [];
+  for (const group of regionGroups) {
+    if (group.regionId !== selectedRegion) continue;
+    for (const place of group.places) {
+      if (hasCoords(place.geo)) points.push([place.geo.lon, place.geo.lat]);
+    }
+  }
+  const area = data?.regions?.[selectedRegion];
+  if (Number.isFinite(area?.lon) && Number.isFinite(area?.lat)) points.push([area.lon, area.lat]);
+  if (!points.length) {
+    mapCamera = {...GLOBAL_CAMERA};
+    return;
+  }
+  const lons = points.map(p => p[0]);
+  const lats = points.map(p => p[1]);
+  const rawMinLon = Math.min(...lons), rawMaxLon = Math.max(...lons);
+  const rawMinLat = Math.min(...lats), rawMaxLat = Math.max(...lats);
+  let lonSpan = Math.max(44, (rawMaxLon - rawMinLon) + 18);
+  let latSpan = Math.max(20, (rawMaxLat - rawMinLat) + 12);
+  if (lonSpan / latSpan < WORLD_ASPECT) lonSpan = latSpan * WORLD_ASPECT;
+  else latSpan = lonSpan / WORLD_ASPECT;
+  const cLon = (rawMinLon + rawMaxLon) / 2;
+  const cLat = (rawMinLat + rawMaxLat) / 2;
+  setCameraBounds(cLon - lonSpan / 2, cLon + lonSpan / 2, cLat - latSpan / 2, cLat + latSpan / 2);
+}
+
+function zoomCameraBy(factor, anchorX = 0.5, anchorY = 0.5) {
+  const currentLonSpan = mapCamera.maxLon - mapCamera.minLon;
+  const currentLatSpan = mapCamera.maxLat - mapCamera.minLat;
+  const anchorLon = mapCamera.minLon + anchorX * currentLonSpan;
+  const anchorLat = mapCamera.maxLat - anchorY * currentLatSpan;
+  const newLonSpan = Math.min(WORLD_LON_SPAN, Math.max(MIN_LON_SPAN, currentLonSpan * factor));
+  const newLatSpan = newLonSpan / WORLD_ASPECT;
+  const minLon = anchorLon - anchorX * newLonSpan;
+  const maxLat = anchorLat + anchorY * newLatSpan;
+  setCameraBounds(minLon, minLon + newLonSpan, maxLat - newLatSpan, maxLat);
+  refreshMapViewport();
+}
+
+function panCameraByPixels(dx, dy, startCamera, rect) {
+  if (!rect.width || !rect.height) return;
+  const lonSpan = startCamera.maxLon - startCamera.minLon;
+  const latSpan = startCamera.maxLat - startCamera.minLat;
+  const dLon = -(dx / rect.width) * lonSpan;
+  const dLat = (dy / rect.height) * latSpan;
+  setCameraBounds(
+    startCamera.minLon + dLon,
+    startCamera.maxLon + dLon,
+    startCamera.minLat + dLat,
+    startCamera.maxLat + dLat
+  );
+  refreshMapViewport();
+}
+
+function centerCameraOnPlace(geo) {
+  if (!hasCoords(geo)) return;
+  const currentLonSpan = mapCamera.maxLon - mapCamera.minLon;
+  const lonSpan = Math.min(currentLonSpan, 72);
+  const latSpan = lonSpan / WORLD_ASPECT;
+  setCameraBounds(
+    geo.lon - lonSpan / 2,
+    geo.lon + lonSpan / 2,
+    geo.lat - latSpan / 2,
+    geo.lat + latSpan / 2
+  );
+  refreshMapViewport();
+}
+
+function layoutMapOverlays(regionGroups) {
+  const activePlaces = regionGroups.flatMap(group =>
+    group.places.filter(place => place.regionId !== 'unknown' && hasCoords(place.geo)));
+  const largest = Math.max(1, ...activePlaces.map(p => p.events.length));
+  const projected = activePlaces.map(place => {
+    const [nx, ny] = project(place.geo.lon, place.geo.lat);
+    const size = 22 + 16 * Math.sqrt((place.events.length - 1) / Math.max(1, largest - 1));
+    const anchorX = nx * BASE_W;
+    const anchorY = ny * BASE_H;
+    const inView = nx >= -0.03 && nx <= 1.03 && ny >= -0.03 && ny <= 1.03;
+    return {
+      ...place,
+      size,
+      radius:size / 2,
+      anchorX,
+      anchorY,
+      inView,
+      displayX:Math.min(BASE_W - 18, Math.max(18, anchorX)),
+      displayY:Math.min(BASE_H - 18, Math.max(18, anchorY)),
+    };
+  });
+
+  const nodes = projected.filter(node => node.inView);
+  // Relax close in-view place markers so counts stay clickable while leader lines point back to true coordinates.
+  for (let iter = 0; iter < 16; iter++) {
+    if (iter < 12) {
+      for (const node of nodes) {
+        node.displayX += (node.anchorX - node.displayX) * 0.08;
+        node.displayY += (node.anchorY - node.displayY) * 0.08;
+      }
+    }
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i], b = nodes[j];
+        let dx = b.displayX - a.displayX;
+        let dy = b.displayY - a.displayY;
+        let dist = Math.hypot(dx, dy);
+        const minDist = a.radius + b.radius + 5;
+        if (dist < minDist) {
+          if (dist < 0.01) {
+            const angle = (i * 2.39996) % (Math.PI * 2);
+            dx = Math.cos(angle);
+            dy = Math.sin(angle);
+            dist = 1;
+          }
+          const push = (minDist - dist) * 0.5;
+          const ux = dx / dist, uy = dy / dist;
+          a.displayX -= ux * push; a.displayY -= uy * push;
+          b.displayX += ux * push; b.displayY += uy * push;
+        }
+      }
+    }
+    for (const node of nodes) {
+      node.displayX = Math.min(BASE_W - 18, Math.max(18, node.displayX));
+      node.displayY = Math.min(BASE_H - 18, Math.max(18, node.displayY));
+    }
+  }
+
+  const byRegion = new Map();
+  for (const node of projected) {
+    if (!byRegion.has(node.regionId)) byRegion.set(node.regionId, []);
+    byRegion.get(node.regionId).push(node);
+  }
+  mapPlaces = nodes;
+  mapCorridors = [...byRegion.entries()]
+    .filter(([, list]) => list.length >= 2)
+    .map(([regionId, list]) => ({regionId, points:list}));
+}
 
 function drawMap() {
   const width = canvas.clientWidth;
-  if (!landPath || !width) return;
+  if (!width) return;
   const ratio = devicePixelRatio || 1;
   const w = Math.round(width * ratio), h = Math.round(width * BASE_H / BASE_W * ratio);
   if (canvas.width !== w || canvas.height !== h) {canvas.width = w; canvas.height = h;}
   const ctx = canvas.getContext('2d');
   const scale = w / BASE_W;
   const style = getComputedStyle(canvas);
+  const rootStyle = getComputedStyle(document.documentElement);
+  const accent = rootStyle.getPropertyValue('--accent').trim() || '#5fd4c0';
+  const gridColor = rootStyle.getPropertyValue('--grid-line').trim();
+  const mutedColor = rootStyle.getPropertyValue('--muted').trim() || '#94acad';
+
   ctx.setTransform(1,0,0,1,0,0);
   ctx.clearRect(0,0,w,h);
   ctx.setTransform(scale,0,0,h / BASE_H,0,0);
-  const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--grid-line').trim();
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0,0,BASE_W,BASE_H);
+  ctx.clip();
+
   if (gridColor) {
+    const lonSpan = mapCamera.maxLon - mapCamera.minLon;
+    const step = lonSpan <= 45 ? 5 : lonSpan <= 120 ? 15 : 30;
+    const firstLon = Math.ceil(mapCamera.minLon / step) * step;
+    const firstLat = Math.ceil(mapCamera.minLat / step) * step;
     ctx.strokeStyle = gridColor;
     ctx.lineWidth = 0.5 * ratio / scale;
     ctx.beginPath();
-    for (let lon = -150; lon <= 150; lon += 30) {
-      const [x] = project(lon,0);
-      ctx.moveTo(x * BASE_W,0);
-      ctx.lineTo(x * BASE_W,BASE_H);
+    for (let lon = firstLon; lon <= mapCamera.maxLon; lon += step) {
+      const [x] = project(lon, 0);
+      ctx.moveTo(x * BASE_W, 0);
+      ctx.lineTo(x * BASE_W, BASE_H);
     }
-    for (let lat = -60; lat <= 60; lat += 30) {
-      const [,y] = project(0,lat);
-      ctx.moveTo(0,y * BASE_H);
-      ctx.lineTo(BASE_W,y * BASE_H);
+    for (let lat = firstLat; lat <= mapCamera.maxLat; lat += step) {
+      const [, y] = project(0, lat);
+      ctx.moveTo(0, y * BASE_H);
+      ctx.lineTo(BASE_W, y * BASE_H);
     }
     ctx.stroke();
   }
-  ctx.fillStyle = style.color;
-  ctx.strokeStyle = style.borderTopColor;
-  ctx.lineWidth = 0.6 * ratio / scale;
-  ctx.lineJoin = 'round';
-  ctx.fill(landPath);
-  ctx.stroke(landPath);
+
+  const path = buildLandPath();
+  if (path) {
+    ctx.fillStyle = style.color;
+    ctx.strokeStyle = style.borderTopColor;
+    ctx.lineWidth = 0.6 * ratio / scale;
+    ctx.lineJoin = 'round';
+    ctx.fill(path);
+    ctx.stroke(path);
+  }
+
+  const activeRegion = regionControl.value || hoveredRegionId;
+  // Intra-region West-to-East spatial corridor polylines.
+  for (const corridor of mapCorridors) {
+    const emphasized = activeRegion === corridor.regionId;
+    ctx.save();
+    ctx.strokeStyle = accent;
+    ctx.globalAlpha = emphasized ? 0.78 : (activeRegion ? 0.16 : 0.36);
+    ctx.lineWidth = emphasized ? 2 : 1.25;
+    ctx.setLineDash(emphasized ? [6, 4] : [4, 4]);
+    ctx.beginPath();
+    corridor.points.forEach((pt, idx) => {
+      ctx[idx ? 'lineTo' : 'moveTo'](pt.anchorX, pt.anchorY);
+    });
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Anchor leader lines, true coordinate dots, and focus rings.
+  for (const place of mapPlaces) {
+    const isFocused = place.id === selectedPlaceId || place.id === hoveredPlaceId;
+    const dist = Math.hypot(place.displayX - place.anchorX, place.displayY - place.anchorY);
+    if (dist > 3) {
+      ctx.save();
+      ctx.strokeStyle = isFocused ? accent : mutedColor;
+      ctx.globalAlpha = isFocused ? 0.9 : 0.45;
+      ctx.lineWidth = isFocused ? 1.5 : 1;
+      ctx.beginPath();
+      ctx.moveTo(place.anchorX, place.anchorY);
+      ctx.lineTo(place.displayX, place.displayY);
+      ctx.stroke();
+      ctx.fillStyle = isFocused ? accent : mutedColor;
+      ctx.beginPath();
+      ctx.arc(place.anchorX, place.anchorY, isFocused ? 3.2 : 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    if (isFocused) {
+      ctx.save();
+      ctx.strokeStyle = accent;
+      ctx.globalAlpha = 0.85;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(place.anchorX, place.anchorY, 7, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+  ctx.restore();
 }
 new ResizeObserver(()=>drawMap()).observe(canvas);
 
@@ -127,18 +422,16 @@ fetch('/vendor/worldmonitor/countries.geojson')
     return response.json();
   })
   .then(geojson => {
-    const path = new Path2D();
+    const rings = [];
     for (const {geometry, properties} of geojson.features) {
       if (properties['ISO3166-1-Alpha-2'] === 'AQ') continue;
-      const rings = geometry?.type === 'Polygon' ? [geometry.coordinates[0]]
+      const featureRings = geometry?.type === 'Polygon' ? [geometry.coordinates[0]]
         : geometry?.type === 'MultiPolygon' ? geometry.coordinates.map(polygon => polygon[0]) : [];
-      for (const ring of rings) ring.forEach(([lon,lat],index) => {
-        const [x,y] = project(lon,lat);
-        path[index ? 'lineTo' : 'moveTo'](x * BASE_W,y * BASE_H);
-      });
-      path.closePath();
+      for (const ring of featureRings) if (ring?.length) rings.push(ring);
     }
-    landPath = path;
+    landRings = rings;
+    landPath = null;
+    landPathKey = '';
     mapState = 'ready';
     drawMap();
   })
@@ -148,46 +441,206 @@ fetch('/vendor/worldmonitor/countries.geojson')
 let unmappedEvents = 0;
 function renderMapNote() {
   el('map-note').textContent = [
-    mapState === 'unavailable' ? '底图暂不可用，可用区域筛选查看事件。' : '圆点为区域事件数，点击筛选。',
-    unmappedEvents && `${unmappedEvents} 个事件地点待确认。`,
+    mapState === 'unavailable' ? '底图暂不可用，可用区域筛选查看事件。'
+      : mapCamera.zoomed ? '滚轮/按钮缩放、拖拽平移，点击节点定位对应地点事件。'
+        : '节点按真实经纬度标注，支持滚轮/+−缩放和区域聚焦，虚线按自西向东连线。',
+    unmappedEvents && `${unmappedEvents} 个事件地点待确认（未落图）。`,
   ].filter(Boolean).join(' ');
 }
 
-const regionControl = el('region');
+function syncGeoHighlight() {
+  for (const marker of el('map-markers').children) {
+    const placeId = marker.dataset.placeId;
+    const region = marker.dataset.region;
+    const active = placeId === selectedPlaceId;
+    const highlight = placeId === hoveredPlaceId || (Boolean(hoveredRegionId) && region === hoveredRegionId);
+    marker.dataset.active = String(active);
+    marker.dataset.highlight = String(highlight);
+    marker.dataset.showLabel = String(marker.dataset.alwaysLabel === 'true' || active || highlight);
+    marker.setAttribute('aria-pressed', String(active));
+  }
+  for (const section of document.querySelectorAll('.place-group')) {
+    const placeId = section.dataset.placeId;
+    section.dataset.active = String(placeId === selectedPlaceId);
+    section.dataset.highlight = String(placeId === hoveredPlaceId);
+  }
+  for (const step of document.querySelectorAll('.corridor-step')) {
+    const placeId = step.dataset.placeId;
+    const active = placeId === selectedPlaceId;
+    step.dataset.active = String(active);
+    step.dataset.highlight = String(placeId === hoveredPlaceId);
+    step.setAttribute('aria-pressed', String(active));
+  }
+  for (const regionSection of document.querySelectorAll('.region-section')) {
+    regionSection.dataset.highlight = String(Boolean(hoveredRegionId) && regionSection.dataset.region === hoveredRegionId);
+  }
+  for (const chip of mapRegions.children) {
+    chip.dataset.highlight = String(Boolean(hoveredRegionId) && chip.dataset.region === hoveredRegionId);
+  }
+  drawMap();
+}
+
+function refreshMapViewport() {
+  layoutMapOverlays(currentRegionGroups);
+  renderMapMarkers();
+  syncGeoHighlight();
+}
+
+function focusPlace(placeId, {scroll = true, open = true, zoom = false} = {}) {
+  selectedPlaceId = selectedPlaceId === placeId ? null : placeId;
+  if (selectedPlaceId) {
+    const section = [...document.querySelectorAll('.place-group')].find(item => item.dataset.placeId === selectedPlaceId);
+    if (section) {
+      if (open) section.open = true;
+      if (scroll) section.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }
+    if (zoom) {
+      const targetPlace = currentRegionGroups.flatMap(g => g.places).find(p => p.id === selectedPlaceId);
+      if (targetPlace) centerCameraOnPlace(targetPlace.geo);
+    }
+  }
+  syncGeoHighlight();
+}
+
 function renderRegionControls(rows) {
   const counts = new Map();
   for (const {geo} of rows) counts.set(geo.region,(counts.get(geo.region) ?? 0) + 1);
   const selected = regionControl.value;
   regionControl.replaceChildren(new Option('全部区域',''));
-  const markers = el('map-markers');
-  const focused = document.activeElement?.dataset.mapRegion;
-  markers.replaceChildren();
-  const largest = Math.max(1,...counts.values());
-  for (const [id,area] of Object.entries(data?.regions ?? {unknown:{label:'地点待确认'}})) {
+  mapRegions.replaceChildren();
+  const regionEntries = Object.entries(data?.regions ?? {unknown:{label:'地点待确认'}});
+  const totalCount = rows.length;
+
+  const allChip = add(mapRegions,'button','','map-region-chip');
+  allChip.type = 'button';
+  allChip.textContent = `全部 ${totalCount}`;
+  allChip.dataset.region = '';
+  allChip.setAttribute('aria-pressed', String(selected === ''));
+  allChip.onclick = () => {
+    regionControl.value = '';
+    selectedPlaceId = null;
+    render();
+  };
+
+  for (const [id,area] of regionEntries) {
     const count = counts.get(id);
     if (!count && selected !== id) continue;
     regionControl.add(new Option(`${area.label} · ${count ?? 0}`,id));
-    if (!count || area.lon == null) continue;
-    const marker = add(markers,'button',String(count),'map-marker');
-    const [x,y] = project(area.lon,area.lat);
-    marker.type = 'button';
-    marker.style.left = `${x * 100}%`;
-    marker.style.top = `${y * 100}%`;
-    marker.style.setProperty('--size',`${24 + 18 * Math.sqrt((count - 1) / Math.max(1,largest - 1))}px`);
-    marker.dataset.mapRegion = id;
-    marker.title = `${area.label} · ${count} 个事件`;
-    marker.setAttribute('aria-label',marker.title);
-    marker.setAttribute('aria-pressed',String(selected === id));
-    marker.onclick = () => {
+    const chip = add(mapRegions,'button',`${area.label} ${count ?? 0}`,'map-region-chip');
+    chip.type = 'button';
+    chip.dataset.region = id;
+    chip.setAttribute('aria-pressed', String(selected === id));
+    chip.onclick = () => {
       regionControl.value = selected === id ? '' : id;
       render();
     };
-    if (focused === id) marker.focus({preventScroll:true});
+    chip.onmouseenter = () => {hoveredRegionId = id; syncGeoHighlight();};
+    chip.onmouseleave = () => {if (hoveredRegionId === id) {hoveredRegionId = null; syncGeoHighlight();}};
   }
   regionControl.value = selected;
   unmappedEvents = counts.get('unknown') ?? 0;
+}
+
+function renderMapMarkers() {
+  const markers = el('map-markers');
+  const focused = document.activeElement?.dataset.placeId;
+  markers.replaceChildren();
+  const showAllLabels = mapCamera.zoomed || mapPlaces.length <= 10;
+  for (const place of mapPlaces) {
+    const marker = add(markers,'button','','map-marker');
+    marker.type = 'button';
+    marker.style.left = `${(place.displayX / BASE_W) * 100}%`;
+    marker.style.top = `${(place.displayY / BASE_H) * 100}%`;
+    marker.style.setProperty('--size',`${place.size}px`);
+    marker.dataset.placeId = place.id;
+    marker.dataset.region = place.regionId;
+    const alwaysLabel = showAllLabels || place.events.length >= 2;
+    marker.dataset.alwaysLabel = String(alwaysLabel);
+    const coord = formatCoord(place.geo.lon, place.geo.lat);
+    const regionLabel = data?.regions?.[place.regionId]?.label;
+    marker.title = [regionLabel, place.geo.label, `${place.events.length} 个事件`, coord].filter(Boolean).join(' · ');
+    marker.setAttribute('aria-label', marker.title);
+    add(marker,'span',String(place.events.length),'map-marker-count');
+    add(marker,'span',place.geo.label,'map-marker-label');
+    marker.onmouseenter = () => {hoveredPlaceId = place.id; hoveredRegionId = place.regionId; syncGeoHighlight();};
+    marker.onmouseleave = () => {
+      if (hoveredPlaceId === place.id) hoveredPlaceId = null;
+      if (hoveredRegionId === place.regionId) hoveredRegionId = null;
+      syncGeoHighlight();
+    };
+    marker.onfocus = () => {hoveredPlaceId = place.id; hoveredRegionId = place.regionId; syncGeoHighlight();};
+    marker.onblur = () => {
+      if (hoveredPlaceId === place.id) hoveredPlaceId = null;
+      if (hoveredRegionId === place.regionId) hoveredRegionId = null;
+      syncGeoHighlight();
+    };
+    marker.onclick = () => focusPlace(place.id, {scroll:true, open:true, zoom:false});
+    if (focused === place.id) marker.focus({preventScroll:true});
+  }
+  mapZoomIn.disabled = (mapCamera.maxLon - mapCamera.minLon) <= MIN_LON_SPAN + 0.5;
+  mapZoomOut.disabled = !mapCamera.zoomed;
+  mapReset.hidden = !mapCamera.zoomed && !regionControl.value && !selectedPlaceId;
+  riskMap.dataset.zoomed = String(mapCamera.zoomed);
   renderMapNote();
 }
+
+riskMap.addEventListener('wheel', event => {
+  if (!data) return;
+  event.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const px = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+  const py = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+  const factor = Math.min(1.35, Math.max(0.72, Math.exp(event.deltaY * 0.0018)));
+  zoomCameraBy(factor, px, py);
+}, {passive:false});
+
+let dragState = null;
+riskMap.addEventListener('pointerdown', event => {
+  if (event.button !== 0 || !mapCamera.zoomed || event.target.closest('button')) return;
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  dragState = {
+    pointerId:event.pointerId,
+    startX:event.clientX,
+    startY:event.clientY,
+    startCamera:{...mapCamera},
+    rect,
+  };
+  riskMap.dataset.dragging = 'true';
+  riskMap.setPointerCapture?.(event.pointerId);
+});
+riskMap.addEventListener('pointermove', event => {
+  if (!dragState || event.pointerId !== dragState.pointerId) return;
+  panCameraByPixels(event.clientX - dragState.startX, event.clientY - dragState.startY, dragState.startCamera, dragState.rect);
+});
+const stopDrag = event => {
+  if (!dragState || event.pointerId !== dragState.pointerId) return;
+  if (riskMap.hasPointerCapture?.(event.pointerId)) riskMap.releasePointerCapture(event.pointerId);
+  dragState = null;
+  delete riskMap.dataset.dragging;
+};
+riskMap.addEventListener('pointerup', stopDrag);
+riskMap.addEventListener('pointercancel', stopDrag);
+
+riskMap.addEventListener('dblclick', event => {
+  if (!data || event.target.closest('button')) return;
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const px = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+  const py = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+  zoomCameraBy(0.6, px, py);
+});
+
+mapZoomIn.onclick = () => zoomCameraBy(0.65);
+mapZoomOut.onclick = () => zoomCameraBy(1 / 0.65);
+mapReset.onclick = () => {
+  regionControl.value = '';
+  selectedPlaceId = null;
+  lastAutoFramedRegion = '';
+  mapCamera = {...GLOBAL_CAMERA};
+  render();
+};
 
 // ── Data ─────────────────────────────────────────────────────────────────
 let data;
@@ -344,6 +797,56 @@ function dataTable(parent, title, columns) {
   return add(table,'tbody');
 }
 
+function buildRegionGroups(list, sortMode) {
+  const byRegion = new Map();
+  for (const row of list) {
+    const regionId = row.geo.region || 'unknown';
+    if (!byRegion.has(regionId)) byRegion.set(regionId, new Map());
+    const byPlace = byRegion.get(regionId);
+    if (!byPlace.has(row.geo.id)) byPlace.set(row.geo.id, []);
+    byPlace.get(row.geo.id).push(row);
+  }
+  const regionOrder = Object.keys(data.regions ?? {});
+  const orderIndex = id => {
+    const idx = regionOrder.indexOf(id);
+    return idx === -1 ? 999 : idx;
+  };
+  const compareRows = (a, b) => sortMode === 'routes'
+    ? Number(a.event.action === 'reopening') - Number(b.event.action === 'reopening') ||
+      b.lanes.size - a.lanes.size ||
+      (b.event.updatedAt ?? '').localeCompare(a.event.updatedAt ?? '')
+    : (b.event.updatedAt ?? '').localeCompare(a.event.updatedAt ?? '');
+
+  const groups = [...byRegion.entries()].map(([regionId, byPlace]) => {
+    const places = [...byPlace.values()].map(placeRows => {
+      const events = [...placeRows].sort(compareRows);
+      const geo = events[0].geo;
+      const lanes = new Set(events.flatMap(row => [...row.lanes]));
+      const latestUpdated = events.map(row => row.event.updatedAt).filter(Boolean).sort().at(-1) ?? '';
+      return {id:geo.id, regionId, geo, events, lanes, latestUpdated};
+    }).sort((a, b) => compareSpatial(a.geo, b.geo));
+    places.forEach((place, idx) => {place.spatialIndex = idx + 1;});
+    const regionLanes = new Set(places.flatMap(place => [...place.lanes]));
+    const latestUpdated = places.map(place => place.latestUpdated).filter(Boolean).sort().at(-1) ?? '';
+    return {
+      regionId,
+      label:data.regions?.[regionId]?.label ?? regionId,
+      places,
+      eventCount:places.reduce((sum, place) => sum + place.events.length, 0),
+      laneCount:regionLanes.size,
+      latestUpdated,
+    };
+  });
+
+  return groups.sort((a, b) => {
+    const unknownDiff = Number(a.regionId === 'unknown') - Number(b.regionId === 'unknown');
+    if (unknownDiff) return unknownDiff;
+    if (sortMode === 'newest') return b.latestUpdated.localeCompare(a.latestUpdated);
+    if (sortMode === 'routes') return b.laneCount - a.laneCount || b.latestUpdated.localeCompare(a.latestUpdated);
+    return orderIndex(a.regionId) - orderIndex(b.regionId);
+  });
+}
+
 function render() {
   const mode = currentMode();
   const loading = pending.has(mode);
@@ -356,48 +859,125 @@ function render() {
   const items = el('items');
   items.replaceChildren();
   el('export').disabled = true;
-  if (!data) {el('stats').replaceChildren(); return;}
-  const selectedRegion = regionControl.value;
-  const list = rows.filter(row => !selectedRegion || row.geo.region === selectedRegion);
-  if (el('sort').value === 'routes') {
-    list.sort((a,b) => Number(a.event.action === 'reopening') - Number(b.event.action === 'reopening') || b.lanes.size - a.lanes.size);
+  if (!data) {
+    currentRegionGroups = [];
+    mapPlaces = []; mapCorridors = [];
+    lastAutoFramedRegion = '';
+    updateMapCamera([], '');
+    renderMapMarkers();
+    drawMap();
+    el('stats').replaceChildren();
+    return;
   }
+  const selectedRegion = regionControl.value;
+  const sortMode = sortControl.value;
+  const list = rows.filter(row => !selectedRegion || row.geo.region === selectedRegion);
+  if (selectedPlaceId && !list.some(row => row.geo.id === selectedPlaceId)) selectedPlaceId = null;
+  if (hoveredPlaceId && !list.some(row => row.geo.id === hoveredPlaceId)) hoveredPlaceId = null;
+
   el('export').disabled = !list.length;
   renderStats(list.map(row => row.event));
-  if (!list.length) {add(items,'p','没有匹配的事件。','empty'); return;}
+  const regionGroups = buildRegionGroups(list, sortMode);
+  currentRegionGroups = regionGroups;
+  if (selectedRegion !== lastAutoFramedRegion) {
+    lastAutoFramedRegion = selectedRegion;
+    updateMapCamera(regionGroups, selectedRegion);
+  }
+  layoutMapOverlays(regionGroups);
+  renderMapMarkers();
+  if (!list.length) {
+    drawMap();
+    add(items,'p','没有匹配的事件。','empty');
+    return;
+  }
 
-  const groups = new Map();
-  for (const row of list) {
-    if (!groups.has(row.geo.id)) groups.set(row.geo.id,[]);
-    groups.get(row.geo.id).push(row);
+  for (const regionGroup of regionGroups) {
+    const {regionId, label, places, eventCount, laneCount} = regionGroup;
+    const regionSection = add(items,'section','','region-section');
+    regionSection.dataset.region = regionId;
+
+    const header = add(regionSection,'header','','region-divider');
+    header.onmouseenter = () => {hoveredRegionId = regionId; syncGeoHighlight();};
+    header.onmouseleave = () => {if (hoveredRegionId === regionId) {hoveredRegionId = null; syncGeoHighlight();}};
+
+    const titleRow = add(header,'div','','region-title-row');
+    add(titleRow,'h3',label,'region-title');
+    const regionStats = add(titleRow,'div','','region-stats');
+    add(regionStats,'span',regionId === 'unknown' ? `${eventCount} 个事件` : `${places.length} 个地点 · ${eventCount} 个事件`);
+    if (laneCount) add(regionStats,'span',`${laneCount} 条线路`,'accent');
+    if (regionId !== 'unknown') {
+      const focusBtn = add(titleRow,'button',selectedRegion === regionId ? '已聚焦' : '聚焦区域','region-focus');
+      focusBtn.type = 'button';
+      focusBtn.setAttribute('aria-pressed', String(selectedRegion === regionId));
+      focusBtn.onclick = () => {
+        regionControl.value = selectedRegion === regionId ? '' : regionId;
+        render();
+      };
+
+      const corridor = add(header,'nav','','region-corridor');
+      corridor.setAttribute('aria-label', `${label}自西向东地点顺序`);
+      add(corridor,'span','西 → 东：','corridor-axis');
+      places.forEach((place, idx) => {
+        if (idx > 0) add(corridor,'span','→','corridor-arrow').setAttribute('aria-hidden','true');
+        const step = add(corridor,'button',`${place.spatialIndex}. ${place.geo.label}`,'corridor-step');
+        step.type = 'button';
+        step.dataset.placeId = place.id;
+        step.dataset.region = regionId;
+        step.title = [place.geo.label, `${place.events.length} 个事件`, formatCoord(place.geo.lon, place.geo.lat)].filter(Boolean).join(' · ');
+        step.onmouseenter = () => {hoveredPlaceId = place.id; hoveredRegionId = regionId; syncGeoHighlight();};
+        step.onmouseleave = () => {if (hoveredPlaceId === place.id) {hoveredPlaceId = null; syncGeoHighlight();}};
+        step.onclick = () => focusPlace(place.id, {scroll:true, open:true, zoom:true});
+      });
+    }
+
+    for (const place of places) {
+      const {geo, events, lanes, latestUpdated, spatialIndex} = place;
+      const section = add(regionSection,'details','','place-group');
+      section.dataset.placeId = geo.id;
+      section.dataset.region = regionId;
+      // Cards are one-line summaries, so groups start open; the unresolved bucket starts closed.
+      const initiallyOpen = selectedRegion !== '' || geo.region !== 'unknown' || (regionGroups.length === 1 && places.length === 1);
+      section.open = openPlaces.get(geo.id) ?? initiallyOpen;
+      const title = add(section,'summary','','place-overview');
+      title.onmouseenter = () => {hoveredPlaceId = geo.id; hoveredRegionId = regionId; syncGeoHighlight();};
+      title.onmouseleave = () => {
+        if (hoveredPlaceId === geo.id) hoveredPlaceId = null;
+        if (hoveredRegionId === regionId) hoveredRegionId = null;
+        syncGeoHighlight();
+      };
+
+      const name = add(title,'span','','place-name');
+      if (regionId !== 'unknown') add(name,'span',String(spatialIndex),'place-index');
+      add(name,'strong',geo.label);
+      if (geo.nodeId) add(name,'code',geo.nodeId,'meta');
+      const coord = formatCoord(geo.lon, geo.lat);
+      if (coord) add(name,'span',coord,'place-coord');
+
+      const stats = add(title,'span','','place-stats');
+      add(stats,'span',`${events.length} 个事件`);
+      if (lanes.size) add(stats,'span',`${lanes.size} 条线路`,'accent');
+      timeElement(stats,latestUpdated,shortTime,'');
+      if (hasCoords(geo)) {
+        const pin = add(stats,'button','定位','place-pin');
+        pin.type = 'button';
+        pin.title = '在地图上定位';
+        pin.onclick = event => {
+          event.preventDefault();
+          event.stopPropagation();
+          focusPlace(geo.id, {scroll:false, open:true, zoom:true});
+        };
+      }
+
+      section.addEventListener('toggle',() => {
+        if (!section.isConnected) return;
+        if (section.open === initiallyOpen) openPlaces.delete(geo.id);
+        else openPlaces.set(geo.id,section.open);
+      });
+      const cards = add(section,'div','','place-events');
+      for (const row of events) renderEvent(cards,row);
+    }
   }
-  const placeGroups = [...groups.values()].sort((a,b) =>
-    Number(a[0].geo.region === 'unknown') - Number(b[0].geo.region === 'unknown'));
-  for (const group of placeGroups) {
-    const {geo} = group[0];
-    const section = add(items,'details','','place-group');
-    // Cards are one-line summaries, so groups start open; the unresolved bucket starts closed.
-    const initiallyOpen = selectedRegion !== '' || geo.region !== 'unknown' || placeGroups.length === 1;
-    section.open = openPlaces.get(geo.id) ?? initiallyOpen;
-    const title = add(section,'summary','','place-overview');
-    const prefix = data.regions?.[geo.region]?.label;
-    const name = add(title,'span','','place-name');
-    if (prefix && geo.region !== 'unknown' && prefix !== geo.label) add(name,'span',prefix,'place-region');
-    add(name,'strong',geo.label);
-    if (geo.nodeId) add(name,'code',geo.nodeId,'meta');
-    const stats = add(title,'span','','place-stats');
-    add(stats,'span',`${group.length} 个事件`);
-    const lanes = new Set(group.flatMap(row => [...row.lanes]));
-    if (lanes.size) add(stats,'span',`${lanes.size} 条线路`,'accent');
-    timeElement(stats,group.map(row => row.event.updatedAt).filter(Boolean).sort().at(-1),shortTime,'');
-    section.addEventListener('toggle',() => {
-      if (!section.isConnected) return;
-      if (section.open === initiallyOpen) openPlaces.delete(geo.id);
-      else openPlaces.set(geo.id,section.open);
-    });
-    const cards = add(section,'div','','place-events');
-    for (const row of group) renderEvent(cards,row);
-  }
+  syncGeoHighlight();
 }
 
 const translateButton = el('translate');
@@ -635,6 +1215,11 @@ async function refresh() {
 
 for (const input of modeInputs) input.onchange = () => {
   regionControl.value = '';
+  selectedPlaceId = null;
+  hoveredPlaceId = null;
+  hoveredRegionId = null;
+  lastAutoFramedRegion = '';
+  mapCamera = {...GLOBAL_CAMERA};
   openPlaces.clear();
   store.set('localStorage',modeKey,currentMode());
   refresh();

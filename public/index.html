@@ -45,7 +45,7 @@
   <section class="toolbar" aria-label="数据筛选">
     <input id="search" type="search" placeholder="搜索事件、地点、线路或类别" aria-label="搜索">
     <select id="region" aria-label="区域"><option value="">全部区域</option></select>
-    <select id="sort" aria-label="排序"><option value="newest">最新更新</option><option value="routes">关联线路最多</option></select>
+    <select id="sort" aria-label="排序"><option value="spatial">地理走廊</option><option value="newest">最新更新</option><option value="routes">关联线路最多</option></select>
     <button id="refresh" type="button">刷新</button>
     <button id="translate" type="button" aria-pressed="false" hidden>翻译成中文</button>
     <button id="export" type="button" disabled>导出 JSON</button>
@@ -63,7 +63,8 @@
     <section id="event-list" aria-labelledby="events-title" hidden><h2 id="events-title" class="section-title">事件</h2><div id="items"></div></section>
     <aside id="map-view" aria-labelledby="map-title" hidden>
       <h2 id="map-title" class="section-title">区域分布</h2>
-      <div id="risk-map"><canvas width="960" height="440" aria-hidden="true"></canvas><div id="map-markers"></div></div>
+      <div id="map-regions" class="map-regions" role="toolbar" aria-label="区域分布切换"></div>
+      <div id="risk-map"><canvas width="960" height="440" aria-hidden="true"></canvas><div id="map-markers"></div><div class="map-controls" role="group" aria-label="地图缩放控制"><button id="map-zoom-in" type="button" class="map-ctrl-btn" title="放大地图" aria-label="放大地图">+</button><button id="map-zoom-out" type="button" class="map-ctrl-btn" title="缩小地图" aria-label="缩小地图">−</button><button id="map-reset" type="button" class="map-ctrl-btn map-reset-btn" title="重置全球视图" hidden>重置</button></div></div>
       <p id="map-note"></p>
       <details id="sources" hidden>
         <summary>数据来源</summary>
