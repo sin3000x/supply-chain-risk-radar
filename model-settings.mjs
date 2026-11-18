@@ -4,7 +4,6 @@ import {randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 
 const defaultBaseUrl = 'https://api.openai.com/v1';
-const loopbackHosts = ['localhost','127.0.0.1','[::1]'];
 const defaults = {
   baseUrl:process.env.DEEPSEEK_BASE_URL || (process.env.DEEPSEEK_API_KEY
     ? 'https://api.deepseek.com' : defaultBaseUrl),
@@ -14,15 +13,15 @@ const defaults = {
 
 function normalizeBaseUrl(value) {
   const url = new URL(value);
-  if ((url.protocol !== 'https:' && !(loopbackHosts.includes(url.hostname) && url.protocol === 'http:')) ||
+  if ((url.protocol !== 'https:' && url.protocol !== 'http:') ||
       url.username || url.password || url.search || url.hash) {
-    throw Error('Base URL 必须是 HTTPS，或本机 HTTP 地址。');
+    throw Error('Base URL 必须是 HTTP 或 HTTPS 地址。');
   }
   return url.href.replace(/\/+$/,'').replace(/\/chat\/completions$/,'');
 }
 
 export function canUseModel(profile) {
-  return Boolean(profile?.modelId && (profile.apiKey || loopbackHosts.includes(new URL(profile.baseUrl).hostname)));
+  return Boolean(profile?.modelId && (profile.apiKey || new URL(profile.baseUrl).protocol === 'http:'));
 }
 
 export async function openModelSettings(path = process.env.MODEL_CONFIG_PATH ||
@@ -74,7 +73,7 @@ export async function openModelSettings(path = process.env.MODEL_CONFIG_PATH ||
       try {
         baseUrl = normalizeBaseUrl(input.baseUrl.trim());
       } catch {
-        throw Error('请输入有效的 HTTPS Base URL 或本机 HTTP 地址。');
+        throw Error('请输入有效的 HTTP 或 HTTPS Base URL。');
       }
       const apiKey = input.apiKey.trim();
       if (apiKey && /[^!-~]/.test(apiKey)) throw Error('API Key 不能包含空格或换行。');

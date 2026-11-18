@@ -3,6 +3,19 @@ import {createServer} from 'node:http';
 import {readFile, stat} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {brotliCompressSync, gzipSync, constants as zlib} from 'node:zlib';
+import {installEnvProxy} from './proxy-fetch.mjs';
+
+const proxyStatus = installEnvProxy();
+if (proxyStatus.enabled) {
+  const parts = [
+    proxyStatus.httpProxy && `http=${proxyStatus.httpProxy}`,
+    proxyStatus.httpsProxy && `https=${proxyStatus.httpsProxy}`,
+    proxyStatus.allProxy && `all=${proxyStatus.allProxy}`,
+    proxyStatus.noProxy && `no_proxy=${proxyStatus.noProxy}`,
+  ].filter(Boolean);
+  console.log(`Outbound proxy enabled (${parts.join(', ')})`);
+}
+
 import {feeds, normalize} from './feed.mjs';
 import {openEventStore} from './event-store.mjs';
 import {buildEvents} from './events.mjs';

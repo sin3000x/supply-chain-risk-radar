@@ -1273,7 +1273,7 @@ function showModelProfile(id) {
   el('clear-model-key-row').hidden = !profile?.hasApiKey;
   el('model-key-note').textContent = profile?.hasApiKey
     ? '已保存密钥。更换 Base URL 时请重新输入。'
-    : '尚未保存密钥。本机模型服务可以不填。';
+    : '尚未保存密钥。本机或内网 HTTP 模型服务可以不填。';
   modelActivate.disabled = !profile?.ready;
   modelActivate.textContent = profile && profile.id === modelSettings.activeId ? '停用此配置' : '启用此配置';
   modelSave.disabled = false;
