@@ -72,9 +72,9 @@ const readRss = createFeedReader(undefined, {getSettings: () => intakeSettings.r
 const readLiveSignals = createSignalReader({findPlaces, getSettings: () => intakeSettings.read()});
 const readLiveMarkets = createMarketReader({findPlaces, getSettings: () => intakeSettings.read()});
 
-const assets = ['index.html','app.js','style.css','vendor/worldmonitor/countries.geojson'];
+const assets = ['index.html','app.js','style.css','favicon.svg','vendor/worldmonitor/countries.geojson'];
 const mime = {html:'text/html; charset=utf-8',js:'text/javascript; charset=utf-8',mjs:'text/javascript; charset=utf-8',
-  css:'text/css; charset=utf-8',geojson:'application/geo+json; charset=utf-8'};
+  css:'text/css; charset=utf-8',svg:'image/svg+xml; charset=utf-8',geojson:'application/geo+json; charset=utf-8'};
 const routes = new Map(assets.map(file => [file === 'index.html' ? '/' : '/'+file, {
   url:new URL(`./public/${file}`,import.meta.url),
   type:mime[file.split('.').at(-1)],

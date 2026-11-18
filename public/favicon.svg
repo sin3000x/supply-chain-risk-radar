@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#14b89e"/>
+      <stop offset="100%" stop-color="#076e5f"/>
+    </linearGradient>
+    <linearGradient id="sweep" x1="32" y1="32" x2="50" y2="18" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.45"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Vibrant full-bleed teal badge -->
+  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+
+  <!-- Radar sweep sector -->
+  <path d="M 32 32 L 32 10 A 22 22 0 0 1 51.6 22 Z" fill="url(#sweep)"/>
+
+  <!-- Bold, high-contrast radar rings -->
+  <circle cx="32" cy="32" r="21" fill="none" stroke="#ffffff" stroke-opacity="0.92" stroke-width="3.8"/>
+  <circle cx="32" cy="32" r="11.5" fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="3.2"/>
+
+  <!-- Sweep hand -->
+  <line x1="32" y1="32" x2="49.5" y2="21.5" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Center emitter -->
+  <circle cx="32" cy="32" r="4.5" fill="#ffffff"/>
+
+  <!-- High-contrast risk blip -->
+  <circle cx="47" cy="17" r="6.8" fill="#ff5a5f" stroke="#ffffff" stroke-width="2.2"/>
+</svg>
