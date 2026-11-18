@@ -1,5 +1,3 @@
-import {locateEvent as resolveLocation, regions} from './geography.mjs';
-
 const el = id => document.getElementById(id);
 const store = {
   get(area, key) {try {return globalThis[area].getItem(key);} catch {return null;}},
@@ -55,7 +53,9 @@ const derived = new WeakMap();
 function info(event) {
   let value = derived.get(event);
   if (!value) {
-    const geo = resolveLocation(event);
+    const geo = event.geo ?? (event.region
+      ? {id:'reported:'+event.region,label:event.region,region:'unknown'}
+      : {id:'unknown',label:'地点待确认',region:'unknown'});
     const kinds = Object.keys(labels).filter(kind => event.records.some(record => record.kind === kind));
     const topic = Object.hasOwn(topics,event.topic) ? event.topic : null;
     value = {
@@ -64,8 +64,8 @@ function info(event) {
       lanes:new Set(event.networkMatches.flatMap(match => match.routes.map(route => route.laneId))),
       reports:event.records.filter(record => record.role !== 'background').length,
       search:[
-        event.title, event.summary, event.region, geo.label, regions[geo.region].label, topic && topics[topic],
-        ...event.networkMatches.flatMap(match => [match.nodeName,...match.routes.flatMap(route => [route.origin,route.destination])]),
+        event.title, event.displayTitle, event.latestUpdate?.text, event.summary, event.region, geo.label, geo.nodeId, data?.regions?.[geo.region]?.label, topic && topics[topic],
+        ...event.networkMatches.flatMap(match => [match.nodeName,match.nodeId,...match.routes.flatMap(route => [route.origin,route.destination])]),
         ...event.records.flatMap(record => [record.title,record.category,record.summary,record.source?.publisher]),
       ].filter(Boolean).join('\n').toLowerCase(),
     };
@@ -146,7 +146,7 @@ function renderRegionControls(rows) {
   const focused = document.activeElement?.dataset.mapRegion;
   markers.replaceChildren();
   const largest = Math.max(1,...counts.values());
-  for (const [id,area] of Object.entries(regions)) {
+  for (const [id,area] of Object.entries(data?.regions ?? {unknown:{label:'地点待确认'}})) {
     const count = counts.get(id);
     if (!count && selected !== id) continue;
     regionControl.add(new Option(`${area.label} · ${count ?? 0}`,id));
@@ -178,7 +178,7 @@ const cache = new Map();
 const pending = new Map();
 const errors = new Map();
 const modeKey = 'external-event-mode';
-const snapshotKey = 'external-event-live-v2';
+const snapshotKey = 'external-event-live-v3';
 const modeInputs = [...document.querySelectorAll('input[name="mode"]')];
 const currentMode = () => modeInputs.find(input => input.checked)?.value ?? 'sample';
 const savedMode = store.get('localStorage',modeKey);
@@ -227,6 +227,9 @@ function renderStats(list) {
 function renderStatus(loading, error) {
   const status = el('status');
   status.replaceChildren();
+  status.dataset.loading = String(Boolean(loading));
+  el('sources').hidden = !data;
+  el('network-data').hidden = !data;
   if (!data) {
     status.textContent = loading ? '正在获取数据…' : error ?? '';
     return;
@@ -241,22 +244,89 @@ function renderStatus(loading, error) {
     error && `更新失败，显示上次结果（${error}）`,
   ].filter(Boolean);
   for (const note of notes) add(status,'span',note,error && note.startsWith('更新失败') ? 'status-error' : 'status-note');
-  status.dataset.loading = String(Boolean(loading));
 
   const sourceStatus = el('source-status');
   sourceStatus.replaceChildren();
-  el('sources').hidden = data.mode !== 'live';
-  if (data.mode !== 'live') return;
-  add(sourceStatus,'li',data.liveSource === 'self-hosted' ? '自建 WorldMonitor' : '公开新闻 RSS','source-heading');
+  const sourceLabel = data.mode === 'sample' ? '虚构样例'
+    : data.liveSource === 'self-hosted' ? '自建 WorldMonitor' : '公开新闻 RSS';
+  add(sourceStatus,'li',sourceLabel,'source-heading');
   for (const source of data.sources) {
-    add(sourceStatus,'li',`${labels[source.kind]}：${states[source.state]}${source.error ? '（'+source.error+'）' : ''}`);
+    add(sourceStatus,'li',`${labels[source.kind]} · ${source.recordCount ?? 0} 条输入记录 · ${states[source.state]}${source.error ? '（'+source.error+'）' : ''}`);
     for (const feed of source.feedStatus ?? []) {
       const row = add(sourceStatus,'li','','feed-row');
       row.dataset.state = feed.error ? (feed.count ? 'warn' : 'bad') : 'ok';
-      add(row,'span',feed.name);
+      if (/^https?:\/\//i.test(feed.url ?? '')) {
+        const link = add(row,'a',feed.name);
+        link.href = feed.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+      } else add(row,'span',feed.name);
       add(row,'span',feed.error ? `${feed.count ? feed.count+' 条（上次结果）' : '失败'} · ${feed.error}` : `${feed.count} 条`,'meta');
     }
   }
+  const {label,nodeCount,laneCount,originCount,destinationCount} = data.network;
+  el('network-label').textContent = `线路与节点 · ${nodeCount} 个节点 · ${laneCount} 条线路 · ${originCount} 个起点 · ${destinationCount} 个目的地`;
+  el('network-label').title = label;
+}
+
+const networkStatus = el('network-status');
+const networkTables = el('network-tables');
+el('network-data').addEventListener('toggle', async event => {
+  if (!event.currentTarget.open || !data || networkTables.childElementCount || networkStatus.dataset.loading) return;
+  const networkLabel = data.network.label;
+  networkStatus.dataset.loading = 'true';
+  networkStatus.textContent = '正在读取线路底表…';
+  try {
+    const response = await fetch('/api/network');
+    if (!response.ok) throw Error('读取失败');
+    const {nodes,lanes,meta} = await response.json();
+    const names = new Map(nodes.map(node => [node.id,node.name_zh || node.name_en || node.id]));
+    const modeNames = {sea:'海运',air:'空运',rail:'铁路',road:'公路',local:'本地'};
+    const nodeTypes = {city:'城市',country:'国家或地区',port:'港口',airport:'机场',chokepoint:'交通咽喉',sea_area:'海域'};
+    const content = document.createDocumentFragment();
+    add(content,'p',[networkLabel,meta?.basis].filter(Boolean).join(' · '),'meta');
+    const laneTable = dataTable(content,'线路与候选路径',['线路','运输方式','候选路径']);
+    for (const lane of lanes) {
+      for (const [mode, detail] of Object.entries(lane.modes)) {
+        const row = add(laneTable,'tr');
+        add(row,'th',`${lane.origin_name} → ${lane.dest_name}`).scope = 'row';
+        add(row,'td',modeNames[mode] ?? mode);
+        const paths = add(row,'td');
+        for (const path of detail.paths) {
+          add(paths,'div',`${path.likelihood} · ${path.nodes.map(id => names.get(id) ?? id).join(' → ')}`);
+        }
+      }
+    }
+    const nodeTable = dataTable(content,'节点',['节点 ID','名称','类型','国家或地区代码','别名']);
+    for (const node of nodes) {
+      const row = add(nodeTable,'tr');
+      const id = add(row,'th');
+      id.scope = 'row';
+      add(id,'code',node.id);
+      add(row,'td',names.get(node.id));
+      add(row,'td',nodeTypes[node.type] ?? node.type);
+      add(row,'td',node.country);
+      add(row,'td',node.aliases?.join('、'));
+    }
+    networkTables.replaceChildren(content);
+    networkStatus.textContent = '';
+  } catch {
+    networkStatus.textContent = '线路底表读取失败，收起后重新展开可重试。';
+  } finally {
+    delete networkStatus.dataset.loading;
+  }
+});
+
+function dataTable(parent, title, columns) {
+  const panel = add(parent,'div','','data-table');
+  panel.tabIndex = 0;
+  panel.setAttribute('role','region');
+  panel.setAttribute('aria-label',title);
+  const table = add(panel,'table');
+  add(table,'caption',title);
+  const header = add(add(table,'thead'),'tr');
+  for (const column of columns) add(header,'th',column).scope = 'col';
+  return add(table,'tbody');
 }
 
 function render() {
@@ -293,10 +363,11 @@ function render() {
     const initiallyOpen = selectedRegion !== '' || geo.region !== 'unknown' || placeGroups.length === 1;
     section.open = openPlaces.get(geo.id) ?? initiallyOpen;
     const title = add(section,'summary','','place-overview');
-    const prefix = regions[geo.region].label;
+    const prefix = data.regions?.[geo.region]?.label;
     const name = add(title,'span','','place-name');
-    if (geo.region !== 'unknown' && prefix !== geo.label) add(name,'span',prefix,'place-region');
+    if (prefix && geo.region !== 'unknown' && prefix !== geo.label) add(name,'span',prefix,'place-region');
     add(name,'strong',geo.label);
+    if (geo.nodeId) add(name,'code',geo.nodeId,'meta');
     const stats = add(title,'span','','place-stats');
     add(stats,'span',`${group.length} 个事件`);
     const lanes = new Set(group.flatMap(row => [...row.lanes]));
@@ -312,19 +383,88 @@ function render() {
   }
 }
 
-function renderEvent(parent, {event, geo, kinds, topic, dimension, lanes, reports}) {
+const translateButton = el('translate');
+const translationOptions = {sourceLanguage:'en', targetLanguage:'zh'};
+let translator;
+let translateCards = false;
+const translated = new Map();
+
+if (globalThis.Translator) {
+  Translator.availability(translationOptions).then(availability => {
+    translateButton.hidden = availability === 'unavailable';
+  }).catch(() => {});
+}
+
+translateButton.onclick = async () => {
+  translateButton.disabled = true;
+  try {
+    if (!translator) {
+      translateButton.textContent = '准备翻译…';
+      translator = await Translator.create({
+        ...translationOptions,
+        monitor(download) {
+          download.addEventListener('downloadprogress', event => {
+            translateButton.textContent = `下载翻译语言包 ${Math.round(event.loaded * 100)}%`;
+          });
+        },
+      });
+    }
+    translateCards = !translateCards;
+    translateButton.setAttribute('aria-pressed', String(translateCards));
+    translateButton.textContent = translateCards ? '显示原文' : '翻译成中文';
+    render();
+  } catch {
+    translateButton.textContent = '翻译失败，重试';
+  } finally {
+    translateButton.disabled = false;
+  }
+};
+
+function addCardText(parent, original, className, prefix = '') {
+  const node = add(parent,'span',prefix + original,className);
+  if (!translateCards || !/[a-z]{2}/i.test(original) || /\p{Script=Han}/u.test(original)) return;
+  if (!translated.has(original)) {
+    // Keep the cache bounded as the live feed changes.
+    if (translated.size >= 300) translated.delete(translated.keys().next().value);
+    translated.set(original,translator.translate(original).catch(() => {
+      translated.delete(original);
+      return original;
+    }));
+  }
+  translated.get(original).then(text => {
+    if (translateCards && node.isConnected) node.textContent = prefix + text;
+  });
+}
+
+// Progress dates come as YYYY-MM-DD (the date the report gives) or a UTC minute.
+const progressTime = new Intl.DateTimeFormat('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+function progressDate({occurredAt, precision}) {
+  if (typeof occurredAt !== 'string') return '';
+  if (precision === 'day') {
+    const [, month, day] = occurredAt.split('-').map(Number);
+    return month && day ? `${month}月${day}日` : '';
+  }
+  const time = new Date(occurredAt);
+  return Number.isNaN(time.getTime()) ? '' : progressTime.format(time);
+}
+
+function renderEvent(parent, {event, kinds, topic, dimension, lanes, reports}) {
   const card = add(parent,'details','','event-card');
   card.dataset.dimension = dimension;
   const summary = add(card,'summary','','event-overview');
   const headline = add(summary,'span','','event-headline');
-  add(headline,'span',event.title,'event-title');
+  addCardText(headline,event.displayTitle ?? event.title,'event-title');
+  if (event.latestUpdate?.text) {
+    const progress = event.latestUpdate.kind === 'progress';
+    const when = progress ? progressDate(event.latestUpdate) : '';
+    addCardText(headline,event.latestUpdate.text + (when ? `（${when}）` : ''),'meta',progress ? '最新进展：' : '最新报道：');
+  }
   const metadata = add(headline,'span','','event-metadata');
   const category = topic ? topics[topic] : dimension === 'mixed' ? '多类信息' : labels[dimension];
   if (category) add(metadata,'span',category,'event-category');
   if (kinds.length > 1) add(metadata,'span',kinds.map(kind => labels[kind]).join(' / '));
   if (reports > 1) add(metadata,'span',`${reports} 篇报道`);
   if (event.corroborationCount > 1) add(metadata,'span',`${event.corroborationCount} 个独立来源`);
-  if (geo.basis === 'inferred') add(metadata,'span','地点按标题推断');
   const signals = add(summary,'span','','event-signals');
   if (lanes.size) add(signals,'span',`${lanes.size} 条线路`,'lane-count');
   const time = timeElement(signals,event.updatedAt);
@@ -359,6 +499,7 @@ function renderEventBody(body, event) {
       group.open = event.networkMatches.length === 1;
       const heading = add(group,'summary');
       add(heading,'strong',match.nodeName);
+      if (match.nodeId) add(heading,'code',match.nodeId,'meta');
       add(heading,'span',`${match.basis === 'event_anchor' ? '事件节点' : '报道提及'} · ${match.routes.length} 条线路`,'meta');
       const scrollArea = add(group,'div','','route-scroll');
       scrollArea.tabIndex = 0;
@@ -434,6 +575,15 @@ function renderEventBody(body, event) {
 function rememberLive(result) {
   store.set('sessionStorage',snapshotKey,JSON.stringify(result));
 }
+// Event titles are written in the background; re-read a few times while some are still pending.
+let presentationPolls = 0;
+let presentationTimer;
+function followPresentation(result) {
+  clearTimeout(presentationTimer);
+  if (!(result?.presentationPending > 0) || presentationPolls >= 12) {presentationPolls = 0; return;}
+  presentationPolls++;
+  presentationTimer = setTimeout(() => {if (currentMode() === 'live') refresh();},5000);
+}
 async function refresh() {
   const mode = currentMode();
   errors.delete(mode);
@@ -448,6 +598,7 @@ async function refresh() {
         if (!available && cache.has(mode)) throw Error('数据来源暂不可用');
         cache.set(mode,result);
         if (mode === 'live' && available) rememberLive(result);
+        if (mode === 'live') followPresentation(result);
       } catch (error) {
         errors.set(mode,error.message);
       } finally {
@@ -471,6 +622,145 @@ for (const input of modeInputs) input.onchange = () => {
   refresh();
 };
 el('refresh').onclick = refresh;
+const modelDialog = el('model-settings');
+const modelForm = el('model-settings-form');
+const modelPicker = el('model-profiles');
+const modelName = el('model-profile-name');
+const modelBaseUrl = el('model-base-url');
+const modelId = el('model-id');
+const modelKey = el('model-api-key');
+const clearModelKey = el('clear-model-key');
+const modelOpen = el('open-model-settings');
+const modelSave = el('save-model-settings');
+const modelActivate = el('activate-model-profile');
+const modelStatus = el('model-settings-status');
+let modelSettings;
+let selectedModelId = null;
+
+function modelProfileLabel(profile) {
+  const model = profile.modelId && profile.modelId !== profile.name ? ` · ${profile.modelId}` : '';
+  return `${profile.name}${model} · ${profile.baseUrl}`;
+}
+
+function setModelSettings(settings) {
+  modelSettings = settings;
+  const active = settings.profiles.find(profile => profile.id === settings.activeId);
+  const text = active ? `当前模型：${active.name === active.modelId ? active.modelId : `${active.name} · ${active.modelId}`}`
+    : '模型未启用';
+  modelOpen.textContent = text;
+  modelOpen.title = active ? `当前启用：${modelProfileLabel(active)}` : '打开模型配置';
+  modelOpen.setAttribute('aria-label',`模型配置，${text}`);
+}
+
+function showModelProfile(id) {
+  const profile = modelSettings.profiles.find(item => item.id === id);
+  selectedModelId = profile?.id ?? null;
+  modelPicker.replaceChildren();
+  for (const entry of modelSettings.profiles) {
+    modelPicker.add(new Option(modelProfileLabel(entry) + (entry.id === modelSettings.activeId ? '（当前启用）' : ''),entry.id));
+  }
+  if (!profile) modelPicker.add(new Option('新配置，尚未保存',''));
+  modelPicker.value = selectedModelId ?? '';
+  modelName.value = profile?.name ?? '';
+  modelBaseUrl.value = profile?.baseUrl ?? modelSettings.defaultBaseUrl;
+  modelId.value = profile?.modelId ?? '';
+  modelKey.value = '';
+  modelKey.disabled = false;
+  clearModelKey.checked = false;
+  el('clear-model-key-row').hidden = !profile?.hasApiKey;
+  el('model-key-note').textContent = profile?.hasApiKey
+    ? '已保存密钥。更换 Base URL 时请重新输入。'
+    : '尚未保存密钥。本机模型服务可以不填。';
+  modelActivate.disabled = !profile?.ready;
+  modelActivate.textContent = profile && profile.id === modelSettings.activeId ? '停用此配置' : '启用此配置';
+  modelSave.disabled = false;
+}
+
+async function readModelSettings() {
+  const response = await fetch('/api/model-settings');
+  if (!response.ok) throw Error('无法读取模型配置。');
+  setModelSettings(await response.json());
+}
+readModelSettings().catch(() => {});
+
+modelOpen.onclick = async () => {
+  modelForm.reset();
+  el('clear-model-key-row').hidden = true;
+  modelSave.disabled = true;
+  modelActivate.disabled = true;
+  modelStatus.textContent = '正在读取配置…';
+  modelDialog.showModal();
+  try {
+    await readModelSettings();
+    showModelProfile(modelSettings.activeId ?? modelSettings.profiles[0]?.id);
+    modelStatus.textContent = '';
+  } catch {
+    modelStatus.textContent = '无法读取模型配置，请关闭后重试。';
+  }
+};
+el('close-model-settings').onclick = () => modelDialog.close();
+modelDialog.addEventListener('close', () => {modelKey.value = '';});
+modelPicker.onchange = () => {
+  showModelProfile(modelPicker.value);
+  modelStatus.textContent = '';
+};
+el('new-model-profile').onclick = () => {
+  if (!modelSettings) return;
+  showModelProfile(null);
+  modelStatus.textContent = '';
+  modelName.focus();
+};
+clearModelKey.onchange = () => {
+  modelKey.disabled = clearModelKey.checked;
+  if (clearModelKey.checked) modelKey.value = '';
+};
+
+async function submitModelSettings(payload) {
+  modelSave.disabled = true;
+  modelActivate.disabled = true;
+  modelStatus.textContent = '正在保存…';
+  try {
+    const previousActiveId = modelSettings.activeId;
+    const response = await fetch('/api/model-settings',{
+      method:'PUT',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw Error(result.error ?? '无法保存模型配置。');
+    setModelSettings(result);
+    showModelProfile(result.profileId ?? selectedModelId);
+    const active = result.profiles.find(profile => profile.id === result.activeId);
+    const changed = previousActiveId !== result.activeId || Boolean(active && payload.action === 'save' && active.id === payload.id);
+    modelStatus.textContent = payload.action === 'save' ? '配置已保存。'
+      : active ? `已启用 ${active.name}。` : '已停用模型。';
+    if (changed && currentMode() === 'live') {
+      await pending.get('live');
+      if (currentMode() === 'live') refresh();
+    }
+  } catch (error) {
+    modelStatus.textContent = error.message;
+    modelSave.disabled = false;
+    modelActivate.disabled = !modelSettings.profiles.some(profile => profile.id === selectedModelId && profile.ready);
+  }
+}
+
+modelActivate.onclick = () => submitModelSettings({
+  action:'activate',
+  id:modelSettings.activeId === selectedModelId ? null : selectedModelId,
+});
+modelForm.onsubmit = event => {
+  event.preventDefault();
+  submitModelSettings({
+    action:'save',
+    id:selectedModelId,
+    name:modelName.value,
+    baseUrl:modelBaseUrl.value,
+    modelId:modelId.value,
+    apiKey:modelKey.value,
+    clearKey:clearModelKey.checked,
+  });
+};
 let searchTimer;
 el('search').oninput = () => {clearTimeout(searchTimer); searchTimer = setTimeout(render,120);};
 el('kind').onchange = render;
