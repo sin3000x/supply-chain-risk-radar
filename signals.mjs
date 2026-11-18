@@ -1,0 +1,276 @@
+const PORTWATCH_QUERY_URL = 'https://services9.arcgis.com/weJ1QsnbMYJlCHdG/arcgis/rest/services/Daily_Chokepoints_Data/FeatureServer/0/query';
+const WMO_SWIC_URL = 'https://severeweather.wmo.int/json/wmo_all.json';
+const CACHE_TTL_MS = 15 * 60_000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Maps IMF PortWatch chokepoint names to supply-chain network nodes.
+const CHOKEPOINTS = [
+  { name: 'Suez Canal', nodeId: 'CP_SUEZ', label: '苏伊士运河', region: '中东' },
+  { name: 'Malacca Strait', nodeId: 'CP_MALACCA', label: '马六甲海峡', region: '东南亚' },
+  { name: 'Strait of Hormuz', nodeId: 'CP_HORMUZ', label: '霍尔木兹海峡', region: '中东' },
+  { name: 'Bab el-Mandeb Strait', nodeId: 'CP_BAB', label: '曼德海峡', region: '红海' },
+  { name: 'Panama Canal', nodeId: 'CP_PANAMA', label: '巴拿马运河', region: '拉美' },
+  { name: 'Taiwan Strait', nodeId: 'CP_TAIWAN', label: '台湾海峡', region: '东亚' },
+  { name: 'Cape of Good Hope', nodeId: 'CP_CAPE', label: '好望角（绕行）', region: '非洲' },
+  { name: 'Gibraltar Strait', nodeId: 'CP_GIBRALTAR', label: '直布罗陀海峡', region: '西欧' },
+  { name: 'Bosporus Strait', nodeId: 'CP_BOSPHORUS', label: '博斯普鲁斯海峡', region: '黑海' },
+  { name: 'Korea Strait', nodeId: 'CP_KOREA', label: '朝鲜海峡/对马海峡', region: '东亚' },
+  { name: 'Dover Strait', nodeId: 'CP_DOVER', label: '多佛尔海峡', region: '西欧' },
+];
+
+const CHOKEPOINT_BY_NAME = new Map(CHOKEPOINTS.map(cp => [cp.name, cp]));
+const formatDay = epochMs => new Date(epochMs).toISOString().slice(0, 10);
+const toArcgisTimestamp = epochMs => `timestamp '${formatDay(epochMs)} 00:00:00'`;
+const mean = values => values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : null;
+const pctDelta = (current, base) => (base && Number.isFinite(current)) ? Math.round(((current - base) / base) * 1000) / 10 : null;
+
+export function buildPortWatchSignals(recentByNode, baselineByNode) {
+  const signals = [];
+  for (const cp of CHOKEPOINTS) {
+    const rows = (recentByNode.get(cp.nodeId) ?? []).sort((a, b) => b.date.localeCompare(a.date));
+    if (rows.length < 14) continue;
+    const thisWeek = mean(rows.slice(0, 7).map(r => r.total));
+    const lastWeek = mean(rows.slice(7, 14).map(r => r.total));
+    const baseline = baselineByNode.get(cp.nodeId) ?? null;
+    const wowPct = pctDelta(thisWeek, lastWeek);
+    const basePct = pctDelta(thisWeek, baseline);
+    if (Math.abs(basePct ?? 0) < 15 && Math.abs(wowPct ?? 0) < 15) continue;
+
+    const latestDate = rows[0].date;
+    const parts = [];
+    if (basePct != null && Math.abs(basePct) >= 15) {
+      parts.push(`近 7 日日均通行 ${Math.round(thisWeek)} 艘，较去年同期基线${basePct > 0 ? '上升' : '下降'} ${Math.abs(basePct)}%`);
+    }
+    if (wowPct != null && Math.abs(wowPct) >= 15) {
+      parts.push(`环比上周${wowPct > 0 ? '上升' : '下降'} ${Math.abs(wowPct)}%`);
+    }
+    const severity = Math.abs(basePct ?? 0) >= 35 || Math.abs(wowPct ?? 0) >= 30 ? 'HIGH' : 'MEDIUM';
+
+    signals.push({
+      id: `signal:portwatch:${cp.nodeId}:${latestDate}`,
+      kind: 'signal',
+      title: `${cp.label}船舶通行量异动：${parts.join('，')}`,
+      summary: null,
+      region: cp.region,
+      geoAnchors: [cp.nodeId],
+      category: 'SHIPPING_DISRUPTION',
+      classification: null,
+      time: { kind: 'detected', value: `${latestDate}T00:00:00.000Z` },
+      source: {
+        provider: 'IMF PortWatch',
+        endpoint: null,
+        upstreamId: `${cp.nodeId}:${latestDate}`,
+        publisher: 'IMF PortWatch',
+        url: 'https://portwatch.imf.org/',
+      },
+      evidence: { contributingTypes: ['船舶通行量'], wowChangePct: wowPct, baselineDeltaPct: basePct, severity },
+      forecast: null,
+    });
+  }
+  return signals;
+}
+
+export function parsePortWatchCsv(text, nowMs = Date.now()) {
+  const lines = text.replace(/^\uFEFF/, '').split('\n');
+  const header = lines[0]?.trim().split(',');
+  if (!header?.length) throw new Error('PortWatch CSV header missing');
+  const col = Object.fromEntries(header.map((name, i) => [name, i]));
+  for (const required of ['date', 'portname', 'n_total', 'n_container', 'n_tanker']) {
+    if (!(required in col)) throw new Error(`PortWatch CSV missing column ${required}`);
+  }
+
+  const recentSince = formatDay(nowMs - 30 * DAY_MS);
+  const baseFrom = formatDay(nowMs - 730 * DAY_MS);
+  const baseTo = formatDay(nowMs - 365 * DAY_MS);
+  const recentRows = new Map();
+  const baselineTotals = new Map();
+
+  for (const line of lines.slice(1)) {
+    if (!line.trim()) continue;
+    const cells = line.split(',');
+    const cp = CHOKEPOINT_BY_NAME.get(cells[col.portname]);
+    if (!cp) continue;
+    const date = cells[col.date]?.replaceAll('/', '-');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    const total = Number(cells[col.n_total]);
+    if (!Number.isFinite(total)) continue;
+
+    if (date >= baseFrom && date < baseTo && cells[col.n_total] !== '') {
+      if (!baselineTotals.has(cp.nodeId)) baselineTotals.set(cp.nodeId, []);
+      baselineTotals.get(cp.nodeId).push(total);
+    }
+    if (date >= recentSince) {
+      if (!recentRows.has(cp.nodeId)) recentRows.set(cp.nodeId, []);
+      recentRows.get(cp.nodeId).push({
+        date,
+        total,
+        container: Number(cells[col.n_container] || 0),
+        tanker: Number(cells[col.n_tanker] || 0),
+      });
+    }
+  }
+
+  const baselineByNode = new Map([...baselineTotals.entries()].map(([id, vals]) => [id, mean(vals)]));
+  return buildPortWatchSignals(recentRows, baselineByNode);
+}
+
+async function fetchPortWatchArcgis(fetchFn, nowMs = Date.now()) {
+  const namesList = CHOKEPOINTS.map(cp => `'${cp.name.replace(/'/g, "''")}'`).join(',');
+  const recentParams = new URLSearchParams({
+    where: `portname IN (${namesList}) AND date >= ${toArcgisTimestamp(nowMs - 30 * DAY_MS)}`,
+    outFields: 'date,portname,n_total,n_container,n_tanker',
+    orderByFields: 'date DESC',
+    resultRecordCount: '1000',
+    f: 'json',
+  });
+  const baseParams = new URLSearchParams({
+    where: `portname IN (${namesList}) AND date >= ${toArcgisTimestamp(nowMs - 730 * DAY_MS)} AND date < ${toArcgisTimestamp(nowMs - 365 * DAY_MS)}`,
+    groupByFieldsForStatistics: 'portname',
+    outStatistics: JSON.stringify([{ statisticType: 'avg', onStatisticField: 'n_total', outStatisticFieldName: 'avg_total' }]),
+    f: 'json',
+  });
+
+  const [recentRes, baseRes] = await Promise.all([
+    fetchFn(`${PORTWATCH_QUERY_URL}?${recentParams}`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(12_000) }),
+    fetchFn(`${PORTWATCH_QUERY_URL}?${baseParams}`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(12_000) }),
+  ]);
+  if (!recentRes.ok) throw new Error(`PortWatch HTTP ${recentRes.status}`);
+  const recentJson = await recentRes.json();
+  if (recentJson.error) throw new Error(recentJson.error.message || 'PortWatch query error');
+
+  const recentByNode = new Map();
+  for (const feat of recentJson.features ?? []) {
+    const a = feat.attributes ?? {};
+    const cp = CHOKEPOINT_BY_NAME.get(a.portname);
+    if (!cp || !Number.isFinite(a.n_total) || !a.date) continue;
+    const date = typeof a.date === 'number' ? formatDay(a.date) : String(a.date).replaceAll('/', '-').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    if (!recentByNode.has(cp.nodeId)) recentByNode.set(cp.nodeId, []);
+    recentByNode.get(cp.nodeId).push({ date, total: Number(a.n_total) });
+  }
+
+  const baselineByNode = new Map();
+  if (baseRes.ok) {
+    const baseJson = await baseRes.json().catch(() => null);
+    for (const feat of baseJson?.features ?? []) {
+      const a = feat.attributes ?? {};
+      const cp = CHOKEPOINT_BY_NAME.get(a.portname);
+      if (cp && Number.isFinite(a.avg_total)) baselineByNode.set(cp.nodeId, Number(a.avg_total));
+    }
+  }
+  return buildPortWatchSignals(recentByNode, baselineByNode);
+}
+
+function parseWmoDate(value) {
+  if (!value || typeof value !== 'string') return null;
+  const iso = value.trim().replace(' ', 'T') + (value.includes('Z') ? '' : 'Z');
+  const ms = Date.parse(iso);
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+}
+
+export function parseWmoAlerts(payload, findPlaces, nowMs = Date.now()) {
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+  const seen = new Set();
+  const signals = [];
+
+  for (const item of items) {
+    if ((item.s ?? 0) < 3) continue; // Only Severe (3) or Extreme (4)
+    const expiresIso = parseWmoDate(item.expires);
+    if (expiresIso && Date.parse(expiresIso) <= nowMs) continue;
+
+    const text = [item.event, item.headline, item.areaDesc].filter(Boolean).join(' · ');
+    const places = findPlaces({ title: text, summary: item.areaDesc });
+    if (!places.length) continue;
+
+    const primaryNode = places[0];
+    const dedupKey = `${primaryNode}:${item.event ?? ''}`;
+    if (seen.has(dedupKey)) continue;
+    seen.add(dedupKey);
+
+    const sentIso = parseWmoDate(item.sent ?? item.effective) ?? new Date(nowMs).toISOString();
+    const severity = item.s >= 4 ? 'HIGH' : 'MEDIUM';
+    const levelLabel = item.s >= 4 ? '极端' : '严重';
+    const rawArea = item.areaDesc || primaryNode;
+    const areaLabel = rawArea.length > 50 ? rawArea.slice(0, 48) + '…' : rawArea;
+    signals.push({
+      id: `signal:wmo:${item.id || dedupKey}`,
+      kind: 'signal',
+      title: `${levelLabel}气象预警：${item.headline || item.event}（${areaLabel}）`,
+      summary: null,
+      region: null,
+      geoAnchors: places.slice(0, 3),
+      category: 'WEATHER_EXTREME',
+      classification: null,
+      time: { kind: 'detected', value: sentIso },
+      source: {
+        provider: 'WMO SWIC',
+        endpoint: null,
+        upstreamId: item.id || dedupKey,
+        publisher: 'WMO 气象预警',
+        url: item.url ? `https://severeweather.wmo.int/${item.url.replace(/^\//, '')}` : 'https://severeweather.wmo.int/',
+      },
+      evidence: { contributingTypes: ['官方天气预警'], severity },
+      forecast: null,
+    });
+    if (signals.length >= 15) break;
+  }
+  return signals;
+}
+
+export function createSignalReader({ findPlaces = () => [], fetchFn = globalThis.fetch } = {}) {
+  const sources = [
+    {
+      name: 'IMF PortWatch 航运通行量',
+      url: 'https://portwatch.imf.org/',
+      load: () => fetchPortWatchArcgis(fetchFn),
+    },
+    {
+      name: 'WMO 极端天气预警',
+      url: 'https://severeweather.wmo.int/',
+      load: async () => {
+        const res = await fetchFn(WMO_SWIC_URL, {
+          headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' },
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return parseWmoAlerts(await res.json(), findPlaces);
+      },
+    },
+  ];
+
+  const cache = new Map();
+  let lastCheckedAt = 0;
+  let lastResult = null;
+
+  return async function readLiveSignals() {
+    if (lastResult && Date.now() - lastCheckedAt < CACHE_TTL_MS) return lastResult;
+
+    const results = await Promise.all(sources.map(async src => {
+      try {
+        const records = await src.load();
+        cache.set(src.name, records);
+        return { name: src.name, url: src.url, count: records.length, error: null, records };
+      } catch (error) {
+        const prior = cache.get(src.name) ?? [];
+        return { name: src.name, url: src.url, count: prior.length, error: error.message || 'fetch failed', records: prior };
+      }
+    }));
+
+    const records = results.flatMap(r => r.records);
+    const feedStatus = results.map(({ name, url, count, error }) => ({ name, url, count, error }));
+    const errors = feedStatus.filter(f => f.error);
+    const state = errors.length === feedStatus.length && !records.length ? 'unavailable'
+      : errors.length ? 'partial'
+      : records.length ? 'ok' : 'empty';
+
+    lastCheckedAt = Date.now();
+    lastResult = {
+      kind: 'signal',
+      records,
+      feedStatus,
+      state,
+      error: errors.length ? errors.map(f => f.name).join('、') + ' 获取失败' : null,
+    };
+    return lastResult;
+  };
+}

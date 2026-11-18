@@ -12,6 +12,8 @@ import {openModelSettings} from './model-settings.mjs';
 import {loadNetwork} from './network.mjs';
 import {createEventLocator, regions} from './geography.mjs';
 import {createFeedReader} from './rss.mjs';
+import {createSignalReader} from './signals.mjs';
+import {createMarketReader} from './markets.mjs';
 import {samples} from './samples.mjs';
 
 const networkDirectory = process.env.RISK_NETWORK_DATA_DIR || fileURLToPath(new URL('./data/',import.meta.url));
@@ -27,6 +29,8 @@ const withPresentation = event => applyPresentation(event,eventStore.get(event.i
 const origin = process.env.WM_BASE_URL;
 const key = process.env.WM_API_KEY;
 const readRss = createFeedReader();
+const readLiveSignals = createSignalReader({findPlaces});
+const readLiveMarkets = createMarketReader({findPlaces});
 
 const assets = ['index.html','app.js','style.css','vendor/worldmonitor/countries.geojson'];
 const mime = {html:'text/html; charset=utf-8',js:'text/javascript; charset=utf-8',mjs:'text/javascript; charset=utf-8',
@@ -65,7 +69,12 @@ async function readLiveNews() {
 
 async function getFeed(kind, path, mode) {
   try {
-    if (mode === 'live' && !origin) return kind === 'news' ? await readLiveNews() : {kind,state:'not_configured',records:[]};
+    if (mode === 'live' && !origin) {
+      if (kind === 'news') return await readLiveNews();
+      if (kind === 'signal') return await readLiveSignals();
+      if (kind === 'forecast') return await readLiveMarkets();
+      return {kind,state:'not_configured',records:[]};
+    }
     let data = samples[kind];
     if (mode === 'live') {
       const response = await fetch(new URL(`/api/${path}`, origin), {

@@ -190,11 +190,9 @@ try {
 
 function visible(applyRegion = true) {
   const query = el('search').value.trim().toLowerCase();
-  const kind = el('kind').value;
   return (data?.events ?? []).filter(event => {
     const meta = info(event);
     return (!applyRegion || !regionControl.value || meta.geo.region === regionControl.value) &&
-      (!kind || meta.kinds.includes(kind)) &&
       (!query || meta.search.includes(query));
   });
 }
@@ -214,7 +212,7 @@ function renderStats(list) {
   };
   stat('事件',list.length);
   stat('关联线路',new Set(list.flatMap(event => [...info(event).lanes])).size);
-  stat('报道',list.reduce((sum,event) => sum + info(event).reports,0));
+  stat('记录',list.reduce((sum,event) => sum + info(event).reports,0));
   if (data.mode === 'live') {
     const feeds = data.sources.flatMap(source => source.feedStatus ?? []);
     if (feeds.length) {
@@ -463,7 +461,7 @@ function renderEvent(parent, {event, kinds, topic, dimension, lanes, reports}) {
   const category = topic ? topics[topic] : dimension === 'mixed' ? '多类信息' : labels[dimension];
   if (category) add(metadata,'span',category,'event-category');
   if (kinds.length > 1) add(metadata,'span',kinds.map(kind => labels[kind]).join(' / '));
-  if (reports > 1) add(metadata,'span',`${reports} 篇报道`);
+  if (reports > 1) add(metadata,'span',`${reports} 条记录`);
   if (event.corroborationCount > 1) add(metadata,'span',`${event.corroborationCount} 个独立来源`);
   const signals = add(summary,'span','','event-signals');
   if (lanes.size) add(signals,'span',`${lanes.size} 条线路`,'lane-count');
@@ -523,7 +521,7 @@ function renderEventBody(body, event) {
     entries.get(key).push(record);
   }
   const timelineSection = add(body,'section','','timeline-section');
-  add(timelineSection,'h3',`报道时间线 · ${entries.size}`);
+  add(timelineSection,'h3',`动态时间线 · ${entries.size}`);
   const timeline = add(timelineSection,'ol','','timeline');
   const eventHeadline = normalizeHeadline(event.title);
   const eventSummary = normalizeHeadline(event.summary);
@@ -763,7 +761,6 @@ modelForm.onsubmit = event => {
 };
 let searchTimer;
 el('search').oninput = () => {clearTimeout(searchTimer); searchTimer = setTimeout(render,120);};
-el('kind').onchange = render;
 el('sort').onchange = render;
 regionControl.onchange = render;
 el('export').onclick = () => {
