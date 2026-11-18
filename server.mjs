@@ -163,9 +163,17 @@ const server = createServer(async (req,res) => {
     if (url.pathname === '/api/model-settings') {
       const reply = (status, value) => send(req,res,status,json,Buffer.from(JSON.stringify(value)),{'cache-control':'no-store'});
       const host = req.headers.host ?? '';
-      if (!/^(?:127\.0\.0\.1|localhost)(?::\d+)?$/i.test(host) ||
-          (req.headers.origin && req.headers.origin !== 'http://'+host)) {
-        reply(403,{error:'仅可从本机雷达页面修改模型配置。'}); return;
+      let sameOrigin = Boolean(host);
+      if (sameOrigin && req.headers.origin) {
+        try {
+          const originUrl = new URL(req.headers.origin);
+          sameOrigin = (originUrl.protocol === 'http:' || originUrl.protocol === 'https:') && originUrl.host === host;
+        } catch {
+          sameOrigin = false;
+        }
+      }
+      if (!sameOrigin) {
+        reply(403,{error:'仅可从雷达页面修改模型配置。'}); return;
       }
       if (req.method === 'GET') {reply(200,modelSettings.describe()); return;}
       if (req.method !== 'PUT') {reply(405,{error:'不支持的请求。'}); return;}

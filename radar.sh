@@ -98,7 +98,7 @@ get_lan_ips() {
 }
 
 print_urls() {
-  echo "  本机访问(含模型配置权限): http://127.0.0.1:${PORT}"
+  echo "  本机访问:               http://127.0.0.1:${PORT}"
   if [[ "$HOST" == "0.0.0.0" || "$HOST" == "::" ]]; then
     local ips ip
     ips="$(get_lan_ips | sort -u)"

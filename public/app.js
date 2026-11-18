@@ -1281,8 +1281,9 @@ function showModelProfile(id) {
 
 async function readModelSettings() {
   const response = await fetch('/api/model-settings');
-  if (!response.ok) throw Error('无法读取模型配置。');
-  setModelSettings(await response.json());
+  const result = await response.json().catch(() => null);
+  if (!response.ok) throw Error(result?.error ?? '无法读取模型配置，请关闭后重试。');
+  setModelSettings(result);
 }
 readModelSettings().catch(() => {});
 
@@ -1297,8 +1298,8 @@ modelOpen.onclick = async () => {
     await readModelSettings();
     showModelProfile(modelSettings.activeId ?? modelSettings.profiles[0]?.id);
     modelStatus.textContent = '';
-  } catch {
-    modelStatus.textContent = '无法读取模型配置，请关闭后重试。';
+  } catch (error) {
+    modelStatus.textContent = error.message || '无法读取模型配置，请关闭后重试。';
   }
 };
 el('close-model-settings').onclick = () => modelDialog.close();
