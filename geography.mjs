@@ -31,7 +31,7 @@ export function createEventLocator(network) {
     const linked = network.getNode(hub.networkId);
     if (linked) return networkLocation(linked,basis);
     return {
-      id:hub.id, nodeId:hub.id, basis,
+      id:hub.id, basis,
       label:hub.label ?? (hub.type === 'capital' ? hub.country : hub.name),
       region:regionsByName.get(fold(hub.region)) ?? 'unknown',
     };
