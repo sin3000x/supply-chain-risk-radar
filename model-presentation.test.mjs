@@ -195,4 +195,43 @@ test('forecast translator stops retrying after invalid replies', async () => {
   assert.equal(calls,2);
   assert.equal(translator.pending(titles),0);
   assert.equal(translator.get(titles[0]),null);
+  assert.equal(translator.status(titles).failed,1);
+});
+
+test('presentation queue status surfaces transport backoff, recovery, and permanent failures', async t => {
+  const {queue,settle,reply,advance,ingest} = await setup(t);
+  const event = await ingest(stop);
+  reply(() => {throw Object.assign(new Error('timeout'),{cause:{code:'ETIMEDOUT'}});});
+  queue.schedule([event.id]);
+  await settle();
+  const paused = queue.status([event.id]);
+  assert.equal(paused.enabled,true);
+  assert.equal(paused.pending,1);
+  assert.ok(paused.pausedUntil);
+  assert.equal(paused.lastError,'ETIMEDOUT');
+
+  advance(61_000);
+  reply(() => ({title:'美国全国航班地面停飞',titleQuote:'orders national ground stop',update:null}));
+  queue.schedule([event.id]);
+  await settle();
+  const recovered = queue.status([event.id]);
+  assert.equal(recovered.pending,0);
+  assert.equal(recovered.pausedUntil,null);
+  assert.equal(recovered.lastError,null);
+  assert.equal(recovered.failed,0);
+
+  // Permanent validation failure after MAX_ATTEMPTS is counted in failed.
+  const distinct = article('x','Port of Rotterdam closes terminals after storm surge','2026-11-16T01:00:00Z',
+    'Port operators halted container handling overnight.');
+  const bad = await ingest(distinct);
+  reply(() => ({title:'没有引号依据',titleQuote:'nonexistent quote',update:null}));
+  queue.schedule([bad.id]);
+  await settle();
+  advance(61_000);
+  queue.schedule([bad.id]);
+  await settle();
+  const failed = queue.status([bad.id]);
+  assert.equal(failed.pending,0);
+  assert.equal(failed.failed,1);
+  assert.match(failed.lastError,/not grounded/);
 });

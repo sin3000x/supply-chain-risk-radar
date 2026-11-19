@@ -744,7 +744,11 @@ function formatFeedWindow(windowValue) {
 function renderStatus(loading, error) {
   const status = el('status');
   status.replaceChildren();
-  status.dataset.loading = String(Boolean(loading));
+  const presentation = data?.mode === 'live' ? data.presentationStatus : null;
+  const llmPending = data?.mode === 'live' ? (presentation?.pending ?? data.presentationPending ?? 0) : 0;
+  const llmPaused = Boolean(presentation?.pausedUntil);
+  const llmWorking = llmPending > 0 && !llmPaused;
+  status.dataset.loading = String(Boolean(loading || llmWorking));
   el('sources').hidden = !data;
   el('network-data').hidden = !data;
   if (!data) {
@@ -755,12 +759,26 @@ function renderStatus(loading, error) {
     add(status,'span','更新于 ');
     timeElement(status,data.fetchedAt,fullTime,'');
   } else add(status,'span','虚构样例，仅用于演示');
-  const notes = [
-    data.mode === 'live' && data.sources.some(source => ['partial','stale','unavailable'].includes(source.state)) && '部分来源异常',
-    loading && '更新中…',
-    error && `更新失败，显示上次结果（${error}）`,
-  ].filter(Boolean);
-  for (const note of notes) add(status,'span',note,error && note.startsWith('更新失败') ? 'status-error' : 'status-note');
+  const notes = [];
+  if (data.mode === 'live' && data.sources.some(source => ['partial','stale','unavailable'].includes(source.state))) {
+    notes.push({text:'部分来源异常',cls:'status-note'});
+  }
+  if (loading) notes.push({text:'更新中…',cls:'status-note'});
+  if (error) notes.push({text:`更新失败，显示上次结果（${error}）`,cls:'status-error'});
+  if (data.mode === 'live') {
+    if (llmPaused) {
+      const reason = presentation.error ? `（${presentation.error}）` : '';
+      notes.push({text:`模型提取失败${reason}，待处理 ${llmPending} 项，稍后自动重试`,cls:'status-error'});
+    } else if (llmPending > 0) {
+      notes.push({text:`模型正在提取中文标题与进展（剩余 ${llmPending} 项）…`,cls:'status-note'});
+    } else if (presentation?.enabled && presentation.failed > 0) {
+      const reason = presentation.error ? `（${presentation.error}）` : '';
+      notes.push({text:`${presentation.failed} 项中文提取失败${reason}，已保留原文`,cls:'status-error'});
+    } else if (presentation && !presentation.enabled) {
+      notes.push({text:'未配置模型，当前显示原文标题',cls:''});
+    }
+  }
+  for (const note of notes) add(status,'span',note.text,note.cls);
 
   const feedCount = data.sources.reduce((sum, source) => sum + (source.feedStatus?.length ?? 0), 0);
   const clusterHours = data.intake?.settings?.clusterWindowHours ?? 48;
@@ -1250,14 +1268,27 @@ function renderEventBody(body, event) {
 function rememberLive(result) {
   store.set('sessionStorage',snapshotKey,JSON.stringify(result));
 }
-// Event titles are written in the background; re-read a few times while some are still pending.
+// Event titles are written in the background; re-read while some are still pending.
 let presentationPolls = 0;
+let lastPresentationPending = Infinity;
 let presentationTimer;
 function followPresentation(result) {
   clearTimeout(presentationTimer);
-  if (!(result?.presentationPending > 0) || presentationPolls >= 12) {presentationPolls = 0; return;}
+  const pendingCount = result?.presentationPending ?? 0;
+  if (!(pendingCount > 0)) {
+    presentationPolls = 0;
+    lastPresentationPending = Infinity;
+    return;
+  }
+  if (pendingCount < lastPresentationPending) presentationPolls = 0;
+  lastPresentationPending = pendingCount;
+  if (presentationPolls >= 12) {presentationPolls = 0; return;}
   presentationPolls++;
-  presentationTimer = setTimeout(() => {if (currentMode() === 'live') refresh();},5000);
+  const pausedUntil = result?.presentationStatus?.pausedUntil ? Date.parse(result.presentationStatus.pausedUntil) : 0;
+  const delay = pausedUntil > Date.now()
+    ? Math.min(65_000, Math.max(5000, pausedUntil - Date.now() + 1500))
+    : 5000;
+  presentationTimer = setTimeout(() => {if (currentMode() === 'live') refresh();}, delay);
 }
 async function refresh() {
   const mode = currentMode();

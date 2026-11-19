@@ -174,6 +174,7 @@ export function createPresentationQueue({store, getProfile, concurrency = 2, fet
   const retryAt = new Map();
   const clients = new WeakMap();
   let pausedUntil = 0, pause = 0, pausedProfile = null, timer = null;
+  let lastError = null, lastErrorProfile = null;
 
   const ready = () => canUseModel(getProfile());
   const needsWork = id => {
@@ -190,7 +191,8 @@ export function createPresentationQueue({store, getProfile, concurrency = 2, fet
   function pump() {
     if (!ready() || !queued.size) return;
     // A changed model configuration (e.g. a corrected key) gets a fresh try.
-    if (getProfile() !== pausedProfile) pausedUntil = 0;
+    if (getProfile() !== pausedProfile) {pausedUntil = 0; pause = 0;}
+    if (getProfile() !== lastErrorProfile) lastError = null;
     if (now() < pausedUntil) {wake(pausedUntil); return;}
     let earliest = Infinity;
     for (const id of queued) {
@@ -215,7 +217,12 @@ export function createPresentationQueue({store, getProfile, concurrency = 2, fet
       await store.setPresentation(id,current => interpret(plan,data,current,profile.modelId));
       retryAt.delete(id);
       pause = 0;
+      pausedUntil = 0;
+      lastError = null;
+      lastErrorProfile = null;
     } catch (error) {
+      lastError = error.message;
+      lastErrorProfile = profile;
       if (error instanceof TransportError) {
         // Provider or network trouble affects every event: back off the whole queue.
         pause = Math.min(MAX_PAUSE_MS,pause ? pause * 2 : RETRY_MS);
@@ -253,6 +260,29 @@ export function createPresentationQueue({store, getProfile, concurrency = 2, fet
       if (!ready()) return 0;
       return ids.filter(id => queued.has(id) || active.has(id)).length;
     },
+    /** Queue state for frontend progress and error indicators. */
+    status(ids) {
+      const enabled = ready();
+      if (!enabled) return {enabled:false,pending:0,active:0,failed:0,pausedUntil:null,lastError:null};
+      const profile = getProfile();
+      if (profile !== pausedProfile) {pausedUntil = 0; pause = 0;}
+      if (profile !== lastErrorProfile) lastError = null;
+      const pendingCount = ids.filter(id => queued.has(id) || active.has(id)).length;
+      const activeCount = ids.filter(id => active.has(id)).length;
+      let failedCount = 0;
+      for (const id of ids) {
+        const p = store.get(id)?.presentation;
+        if (!p?.title && p?.failed?.count >= MAX_ATTEMPTS) failedCount++;
+      }
+      return {
+        enabled: true,
+        pending: pendingCount,
+        active: activeCount,
+        failed: failedCount,
+        pausedUntil: now() < pausedUntil ? new Date(pausedUntil).toISOString() : null,
+        lastError,
+      };
+    },
     /** Resolves once no call is running. */
     async idle() {
       while (active.size) await Promise.allSettled([...active.values()]);
@@ -273,6 +303,7 @@ export async function createForecastTranslator({getProfile, cachePath = null, fe
   const clients = new WeakMap();
   let running = null;
   let pausedUntil = 0, pause = 0, pausedProfile = null, timer = null;
+  let lastError = null, lastErrorProfile = null;
 
   if (cachePath) {
     try {
@@ -327,7 +358,8 @@ export async function createForecastTranslator({getProfile, cachePath = null, fe
 
   function pump() {
     if (running || !ready() || !queued.size) return;
-    if (getProfile() !== pausedProfile) pausedUntil = 0;
+    if (getProfile() !== pausedProfile) {pausedUntil = 0; pause = 0;}
+    if (getProfile() !== lastErrorProfile) lastError = null;
     if (now() < pausedUntil) {wake(pausedUntil); return;}
     const batch = [];
     for (const title of queued) {
@@ -339,7 +371,12 @@ export async function createForecastTranslator({getProfile, cachePath = null, fe
     const profile = getProfile();
     running = translateBatch(batch,profile).then(() => {
       pause = 0;
+      pausedUntil = 0;
+      lastError = null;
+      lastErrorProfile = null;
     }, error => {
+      lastError = error.message;
+      lastErrorProfile = profile;
       if (error instanceof TransportError) {
         pause = Math.min(MAX_PAUSE_MS,pause ? pause * 2 : RETRY_MS);
         pausedUntil = now() + pause;
@@ -374,6 +411,30 @@ export async function createForecastTranslator({getProfile, cachePath = null, fe
         if (needsWork(title)) count++;
       }
       return count;
+    },
+    status(titles) {
+      const enabled = ready();
+      if (!enabled) return {enabled:false,pending:0,active:0,failed:0,pausedUntil:null,lastError:null};
+      const profile = getProfile();
+      if (profile !== pausedProfile) {pausedUntil = 0; pause = 0;}
+      if (profile !== lastErrorProfile) lastError = null;
+      const seen = new Set();
+      let pendingCount = 0;
+      let failedCount = 0;
+      for (const title of titles) {
+        if (seen.has(title)) continue;
+        seen.add(title);
+        if (needsWork(title)) pendingCount++;
+        else if (!cache.has(title) && (attempts.get(title) ?? 0) >= MAX_ATTEMPTS) failedCount++;
+      }
+      return {
+        enabled: true,
+        pending: pendingCount,
+        active: running ? 1 : 0,
+        failed: failedCount,
+        pausedUntil: now() < pausedUntil ? new Date(pausedUntil).toISOString() : null,
+        lastError,
+      };
     },
     async idle() {
       while (running) await running;

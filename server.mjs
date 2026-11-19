@@ -169,6 +169,7 @@ async function buildFeed(mode) {
   const sources = await Promise.all(Object.entries(feeds).map(([kind,path]) => getFeed(kind,path,mode)));
   let events;
   let presentationPending = 0;
+  let presentationStatus = null;
   if (mode === 'live') {
     const fingerprint = createHash('sha256').update(JSON.stringify({
       intake,
@@ -186,7 +187,22 @@ async function buildFeed(mode) {
       event.records.filter(record => record.kind === 'forecast').map(record => record.title));
     presenter.schedule(ids);
     forecastTranslator.schedule(forecastTitles);
-    presentationPending = presenter.pending(ids) + forecastTranslator.pending(forecastTitles);
+    const eventStatus = presenter.status(ids);
+    const forecastStatus = forecastTranslator.status(forecastTitles);
+    presentationPending = eventStatus.pending + forecastStatus.pending;
+    const pausedUntil = eventStatus.pausedUntil && forecastStatus.pausedUntil
+      ? (eventStatus.pausedUntil > forecastStatus.pausedUntil ? eventStatus.pausedUntil : forecastStatus.pausedUntil)
+      : (eventStatus.pausedUntil || forecastStatus.pausedUntil || null);
+    presentationStatus = {
+      enabled: eventStatus.enabled || forecastStatus.enabled,
+      pending: presentationPending,
+      eventPending: eventStatus.pending,
+      forecastPending: forecastStatus.pending,
+      active: eventStatus.active + forecastStatus.active,
+      failed: eventStatus.failed + forecastStatus.failed,
+      pausedUntil,
+      error: eventStatus.lastError || forecastStatus.lastError || null,
+    };
     events = lastLive.events.map(withPresentation);
   } else events = buildEvents(sources,mode,findPlaces).map(present);
   // Events carry every record they use; the full input batch would only bloat the response.
@@ -197,7 +213,7 @@ async function buildFeed(mode) {
   }));
   return {schemaVersion:'0.5',mode,liveSource:origin ? 'self-hosted' : 'rss',fetchedAt:new Date().toISOString(),sources:status,
     intake:intakeSettings.describe(),network:network.summary,regions,
-    ...(mode === 'live' && {presentationPending}),events};
+    ...(mode === 'live' && {presentationPending,presentationStatus}),events};
 }
 
 function send(req, res, status, type, body, headers = {}) {
@@ -254,6 +270,8 @@ const server = createServer(async (req,res) => {
           const result = await modelSettings.update(payload);
           // A newly enabled model picks up events still showing source headlines.
           presenter.schedule(lastLive.events.map(event=>event.id));
+          forecastTranslator.schedule(lastLive.events.flatMap(event =>
+            event.records.filter(record => record.kind === 'forecast').map(record => record.title)));
           return result;
         },
       });
