@@ -144,6 +144,10 @@ test('createProxyFetch handles AbortSignal on stalled proxy connections', async 
     await assert.rejects(
       () => proxyFetch('https://example.com/slow', {signal: controller.signal}),
     );
+    await assert.rejects(
+      () => proxyFetch('https://example.com/slow-timeout', {signal: AbortSignal.timeout(40)}),
+      error => error?.name === 'TimeoutError',
+    );
   } finally {
     clearTimeout(timer);
     for (const socket of sockets) socket.destroy();

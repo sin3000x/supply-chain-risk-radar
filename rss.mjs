@@ -10,7 +10,8 @@ import {
 
 export const FEEDS = JSON.parse(readFileSync(new URL('./data/news-sources.json', import.meta.url), 'utf8'));
 const ITEMS_PER_FEED = 30;
-const FETCH_TIMEOUT_MS = 8000;
+const FETCH_TIMEOUT_MS = 15_000;
+const MAX_CONCURRENT_PER_HOST = 3;
 // Same refresh interval as WorldMonitor's FEED_REFRESH_AFTER_MS.
 export const FEED_REFRESH_AFTER_MS = 5 * 60_000;
 // Failed feeds use a shorter cooldown so transient/cold-start errors recover quickly
@@ -18,6 +19,44 @@ export const FEED_REFRESH_AFTER_MS = 5 * 60_000;
 export const FEED_ERROR_RETRY_MS = 30_000;
 const USER_AGENT = 'SupplyChainRiskRadar/0.2';
 const isAggregator = url => new URL(url).hostname === 'news.google.com';
+
+function formatFetchError(error) {
+  if (error?.name === 'TimeoutError' || error?.cause?.name === 'TimeoutError') return 'timeout';
+  const code = error?.cause?.code;
+  if (typeof code === 'string' && code) return code;
+  return error?.message || 'fetch failed';
+}
+
+function createHostLimiter(limit) {
+  const active = new Map();
+  const queues = new Map();
+  return async function runLimited(host, task) {
+    if (!Number.isFinite(limit) || limit <= 0) return task();
+    const count = active.get(host) ?? 0;
+    if (count >= limit) {
+      await new Promise(resolve => {
+        const q = queues.get(host) ?? [];
+        q.push(resolve);
+        queues.set(host, q);
+      });
+    }
+    active.set(host, (active.get(host) ?? 0) + 1);
+    try {
+      return await task();
+    } finally {
+      const remaining = (active.get(host) ?? 1) - 1;
+      const q = queues.get(host);
+      if (q?.length) {
+        active.set(host, remaining);
+        q.shift()();
+      } else {
+        if (remaining <= 0) active.delete(host);
+        else active.set(host, remaining);
+        queues.delete(host);
+      }
+    }
+  };
+}
 
 /** Resolve effective feed URL, time window label, and human-readable query scope. */
 export function resolveFeedMeta(feed, {googleNewsWindowDays = 0} = {}) {
@@ -85,11 +124,11 @@ export function parseFeed(xml, feed) {
   return items;
 }
 
-async function fetchFeed(feed, validators) {
+async function fetchFeed(feed, validators, timeoutMs = FETCH_TIMEOUT_MS) {
   const headers = {'user-agent':USER_AGENT, accept:'application/rss+xml, application/atom+xml, application/xml, text/xml, */*'};
   if (validators?.etag) headers['if-none-match'] = validators.etag;
   if (validators?.lastModified) headers['if-modified-since'] = validators.lastModified;
-  const response = await fetch(feed.url, {headers, signal:AbortSignal.timeout(FETCH_TIMEOUT_MS)});
+  const response = await fetch(feed.url, {headers, signal:AbortSignal.timeout(timeoutMs)});
   if (response.status === 304 && validators) return {notModified:true};
   if (!response.ok) throw Error(`HTTP ${response.status}`);
   const text = decodeFeedBody(await readBoundedResponseBody(response, RSS_MAX_BODY_BYTES), response.headers.get('content-type'));
@@ -100,23 +139,28 @@ async function fetchFeed(feed, validators) {
 }
 
 /**
- * Feeds are refreshed at most every five minutes and in parallel; concurrent
- * callers share one in-flight refresh. A failed refresh keeps the last good
- * items and reports the error alongside them.
+ * Feeds are refreshed at most every five minutes and in parallel (throttled per
+ * host so aggregator bursts do not time out); concurrent callers share one
+ * in-flight refresh. A failed refresh keeps the last good items and reports the
+ * error alongside them.
  */
 export function createFeedReader(feeds = FEEDS, {
   refreshAfterMs = FEED_REFRESH_AFTER_MS,
   errorRetryMs = FEED_ERROR_RETRY_MS,
+  fetchTimeoutMs = FETCH_TIMEOUT_MS,
+  maxConcurrentPerHost = MAX_CONCURRENT_PER_HOST,
   now = Date.now,
   getSettings = () => ({}),
 } = {}) {
   const cache = new Map();
+  const runLimited = createHostLimiter(maxConcurrentPerHost);
   async function refresh(feed, force) {
     const entry = cache.get(feed.url);
     if (entry?.inFlight) return entry.inFlight;
     const ttl = entry?.error ? Math.min(refreshAfterMs, errorRetryMs) : refreshAfterMs;
     if (entry && !force && now() - entry.checkedAt < ttl) return entry;
-    const inFlight = fetchFeed(feed, entry?.validators).then(result => {
+    const host = new URL(feed.url).hostname;
+    const inFlight = runLimited(host, () => fetchFeed(feed, entry?.validators, fetchTimeoutMs)).then(result => {
       const next = result.notModified
         ? {...entry, checkedAt:now(), error:null}
         : {items:result.items, validators:result.validators, checkedAt:now(), error:null};
@@ -124,7 +168,7 @@ export function createFeedReader(feeds = FEEDS, {
       return next;
     }, error => {
       const next = {items:entry?.items ?? [], validators:entry?.validators, checkedAt:now(),
-        error:error.name === 'TimeoutError' ? 'timeout' : error.cause?.code || error.message};
+        error:formatFetchError(error)};
       cache.set(feed.url, next);
       return next;
     });

@@ -150,3 +150,46 @@ test('createFeedReader filters stale items by newsMaxAgeHours', async () => {
     server.close();
   }
 });
+
+test('createFeedReader reports timeout cleanly and limits per-host concurrency', async () => {
+  let inFlight = 0;
+  let maxInFlight = 0;
+  const server = createServer((req, res) => {
+    if (req.url === '/slow') {
+      // Never respond; let fetchTimeoutMs abort it.
+      return;
+    }
+    inFlight++;
+    maxInFlight = Math.max(maxInFlight, inFlight);
+    setTimeout(() => {
+      inFlight--;
+      res.writeHead(200, {'content-type': 'application/rss+xml'});
+      res.end(rss);
+    }, 35);
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const {port} = server.address();
+  try {
+    const feeds = [
+      {name: 'F1', category: 'world', url: `http://127.0.0.1:${port}/f1`},
+      {name: 'F2', category: 'world', url: `http://127.0.0.1:${port}/f2`},
+      {name: 'F3', category: 'world', url: `http://127.0.0.1:${port}/f3`},
+      {name: 'F4', category: 'world', url: `http://127.0.0.1:${port}/f4`},
+      {name: 'F5', category: 'world', url: `http://127.0.0.1:${port}/f5`},
+    ];
+    const read = createFeedReader(feeds, {maxConcurrentPerHost: 2, fetchTimeoutMs: 500});
+    const result = await read();
+    assert.equal(result.feedStatus.every(f => f.error === null && f.count === 1), true);
+    assert.ok(maxInFlight <= 2, `expected maxInFlight <= 2, got ${maxInFlight}`);
+
+    const readSlow = createFeedReader(
+      [{name: 'Slow', category: 'world', url: `http://127.0.0.1:${port}/slow`}],
+      {fetchTimeoutMs: 60},
+    );
+    const slowResult = await readSlow();
+    assert.equal(slowResult.feedStatus[0].error, 'timeout');
+  } finally {
+    server.closeAllConnections?.();
+    server.close();
+  }
+});

@@ -199,7 +199,10 @@ function createClient({apiKey,baseUrl,modelId}, fetchImpl) {
         }),
       });
     } catch (error) {
-      throw new TransportError(error.cause?.code || error.message);
+      const detail = error?.name === 'TimeoutError' || error?.cause?.name === 'TimeoutError'
+        ? 'timeout'
+        : (typeof error?.cause?.code === 'string' && error.cause.code) || error.message;
+      throw new TransportError(detail);
     }
     if (!response.ok) throw new TransportError(`HTTP ${response.status}`);
     const payload = await response.json().catch(() => null);

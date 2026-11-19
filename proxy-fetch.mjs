@@ -122,6 +122,13 @@ function decodeBodyStream(res, headers) {
   return res.pipe(decoder);
 }
 
+function unwrapAbortError(error, signal) {
+  if (signal?.aborted && signal.reason !== undefined) {
+    return signal.reason;
+  }
+  return error;
+}
+
 function openConnectTunnel(proxyUrl, targetUrl, signal) {
   const targetHost = targetUrl.hostname.replace(/^\[|\]$/g, '');
   const targetPort = Number(targetUrl.port || 443);
@@ -130,6 +137,10 @@ function openConnectTunnel(proxyUrl, targetUrl, signal) {
   const transport = proxyUrl.protocol === 'https:' ? https : http;
 
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason ?? new Error('Aborted'));
+      return;
+    }
     const req = transport.request({
       hostname: proxyUrl.hostname.replace(/^\[|\]$/g, ''),
       port: Number(proxyUrl.port || defaultPort(proxyUrl.protocol)),
@@ -153,7 +164,8 @@ function openConnectTunnel(proxyUrl, targetUrl, signal) {
       const onAbort = () => tlsSocket.destroy(signal?.reason ?? new Error('Aborted'));
       if (signal) {
         if (signal.aborted) {
-          onAbort();
+          tlsSocket.destroy();
+          reject(signal.reason ?? new Error('Aborted'));
           return;
         }
         signal.addEventListener('abort', onAbort, {once: true});
@@ -162,7 +174,7 @@ function openConnectTunnel(proxyUrl, targetUrl, signal) {
       resolve(tlsSocket);
     });
 
-    req.once('error', reject);
+    req.once('error', error => reject(unwrapAbortError(error, signal)));
     req.end();
   });
 }
@@ -210,7 +222,7 @@ async function sendViaProxyOnce({url, method, headers, bodyBuffer, proxyUrl, sig
 
   const res = await new Promise((resolve, reject) => {
     req.once('response', resolve);
-    req.once('error', reject);
+    req.once('error', error => reject(unwrapAbortError(error, signal)));
     if (bodyBuffer && bodyBuffer.length > 0) req.write(bodyBuffer);
     req.end();
   });

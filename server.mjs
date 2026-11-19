@@ -134,7 +134,10 @@ async function getFeed(kind, path, mode) {
       : data.stale || data.coverage?.servedStale ? 'stale' : records.length ? 'ok' : 'empty';
     return {kind, state, coverage, records};
   } catch (error) {
-    return {kind,state:'unavailable',error:error.cause?.code || error.message,records:[]};
+    const detail = error?.name === 'TimeoutError' || error?.cause?.name === 'TimeoutError'
+      ? 'timeout'
+      : (typeof error?.cause?.code === 'string' && error.cause.code) || error.message;
+    return {kind,state:'unavailable',error:detail,records:[]};
   }
 }
 
