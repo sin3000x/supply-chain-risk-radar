@@ -192,18 +192,22 @@ function stemWord(word) {
 function maritimeKind(headline, topic) {
   if (topic !== 'maritime_security' && topic !== 'security_development') return null;
   if (topic === 'maritime_security' && /\b(discuss|talks?|deal|agreement|safeguarding)\b/i.test(headline) &&
-    !/\b(hit|mine|fire|ablaze|missing)\b/i.test(headline)) return 'diplomacy';
-  if (/\b(crew\s+member\s+missing|national\s+missing|missing\s+after)\b/i.test(headline)) return 'missing_crew';
+    !/\b(hit|mine|fire|ablaze|missing|struck|strike\w*|projectile|capsiz\w*|sink\w*|sunk)\b/i.test(headline)) return 'diplomacy';
   if (/\b(seiz\w+|captur\w+)\b.*\bdrone\b|\bdrone\b.*\b(seiz\w+|captur\w+)\b/i.test(headline)) return 'drone_capture';
-  if (/\bblockad\w+\b/i.test(headline)) return 'blockade';
   if (/\b(qeshm|missile\s+site)\b/i.test(headline)) return 'island_strike';
-  if (topic === 'maritime_security' && /\b(mines?|mine\s+blast|naval\s+mine|sea\s+mine)\b/i.test(headline)) return 'mine';
-  if (topic === 'maritime_security' && /\b(gas\s+tanker|lpg|lng|tara\s+gas)\b/i.test(headline)) return 'gas_tanker';
+  if (/\bblockad\w+\b/i.test(headline) && !/\b(tankers?|cargo ships?|lpg|lng)\b/i.test(headline)) return 'blockade';
+  if (topic === 'maritime_security' && /\b(declares?\b.*\bclosed|kept\b.*\bshut)\b/i.test(headline)) return 'closure';
+  if (topic === 'maritime_security' &&
+    /\b(tankers?|vessels?|cargo ships?|container ships?|lpg carriers?|lng carriers?|bulk carriers?|tara gas|adnoc)\b/i.test(headline) &&
+    /\b(attacks?|mines?|hit|hits|hitting|strike\w*|struck|projectile|missil\w*|fire|ablaze|burn\w*|sink\w*|sunk|capsiz\w*|disabl\w*|abandon\w*|injur\w*|crew|missing|safe|accounted|blast\w*|target\w*)\b/i.test(headline)) {
+    return 'vessel_attack';
+  }
   return null;
 }
 
 const physicalTopics = new Set(['maritime_security', 'transport_disruption', 'natural_hazard', 'infrastructure_incident']);
-const CASUALTY_KINDS = new Set(['missing_crew', 'gas_tanker', 'mine']);
+const CASUALTY_KINDS = new Set(['vessel_attack']);
+const maritimeZones = places => new Set([...places].filter(id => id.startsWith('CP_') || id.startsWith('SEA_')));
 
 function extractArticleMeta(headline, recordPlaces, topic, publisher) {
   const hubs = inferGeoHubsFromTitle(headline);
@@ -230,9 +234,10 @@ function extractArticleMeta(headline, recordPlaces, topic, publisher) {
   }
   const canonHubs = new Set(hubs.map(({hub, hubId}) => hub.networkId || hubId));
   const places = new Set([...recordPlaces, ...canonHubs]);
+  const zones = maritimeZones(places);
   const polities = extractPolities(headline, publisher);
   const mKind = maritimeKind(headline, topic);
-  return {phrases, specWords, contentWords, places, polities, mKind};
+  return {phrases, specWords, contentWords, places, zones, polities, mKind};
 }
 
 function buildArticle(record, findPlaces, fallbackTopic) {
@@ -271,9 +276,7 @@ function politiesConflict(leadA, leadB) {
 function maritimeKindsConflict(kindsA, kindsB) {
   for (const ka of kindsA) {
     for (const kb of kindsB) {
-      if (ka === kb) continue;
-      const pair = [ka, kb].sort().join('+');
-      if (pair !== 'gas_tanker+missing_crew') return true;
+      if (ka !== kb) return true;
     }
   }
   return false;
@@ -285,6 +288,10 @@ function articlesMatch(a, b, recent) {
   if (!recent(a, b)) return false;
   if (a.meta.mKind && b.meta.mKind && maritimeKindsConflict([a.meta.mKind], [b.meta.mKind])) return false;
 
+  if (a.meta.zones.size > 0 && b.meta.zones.size > 0 && intersection(a.meta.zones, b.meta.zones).length === 0) {
+    return false;
+  }
+
   const sim = storySimilarity(a.headline, b.headline);
   const sharedPlaces = intersection(a.meta.places, b.meta.places);
   const sharedPhrases = intersection(a.meta.phrases, b.meta.phrases);
@@ -294,13 +301,17 @@ function articlesMatch(a, b, recent) {
 
   const bothHavePlaces = a.meta.places.size > 0 && b.meta.places.size > 0;
   const oneHasPlaces = (a.meta.places.size > 0) !== (b.meta.places.size > 0);
-  if (bothHavePlaces && sharedPlaces.length === 0) return false;
   if (oneHasPlaces && sim < 0.55) return false;
+
+  const bothVesselAttacks = a.meta.mKind === 'vessel_attack' && b.meta.mKind === 'vessel_attack';
+  if (bothHavePlaces && sharedPlaces.length === 0 && !(bothVesselAttacks && sharedPhrases.length > 0)) {
+    return false;
+  }
 
   const casualtyPair = CASUALTY_KINDS.has(a.meta.mKind) || CASUALTY_KINDS.has(b.meta.mKind);
   if (!casualtyPair && politiesConflict(a.meta.polities.lead, b.meta.polities.lead)) return false;
 
-  // Rule 1: Specific incident phrase match for physical disruptions (e.g. "ground stop", "crew member").
+  // Rule 1: Specific incident phrase match for physical disruptions (e.g. "ground stop", "tara gas").
   if (sharedPhrases.length > 0 && (physicalTopics.has(a.topic) || physicalTopics.has(b.topic))) {
     if (!oneHasPlaces) return true;
   }
@@ -316,11 +327,14 @@ function articlesMatch(a, b, recent) {
     return false;
   }
 
-  // Rule 3: Maritime security — prevent broad chokepoint mentions from lumping distinct incidents.
+  // Rule 3: Maritime security — group commercial vessel attacks per chokepoint; keep military/diplomacy separate.
   if (a.topic === 'maritime_security' || b.topic === 'maritime_security') {
+    if (bothVesselAttacks && sharedPlaces.length > 0) return true;
     if (!sharedPlaces.length) return false;
     if (a.meta.mKind && a.meta.mKind === b.meta.mKind) {
-      if (sim >= 0.30 || sharedSpec.length >= 1 || sharedPhrases.length >= 1 || sharedPolities.length >= 2) return true;
+      if (a.meta.mKind === 'closure' || sim >= 0.30 || sharedSpec.length >= 1 || sharedPhrases.length >= 1 || sharedPolities.length >= 2) {
+        return true;
+      }
     }
     return sim >= 0.54;
   }
@@ -351,20 +365,29 @@ function groupDescriptor(members) {
   const maxAt = times.length ? Math.max(...times) : NaN;
   const leadPolities = new Set(members.flatMap(m => [...m.meta.polities.lead]));
   const mKinds = new Set(members.map(m => m.meta.mKind).filter(Boolean));
-  return {members: [...members], minAt, maxAt, leadPolities, mKinds};
+  const places = new Set(members.flatMap(m => [...m.meta.places]));
+  const zones = new Set(members.flatMap(m => [...m.meta.zones]));
+  return {members: [...members], minAt, maxAt, leadPolities, mKinds, places, zones};
 }
 
-function canMergeGroups(ga, gb, maxSpanMs, recent, allowCopySimilarity = false) {
+function canMergeGroups(ga, gb, windowMs, recent, allowCopySimilarity = false) {
+  const bothVesselCrisis = ga.mKinds.size === 1 && ga.mKinds.has('vessel_attack') &&
+    gb.mKinds.size === 1 && gb.mKinds.has('vessel_attack');
+  const maxSpanMs = bothVesselCrisis
+    ? Math.max(windowMs * 3, 7 * 24 * 3600_000)
+    : Math.round(windowMs * 1.5);
   if (Number.isFinite(ga.minAt) && Number.isFinite(ga.maxAt) && Number.isFinite(gb.minAt) && Number.isFinite(gb.maxAt)) {
     if (Math.max(ga.maxAt, gb.maxAt) - Math.min(ga.minAt, gb.minAt) > maxSpanMs) return false;
   }
   const hasCasualty = [...ga.mKinds, ...gb.mKinds].some(k => CASUALTY_KINDS.has(k));
   if (!hasCasualty && politiesConflict(ga.leadPolities, gb.leadPolities)) return false;
   if (maritimeKindsConflict(ga.mKinds, gb.mKinds)) return false;
+  if (ga.zones.size > 0 && gb.zones.size > 0 && intersection(ga.zones, gb.zones).length === 0) return false;
+
   const anchorA = ga.members[0];
   const anchorB = gb.members[0];
   if (!crossTopicAllowed(anchorA.topic, anchorB.topic)) return false;
-  if (anchorA.meta.places.size > 0 && anchorB.meta.places.size > 0 &&
+  if (!bothVesselCrisis && anchorA.meta.places.size > 0 && anchorB.meta.places.size > 0 &&
     intersection(anchorA.meta.places, anchorB.meta.places).length === 0) {
     return false;
   }
@@ -381,7 +404,6 @@ export function clusterNews(records, findPlaces = () => [], { windowMs = WINDOW_
     .map(record => buildArticle(record, findPlaces))
     .sort((a,b) => a.at - b.at || a.record.id.localeCompare(b.record.id));
   const recent = (a,b) => Number.isFinite(a.at) && Number.isFinite(b.at) && Math.abs(a.at - b.at) <= windowMs;
-  const maxSpanMs = Math.round(windowMs * 1.5);
   const sharedPlace = (a,b) => intersection(a.places, b.places).length;
   const candidates = articles.filter(item => item.topic && !item.background);
 
@@ -400,7 +422,7 @@ export function clusterNews(records, findPlaces = () => [], { windowMs = WINDOW_
     return windows;
   });
 
-  const groups = threadIncidents(copies, recent, maxSpanMs);
+  const groups = threadIncidents(copies, recent, windowMs);
   // Attach context to one clear match so commentary cannot bridge two event groups.
   const context = new Map();
   for (const item of articles.filter(item => item.background)) {
@@ -424,7 +446,7 @@ export function clusterNews(records, findPlaces = () => [], { windowMs = WINDOW_
   });
 }
 
-function threadIncidents(groups, recent, maxSpanMs) {
+function threadIncidents(groups, recent, windowMs) {
   const info = groups.map(group => groupDescriptor(group));
   const parent = info.map((_,i) => i);
   const find = i => parent[i] === i ? i : (parent[i] = find(parent[i]));
@@ -432,7 +454,7 @@ function threadIncidents(groups, recent, maxSpanMs) {
     const ri = find(i), rj = find(j);
     if (ri === rj) continue;
     const a = info[ri], b = info[rj];
-    if (!canMergeGroups(a, b, maxSpanMs, recent, false)) continue;
+    if (!canMergeGroups(a, b, windowMs, recent, false)) continue;
     // Merge into the root that started earlier so the group keeps its first report.
     const [keep, drop] = ri < rj ? [ri, rj] : [rj, ri];
     parent[drop] = keep;
@@ -443,6 +465,8 @@ function threadIncidents(groups, recent, maxSpanMs) {
     target.maxAt = Math.max(target.maxAt, source.maxAt);
     for (const polity of source.leadPolities) target.leadPolities.add(polity);
     for (const kind of source.mKinds) target.mKinds.add(kind);
+    for (const place of source.places) target.places.add(place);
+    for (const zone of source.zones) target.zones.add(zone);
   }
   return info.filter((_,i) => find(i) === i).map(({members}) =>
     members.sort((a,b) => a.at - b.at || a.record.id.localeCompare(b.record.id)));
@@ -460,7 +484,7 @@ export function canJoinEvent(prevRecords, incRecords, findPlaces = () => [], { w
     .sort((a, b) => a.at - b.at || a.record.id.localeCompare(b.record.id));
   if (!prevArticles.length || !incArticles.length) return false;
   const recent = (a, b) => Number.isFinite(a.at) && Number.isFinite(b.at) && Math.abs(a.at - b.at) <= windowMs;
-  return canMergeGroups(groupDescriptor(prevArticles), groupDescriptor(incArticles), Math.round(windowMs * 1.5), recent, true);
+  return canMergeGroups(groupDescriptor(prevArticles), groupDescriptor(incArticles), windowMs, recent, true);
 }
 
 /** Recompute canonical event metadata from its full chronological news report history. */

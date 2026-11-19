@@ -191,21 +191,30 @@ test('clusters separate conflicting actors and distinct Hormuz incidents while m
   }], 'live', findPlaces);
   assert.equal(misc.length, 2);
 
-  // 3. Distinct Hormuz incidents (mine vs drone capture vs missing crew vs Qeshm strike vs talks) stay separate.
+  // 3. Hormuz commercial vessel attacks (mines, projectiles, missing/safe crew, Tara Gas) merge per chokepoint;
+  // drone capture, island strikes, diplomacy, and other regions (New Orleans, Bulgaria) stay separate.
   const hormuz = buildEvents([{
     records: [
       pubArticle('hm1', 'Oil Tanker On Fire After Hitting Mine In Hormuz', '2026-11-16T01:00:00Z', 'gCaptain'),
+      pubArticle('hp1', 'Projectile Strikes Oil Tanker While Attempting to Exit Strait of Hormuz', '2026-11-18T23:05:00Z', 'WANA'),
       pubArticle('hd1', 'Iran says it captured US drone south of Qeshm Island in Strait of Hormuz', '2026-11-16T10:12:00Z', 'Anadolu'),
       pubArticle('hd2', 'Iran says it seized US military drone near Strait of Hormuz', '2026-11-16T10:58:00Z', 'TRT World'),
       pubArticle('hc1', 'One crew member missing after two missile strikes on LPG carrier in Strait of Hormuz', '2026-11-17T16:30:00Z', 'Marine Log'),
       pubArticle('hc2', "UAE's ADNOC L&S says one crew member missing after attack on its vessel in Hormuz", '2026-11-18T07:41:00Z', 'Reuters'),
+      pubArticle('hc3', "Update: all crew 'are safe and accounted for' following strike on ADNOC tanker in Strait of Hormuz", '2026-11-19T00:01:00Z', 'Riviera'),
+      pubArticle('tg1', 'India identifies Tara Gas as tanker targeted in Strait of Hormuz missile attack', '2026-11-17T07:02:00Z', 'Gulf Business'),
+      pubArticle('tg2', 'TARA GAS Burning Off Oman as Another Tanker Attack Leaves 11 Injured', '2026-11-18T19:12:00Z', 'gCaptain'),
       pubArticle('hq1', "US attacks Iran's Qeshm island in Strait of Hormuz, official says", '2026-11-17T16:52:00Z', 'MEE'),
       pubArticle('hq2', 'U.S. Military Strikes Iranian Missile Site Near Strait of Hormuz', '2026-11-17T20:14:00Z', 'gCaptain'),
       pubArticle('ht1', 'Oman, Iran discuss safeguarding maritime corridors, as attacks in Hormuz increase', '2026-11-17T05:45:00Z', 'Reuters'),
       pubArticle('ht2', 'Iran and Oman Hold Talks on Strait of Hormuz Security as Tanker Attacks Surge', '2026-11-17T10:00:00Z', 'OilPrice'),
+      pubArticle('no1', 'USA: All passengers survive after tanker hits docked river cruise ship in New Orleans', '2026-11-14T13:15:00Z', 'France 24'),
+      pubArticle('bg1', 'Cargo Ship Capsizes Off Bulgaria After Reported Sea Drone Attack', '2026-11-16T20:36:00Z', 'gCaptain'),
     ],
   }], 'live', findPlaces);
-  assert.equal(hormuz.length, 5);
+  assert.equal(hormuz.length, 6);
+  const vesselCard = hormuz.find(ev => ev.records.some(r => r.id === 'hm1'));
+  assert.equal(vesselCard.records.length, 7);
 });
 
 test('forecast and signal matching reject geo conflicts and weak token collisions', async () => {

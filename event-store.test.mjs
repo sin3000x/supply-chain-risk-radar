@@ -138,12 +138,25 @@ test('put recomputes metadata from full accumulated history and caps snowball sp
       time: {value: '2026-11-16T03:21:00.000Z'},
       source: {publisher: 'Mehr News Agency'},
     };
-    // 4 days after n1 (> 72h max span for 48h window) — must not snowball into the same event.
-    const nLate = {
+    // 4 days after n1 (within 7-day vessel-attack crisis cap) — joins the same Hormuz vessel-attack card.
+    const nDay4 = {
       id: 'rss:4', kind: 'news',
       title: 'Another oil tanker hits mine in Strait of Hormuz, fire erupts',
-      time: {value: '2026-11-18T15:00:00.000Z'},
+      time: {value: '2026-11-17T18:00:00.000Z'},
       source: {publisher: 'Reuters'},
+    };
+    const nDay4b = {
+      id: 'rss:5', kind: 'news',
+      title: 'Projectile Strikes Oil Tanker While Attempting to Exit Strait of Hormuz',
+      time: {value: '2026-11-18T23:05:00.000Z'},
+      source: {publisher: 'WANA News Agency'},
+    };
+    // 9 days after n1 (> 7-day vessel-attack cap) — must not snowball into the old event.
+    const nTooLate = {
+      id: 'rss:6', kind: 'news',
+      title: 'Tanker hit by unknown projectile near Strait of Hormuz',
+      time: {value: '2026-11-23T18:00:00.000Z'},
+      source: {publisher: 'Al Jazeera'},
     };
 
     const [created] = await store.update(buildEvents([{records: [n1, n2]}], 'live', findPlaces));
@@ -157,7 +170,12 @@ test('put recomputes metadata from full accumulated history and caps snowball sp
     assert.equal(updated.action, 'attack');
     assert.deepEqual(updated.geoAnchors, ['CP_HORMUZ']);
 
-    const [late] = await store.update(buildEvents([{records: [nLate]}], 'live', findPlaces));
+    await store.update(buildEvents([{records: [nDay4]}], 'live', findPlaces));
+    const [continued] = await store.update(buildEvents([{records: [nDay4b]}], 'live', findPlaces));
+    assert.equal(continued.id, created.id);
+    assert.equal(continued.corroborationCount, 5);
+
+    const [late] = await store.update(buildEvents([{records: [nTooLate]}], 'live', findPlaces));
     assert.notEqual(late.id, created.id);
   } finally {
     await rm(directory, {recursive: true, force: true});
