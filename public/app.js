@@ -772,13 +772,22 @@ function renderStatus(loading, error) {
     } else if (llmPending > 0) {
       notes.push({text:`模型正在提取中文标题与进展（剩余 ${llmPending} 项）…`,cls:'status-note'});
     } else if (presentation?.enabled && presentation.failed > 0) {
-      const reason = presentation.error ? `（${presentation.error}）` : '';
-      notes.push({text:`${presentation.failed} 项中文提取失败${reason}，已保留原文`,cls:'status-error'});
+      notes.push({
+        text:`${presentation.failed} 项中文提取失败，已保留原文（查看详情）`,
+        cls:'status-error status-link',
+        onClick:openFailureDialog,
+      });
     } else if (presentation && !presentation.enabled) {
       notes.push({text:'未配置模型，当前显示原文标题',cls:''});
     }
   }
-  for (const note of notes) add(status,'span',note.text,note.cls);
+  for (const note of notes) {
+    if (note.onClick) {
+      const btn = add(status,'button',note.text,note.cls);
+      btn.type = 'button';
+      btn.onclick = note.onClick;
+    } else add(status,'span',note.text,note.cls);
+  }
 
   const feedCount = data.sources.reduce((sum, source) => sum + (source.feedStatus?.length ?? 0), 0);
   const clusterHours = data.intake?.settings?.clusterWindowHours ?? 48;
@@ -1143,6 +1152,7 @@ function progressDate({occurredAt, precision}) {
 function renderEvent(parent, {event, kinds, topic, dimension, lanes, reports}) {
   const card = add(parent,'details','','event-card');
   card.dataset.dimension = dimension;
+  card.dataset.eventId = event.id;
   const summary = add(card,'summary','','event-overview');
   const headline = add(summary,'span','','event-headline');
   addCardText(headline,event.displayTitle ?? event.title,'event-title');
@@ -1263,6 +1273,81 @@ function renderEventBody(body, event) {
     if (json.open && !json.querySelector('pre')) add(json,'pre',JSON.stringify(event,null,2));
   });
 }
+
+const failureDialog = el('presentation-failures');
+const failureList = el('presentation-failures-list');
+const failureStatus = el('presentation-failures-status');
+const retryFailuresButton = el('retry-presentation-failures');
+
+function describeFailureReason(reason) {
+  if (!reason) return '未记录具体原因（可能是早期重试耗尽，可点击下方重试）';
+  if (reason.includes('not grounded')) return `原文引用校验未通过（防幻觉保护：模型给出的 titleQuote 未在首条报道中逐字出现 · ${reason}）`;
+  if (reason.includes('not JSON') || reason.includes('not a JSON object')) return `模型返回内容不是合法 JSON（${reason}）`;
+  if (reason.includes('translation count mismatch')) return `模型返回的翻译条数与输入不匹配（${reason}）`;
+  if (reason.includes('non-Chinese')) return `模型返回为空、非中文或超出长度限制（${reason}）`;
+  return reason;
+}
+
+function locateEventCard(eventId) {
+  const event = data?.events?.find(item => item.id === eventId);
+  if (!event) return;
+  failureDialog.close();
+  const meta = info(event);
+  let card = document.querySelector(`.event-card[data-event-id="${CSS.escape(eventId)}"]`);
+  if (!card) {
+    el('search').value = '';
+    regionControl.value = '';
+    timeWindowControl.value = '';
+    el('custom-time-bar').hidden = true;
+  }
+  openPlaces.set(meta.geo.id, true);
+  openEvents.add(eventId);
+  render();
+  card = document.querySelector(`.event-card[data-event-id="${CSS.escape(eventId)}"]`);
+  if (card) card.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function openFailureDialog() {
+  const items = data?.presentationStatus?.failedItems ?? [];
+  failureList.replaceChildren();
+  failureStatus.textContent = '';
+  retryFailuresButton.disabled = !items.length;
+  if (!items.length) {
+    add(failureList,'li','当前没有失败条目。','meta');
+  } else {
+    for (const item of items) {
+      const li = add(failureList,'li','','failure-item');
+      const head = add(li,'div','','failure-item-head');
+      add(head,'span',item.kind === 'forecast' ? '预测市场' : '事件标题','failure-item-kind');
+      if (item.kind === 'event' && item.id) {
+        const locate = add(head,'button','定位到卡片','failure-locate-btn');
+        locate.type = 'button';
+        locate.onclick = () => locateEventCard(item.id);
+      }
+      add(li,'div',item.title || '（无标题）','failure-item-title');
+      add(li,'div',`原因：${describeFailureReason(item.reason)}`,'failure-item-reason');
+    }
+  }
+  if (!failureDialog.open) failureDialog.showModal();
+}
+
+el('close-presentation-failures').onclick = () => failureDialog.close();
+retryFailuresButton.onclick = async () => {
+  retryFailuresButton.disabled = true;
+  failureStatus.textContent = '正在重新提交模型提取…';
+  try {
+    const response = await fetch('/api/presentation/retry', {method:'POST'});
+    const body = await response.json().catch(() => null);
+    if (!response.ok) throw Error(body?.error || '重试请求失败');
+    failureDialog.close();
+    presentationPolls = 0;
+    lastPresentationPending = Infinity;
+    await refresh();
+  } catch (error) {
+    failureStatus.textContent = error.message;
+    retryFailuresButton.disabled = false;
+  }
+};
 
 // ── Loading ──────────────────────────────────────────────────────────────
 function rememberLive(result) {

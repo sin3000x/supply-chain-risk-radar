@@ -238,7 +238,7 @@ export function createPresentationQueue({store, getProfile, concurrency = 2, fet
       // an update just marks the follow-ups as read.
       const updated = await store.setPresentation(id,current => {
         const count = (current?.failed?.key === plan.key ? current.failed.count : 0) + 1;
-        if (count < MAX_ATTEMPTS || plan.mode === 'create') return {...current,failed:{key:plan.key,count}};
+        if (count < MAX_ATTEMPTS || plan.mode === 'create') return {...current,failed:{key:plan.key,count,reason:error.message}};
         const {failed,...rest} = current;
         return {...rest,processedIds:[...new Set([...(rest.processedIds ?? []),...plan.read])]};
       });
@@ -263,25 +263,50 @@ export function createPresentationQueue({store, getProfile, concurrency = 2, fet
     /** Queue state for frontend progress and error indicators. */
     status(ids) {
       const enabled = ready();
-      if (!enabled) return {enabled:false,pending:0,active:0,failed:0,pausedUntil:null,lastError:null};
+      if (!enabled) return {enabled:false,pending:0,active:0,failed:0,failedItems:[],pausedUntil:null,lastError:null};
       const profile = getProfile();
       if (profile !== pausedProfile) {pausedUntil = 0; pause = 0;}
       if (profile !== lastErrorProfile) lastError = null;
       const pendingCount = ids.filter(id => queued.has(id) || active.has(id)).length;
       const activeCount = ids.filter(id => active.has(id)).length;
-      let failedCount = 0;
+      const failedItems = [];
       for (const id of ids) {
-        const p = store.get(id)?.presentation;
-        if (!p?.title && p?.failed?.count >= MAX_ATTEMPTS) failedCount++;
+        const event = store.get(id);
+        const p = event?.presentation;
+        if (!p?.title && p?.failed?.count >= MAX_ATTEMPTS) {
+          failedItems.push({kind:'event',id,title:event.title ?? '',reason:p.failed.reason ?? null});
+        }
       }
       return {
         enabled: true,
         pending: pendingCount,
         active: activeCount,
-        failed: failedCount,
+        failed: failedItems.length,
+        failedItems,
         pausedUntil: now() < pausedUntil ? new Date(pausedUntil).toISOString() : null,
         lastError,
       };
+    },
+    /** Clears permanent failure markers for the given events and queues them again. */
+    async retryFailed(ids) {
+      const retried = [];
+      for (const id of ids) {
+        const p = store.get(id)?.presentation;
+        if (!p?.title && p?.failed?.count >= MAX_ATTEMPTS) {
+          await store.setPresentation(id, current => {
+            if (!current?.failed) return current;
+            const {failed, ...rest} = current;
+            return rest;
+          });
+          retryAt.delete(id);
+          retried.push(id);
+        }
+      }
+      if (retried.length) {
+        lastError = null;
+        this.schedule(retried);
+      }
+      return retried.length;
     },
     /** Resolves once no call is running. */
     async idle() {
@@ -299,6 +324,7 @@ export async function createForecastTranslator({getProfile, cachePath = null, fe
   const BATCH_SIZE = 20;
   const cache = new Map();
   const attempts = new Map();
+  const reasons = new Map();
   const queued = new Set();
   const clients = new WeakMap();
   let running = null;
@@ -348,9 +374,11 @@ export async function createForecastTranslator({getProfile, cachePath = null, fe
         if (cache.size >= MAX_CACHE) cache.delete(cache.keys().next().value);
         cache.set(batch[i],zh);
         attempts.delete(batch[i]);
+        reasons.delete(batch[i]);
         changed = true;
       } else {
         attempts.set(batch[i],(attempts.get(batch[i]) ?? 0) + 1);
+        reasons.set(batch[i],'translation is empty, non-Chinese, or too long');
       }
     }
     if (changed) await saveCache().catch(err => console.warn('Forecast translation cache save failed:',err.message));
@@ -384,7 +412,10 @@ export async function createForecastTranslator({getProfile, cachePath = null, fe
         for (const title of batch) queued.add(title);
         console.warn('Forecast translation unavailable:',error.message);
       } else {
-        for (const title of batch) attempts.set(title,(attempts.get(title) ?? 0) + 1);
+        for (const title of batch) {
+          attempts.set(title,(attempts.get(title) ?? 0) + 1);
+          reasons.set(title,error.message);
+        }
         console.warn('Forecast translation rejected:',error.message);
       }
     }).finally(() => {
@@ -414,27 +445,48 @@ export async function createForecastTranslator({getProfile, cachePath = null, fe
     },
     status(titles) {
       const enabled = ready();
-      if (!enabled) return {enabled:false,pending:0,active:0,failed:0,pausedUntil:null,lastError:null};
+      if (!enabled) return {enabled:false,pending:0,active:0,failed:0,failedItems:[],pausedUntil:null,lastError:null};
       const profile = getProfile();
       if (profile !== pausedProfile) {pausedUntil = 0; pause = 0;}
       if (profile !== lastErrorProfile) lastError = null;
       const seen = new Set();
       let pendingCount = 0;
-      let failedCount = 0;
+      const failedItems = [];
       for (const title of titles) {
         if (seen.has(title)) continue;
         seen.add(title);
         if (needsWork(title)) pendingCount++;
-        else if (!cache.has(title) && (attempts.get(title) ?? 0) >= MAX_ATTEMPTS) failedCount++;
+        else if (!cache.has(title) && (attempts.get(title) ?? 0) >= MAX_ATTEMPTS) {
+          failedItems.push({kind:'forecast',title,reason:reasons.get(title) ?? null});
+        }
       }
       return {
         enabled: true,
         pending: pendingCount,
         active: running ? 1 : 0,
-        failed: failedCount,
+        failed: failedItems.length,
+        failedItems,
         pausedUntil: now() < pausedUntil ? new Date(pausedUntil).toISOString() : null,
         lastError,
       };
+    },
+    retryFailed(titles) {
+      const retried = [];
+      const seen = new Set();
+      for (const title of titles) {
+        if (seen.has(title)) continue;
+        seen.add(title);
+        if (!cache.has(title) && (attempts.get(title) ?? 0) >= MAX_ATTEMPTS) {
+          attempts.delete(title);
+          reasons.delete(title);
+          retried.push(title);
+        }
+      }
+      if (retried.length) {
+        lastError = null;
+        this.schedule(retried);
+      }
+      return retried.length;
     },
     async idle() {
       while (running) await running;

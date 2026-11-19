@@ -195,7 +195,13 @@ test('forecast translator stops retrying after invalid replies', async () => {
   assert.equal(calls,2);
   assert.equal(translator.pending(titles),0);
   assert.equal(translator.get(titles[0]),null);
-  assert.equal(translator.status(titles).failed,1);
+  const fStatus = translator.status(titles);
+  assert.equal(fStatus.failed,1);
+  assert.equal(fStatus.failedItems.length,1);
+  assert.equal(fStatus.failedItems[0].title,titles[0]);
+  assert.match(fStatus.failedItems[0].reason,/non-Chinese/);
+  assert.equal(translator.retryFailed(titles),1);
+  await translator.idle();
 });
 
 test('presentation queue status surfaces transport backoff, recovery, and permanent failures', async t => {
@@ -233,5 +239,16 @@ test('presentation queue status surfaces transport backoff, recovery, and perman
   const failed = queue.status([bad.id]);
   assert.equal(failed.pending,0);
   assert.equal(failed.failed,1);
+  assert.equal(failed.failedItems.length,1);
+  assert.equal(failed.failedItems[0].id,bad.id);
+  assert.match(failed.failedItems[0].reason,/not grounded/);
   assert.match(failed.lastError,/not grounded/);
+
+  // retryFailed clears the failure marker and re-runs the event.
+  reply(() => ({title:'鹿特丹港因风暴潮关闭码头',titleQuote:'closes terminals after storm surge',update:null}));
+  assert.equal(await queue.retryFailed([bad.id]),1);
+  await settle();
+  const retried = queue.status([bad.id]);
+  assert.equal(retried.failed,0);
+  assert.equal(retried.failedItems.length,0);
 });

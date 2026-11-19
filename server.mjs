@@ -200,6 +200,7 @@ async function buildFeed(mode) {
       forecastPending: forecastStatus.pending,
       active: eventStatus.active + forecastStatus.active,
       failed: eventStatus.failed + forecastStatus.failed,
+      failedItems: [...eventStatus.failedItems, ...forecastStatus.failedItems],
       pausedUntil,
       error: eventStatus.lastError || forecastStatus.lastError || null,
     };
@@ -288,6 +289,29 @@ const server = createServer(async (req,res) => {
         },
       });
       return;
+    }
+    if (url.pathname === '/api/presentation/retry') {
+      const host = req.headers.host ?? '';
+      let sameOrigin = Boolean(host);
+      if (sameOrigin && req.headers.origin) {
+        try {
+          const originUrl = new URL(req.headers.origin);
+          sameOrigin = (originUrl.protocol === 'http:' || originUrl.protocol === 'https:') && originUrl.host === host;
+        } catch {
+          sameOrigin = false;
+        }
+      }
+      if (!sameOrigin) {
+        send(req,res,403,json,Buffer.from(JSON.stringify({error:'仅可从雷达页面重试模型提取。'})),{'cache-control':'no-store'}); return;
+      }
+      if (req.method !== 'POST') {
+        send(req,res,405,json,Buffer.from(JSON.stringify({error:'不支持的请求。'})),{'cache-control':'no-store'}); return;
+      }
+      const ids = lastLive.events.map(event => event.id);
+      const forecastTitles = lastLive.events.flatMap(event =>
+        event.records.filter(record => record.kind === 'forecast').map(record => record.title));
+      const retried = (await presenter.retryFailed(ids)) + forecastTranslator.retryFailed(forecastTitles);
+      send(req,res,200,json,Buffer.from(JSON.stringify({ok:true,retried})),{'cache-control':'no-store'}); return;
     }
     if (url.pathname === '/api/health') {
       send(req,res,200,json,Buffer.from(JSON.stringify({ok:true,uptime:Math.round(process.uptime())})),{'cache-control':'no-store'}); return;

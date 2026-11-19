@@ -69,6 +69,18 @@
     </div>
   </form>
 </dialog>
+<dialog id="presentation-failures" aria-labelledby="presentation-failures-title">
+  <div class="failure-dialog-body">
+    <h2 id="presentation-failures-title">中文提取失败明细</h2>
+    <p class="meta">以下条目经模型尝试后未通过校验，当前保留原文标题。可定位查看原文或重新提交模型提取。</p>
+    <ul id="presentation-failures-list" class="failure-list"></ul>
+    <p id="presentation-failures-status" class="meta" role="status"></p>
+    <div class="model-settings-actions">
+      <button id="close-presentation-failures" type="button">关闭</button>
+      <button id="retry-presentation-failures" type="button">重试全部失败项</button>
+    </div>
+  </div>
+</dialog>
 <main>
   <section class="toolbar" aria-label="数据筛选">
     <input id="search" type="search" placeholder="搜索事件、地点、线路或类别" aria-label="搜索">
