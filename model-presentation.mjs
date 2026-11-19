@@ -178,12 +178,16 @@ function createClient({apiKey,baseUrl,modelId}, fetchImpl) {
   return async function complete(mode, system, user, {maxTokens = 600} = {}) {
     let response;
     const tokenLimit = openAIReasoning || mayThink ? Math.max(maxTokens, 2000) : maxTokens;
+    const envTimeout = Number(process.env.MODEL_TIMEOUT_MS);
+    const timeoutMs = Number.isFinite(envTimeout) && envTimeout >= 5_000
+      ? envTimeout
+      : (openAIReasoning || mayThink ? 120_000 : 60_000);
     try {
       response = await fetchImpl(baseUrl + '/chat/completions',{
         method:'POST',
         headers:{'content-type':'application/json',...(apiKey ? {authorization:`Bearer ${apiKey}`} : {})},
         redirect:'error',
-        signal:AbortSignal.timeout(20_000),
+        signal:AbortSignal.timeout(timeoutMs),
         body:JSON.stringify({
           model:modelId,
           ...(officialDeepSeek && {thinking:{type:'disabled'}}),
