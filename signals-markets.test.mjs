@@ -291,3 +291,43 @@ test('parsePortWatchCsv and normalizePolymarketEvents honor custom windows and t
   assert.equal(shortHorizon.length, 1);
   assert.equal(shortHorizon[0].source.upstreamId, 'm-soon');
 });
+
+test('parseWmoAlerts rejects cross-country town collisions when getNode is provided', () => {
+  const now = Date.parse('2026-11-18T00:00:00Z');
+  const nodes = new Map([
+    ['PORT_ALGECIRAS', {id: 'PORT_ALGECIRAS', type: 'port', country: 'ES'}],
+    ['PORT_VALENCIA', {id: 'PORT_VALENCIA', type: 'port', country: 'ES'}],
+    ['SEA_PACIFIC', {id: 'SEA_PACIFIC', type: 'sea_area', country: ''}],
+    ['PORT_BUENAVENTURA', {id: 'PORT_BUENAVENTURA', type: 'port', country: 'CO'}],
+  ]);
+  const findPlaces = r => {
+    const hits = [];
+    if (r.title.includes('Algeciras')) hits.push('PORT_ALGECIRAS');
+    if (r.title.includes('Valencia')) hits.push('PORT_VALENCIA');
+    if (r.title.includes('Pacific')) hits.push('SEA_PACIFIC');
+    if (r.title.includes('Buenaventura')) hits.push('PORT_BUENAVENTURA');
+    return hits;
+  };
+  const signals = parseWmoAlerts({
+    items: [
+      {
+        id: 'co-1', event: 'Forest fire warning', areaDesc: 'Algeciras, Valencia',
+        s: 3, capURL: 'co-ideam-es/2026/11/18/alert1.xml',
+        sent: '2026-11-18 10:00:00', expires: '2026-11-19 16:00:00',
+      },
+      {
+        id: 'co-2', event: 'Severe weather warning', areaDesc: 'Pacific northern',
+        s: 3, capURL: 'co-ideam-es/2026/11/18/alert2.xml',
+        sent: '2026-11-18 10:00:00', expires: '2026-11-19 16:00:00',
+      },
+      {
+        id: 'co-3', event: 'Landslide warning', areaDesc: 'Buenaventura, Pacific northern',
+        s: 4, capURL: 'co-ideam-es/2026/11/18/alert3.xml',
+        sent: '2026-11-18 10:00:00', expires: '2026-11-19 16:00:00',
+      },
+    ],
+  }, findPlaces, now, {getNode: id => nodes.get(id)});
+
+  assert.equal(signals.length, 1);
+  assert.deepEqual(signals[0].geoAnchors, ['PORT_BUENAVENTURA']);
+});

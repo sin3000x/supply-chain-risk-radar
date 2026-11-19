@@ -24,6 +24,11 @@ export function presentEvent({presentation, ...event}) {
 export function applyPresentation(display, presentation) {
   if (!presentation?.title) return display;
   const result = {...display,displayTitle:presentation.title,titleEvidence:presentation.titleEvidence};
-  if (presentation.update) result.latestUpdate = {kind:'progress',...presentation.update};
+  if (presentation.update) {
+    result.latestUpdate = {kind:'progress',...presentation.update};
+  } else if (result.latestUpdate?.recordId && Array.isArray(presentation.processedIds) &&
+    presentation.processedIds.includes(result.latestUpdate.recordId)) {
+    delete result.latestUpdate;
+  }
   return result;
 }

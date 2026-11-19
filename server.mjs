@@ -69,7 +69,7 @@ function withPresentation(event) {
 const origin = process.env.WM_BASE_URL;
 const key = process.env.WM_API_KEY;
 const readRss = createFeedReader(undefined, {getSettings: () => intakeSettings.read()});
-const readLiveSignals = createSignalReader({findPlaces, getSettings: () => intakeSettings.read()});
+const readLiveSignals = createSignalReader({findPlaces, getNode: id => network.getNode(id), getSettings: () => intakeSettings.read()});
 const readLiveMarkets = createMarketReader({findPlaces, getSettings: () => intakeSettings.read()});
 
 const assets = ['index.html','app.js','style.css','favicon.svg','vendor/worldmonitor/countries.geojson'];

@@ -117,3 +117,179 @@ test('createEventLocator resolves coordinates supporting West-to-East spatial or
     ['PORT_ALGECIRAS', 'PORT_VALENCIA', 'PORT_ROTTERDAM', 'CP_BOSPHORUS']
   );
 });
+
+test('military strikes are not classified as labor_action and oil price stories stay in market_change', () => {
+  const strikeHeadlines = [
+    'US Now Has Three Carrier Strike Groups In Middle East As Roosevelt Arrives',
+    'One crew member missing after two missile strikes on LPG carrier in Strait of Hormuz',
+    'U.S. Military Strikes Iranian Missile Site Near Strait of Hormuz',
+    'Iran says it targeted US military radar in Bahrain in retaliatory strike',
+    'Oil tanker burns after mine strike in Strait of Hormuz',
+    'Thailand Says US Agrees to Lower Forced-Labor Tariff to 10%',
+    'European Union imposes sanctions on four Haiti gangs, citing killing, rape of children',
+  ];
+  const strikeEvents = buildEvents([{
+    records: strikeHeadlines.map((title, i) => article(`s${i}`, title, `2026-11-18T0${i}:00:00Z`)),
+  }], 'live');
+  for (const ev of strikeEvents) {
+    assert.notEqual(ev.action, 'labor_action', `unexpected labor_action for: ${ev.title}`);
+  }
+
+  const [laborEv] = buildEvents([{
+    records: [article('labor', 'Strike Threat Looms at Ports of Los Angeles and Long Beach as Labor Talks Stall', '2026-11-18T17:08:00Z')],
+  }], 'live');
+  assert.equal(laborEv.action, 'labor_action');
+
+  const oilAndTanker = buildEvents([{
+    records: [
+      article('o1', 'Oil edges up on tanker attacks, expected US crude drop', '2026-11-18T02:59:00Z'),
+      article('o2', 'Oil prices rise after Strait of Hormuz attacks', '2026-11-18T04:08:00Z'),
+      article('o3', 'The Oil Market Is Brimming With Crude Despite Tanker Attacks', '2026-11-16T18:45:00Z'),
+      article('m1', 'New Tanker Attack Reported in Strait of Hormuz', '2026-11-16T11:08:00Z'),
+    ],
+  }], 'live');
+  for (const id of ['o1', 'o2', 'o3']) {
+    const found = oilAndTanker.find(ev => ev.records.some(r => r.id === id));
+    assert.equal(found.topic, 'market_change', `expected market_change for ${id}`);
+  }
+  const tankerEv = oilAndTanker.find(ev => ev.records.some(r => r.id === 'm1'));
+  assert.equal(tankerEv.topic, 'maritime_security');
+  assert.equal(tankerEv.records.length, 1);
+});
+
+test('clusters separate conflicting actors and distinct Hormuz incidents while merging reworded follow-ups', async () => {
+  const network = await loadNetwork(new URL('./data/', import.meta.url).pathname, 'demo');
+  const findPlaces = r => network.findPlaces(r);
+  const pubArticle = (id, title, time, publisher = 'Outlet') => ({
+    id, kind: 'news', title, time: {value: time}, source: {publisher},
+  });
+
+  // 1. Australia vs UK West Bank sanctions merge internally, never across countries.
+  const sanctions = buildEvents([{
+    records: [
+      pubArticle('au1', 'Australia Imposes New Sanctions Targeting West Bank Settlement Expansion', '2026-11-17T21:17:00Z', 'Haaretz'),
+      pubArticle('au2', 'Australia sanctions Israeli settlers, organisations over West Bank expansion', '2026-11-18T00:24:00Z', 'Al-Monitor'),
+      pubArticle('au3', 'Australia sanctions three Israelis and four organizations over West Bank settlements, following UK sanctions', '2026-11-18T05:03:00Z', 'i24NEWS'),
+      pubArticle('uk1', 'Israel vows retaliation after UK sanctions firms for West Bank settlements', '2026-11-17T17:20:00Z', 'Al-Monitor'),
+      pubArticle('uk2', 'UK sanctions firms over Israeli West Bank settlements', '2026-11-17T18:27:00Z', 'BBC World'),
+      pubArticle('uk3', 'Israel delays building contracts for West Bank settlement after UK sanctions', '2026-11-18T14:05:00Z', 'Guardian World'),
+    ],
+  }], 'live', findPlaces);
+  assert.equal(sanctions.length, 2);
+  assert.deepEqual(sanctions.map(e => e.records.length).sort((a,b) => a - b), [3, 3]);
+
+  // 2. Reworded trade/border/cross-topic stories merge cleanly; NewsCord/Commentary become background or filtered.
+  const misc = buildEvents([{
+    records: [
+      pubArticle('eu1', 'EU governments authorise signature of trade deal agreement with Indonesia', '2026-11-18T18:31:00Z', 'Reuters'),
+      pubArticle('eu2', 'EU governments approve trade deal with Indonesia to offset Trump tariffs', '2026-11-19T00:11:00Z', 'Al Jazeera'),
+      pubArticle('ee1', 'Estonia closes border to Russia after suspected drone factory arson', '2026-11-15T18:29:00Z', 'DW News'),
+      pubArticle('ee2', 'Estonia to close all border crossings with Russia after attack on drone maker', '2026-11-15T22:17:00Z', 'Guardian World'),
+      pubArticle('nc1', 'Oman and Iran Discuss Strait of Hormuz Security Amid Drone Attack on Bahrain Radar: 13 outlets compared', '2026-11-17T11:52:00Z', 'NewsCord'),
+      pubArticle('op1', "Trump’s failed import tariff policy added to inflation | COMMENTARY | Opinion", '2026-11-18T05:00:00Z', 'LVRJ'),
+    ],
+  }], 'live', findPlaces);
+  assert.equal(misc.length, 2);
+
+  // 3. Distinct Hormuz incidents (mine vs drone capture vs missing crew vs Qeshm strike vs talks) stay separate.
+  const hormuz = buildEvents([{
+    records: [
+      pubArticle('hm1', 'Oil Tanker On Fire After Hitting Mine In Hormuz', '2026-11-16T01:00:00Z', 'gCaptain'),
+      pubArticle('hd1', 'Iran says it captured US drone south of Qeshm Island in Strait of Hormuz', '2026-11-16T10:12:00Z', 'Anadolu'),
+      pubArticle('hd2', 'Iran says it seized US military drone near Strait of Hormuz', '2026-11-16T10:58:00Z', 'TRT World'),
+      pubArticle('hc1', 'One crew member missing after two missile strikes on LPG carrier in Strait of Hormuz', '2026-11-17T16:30:00Z', 'Marine Log'),
+      pubArticle('hc2', "UAE's ADNOC L&S says one crew member missing after attack on its vessel in Hormuz", '2026-11-18T07:41:00Z', 'Reuters'),
+      pubArticle('hq1', "US attacks Iran's Qeshm island in Strait of Hormuz, official says", '2026-11-17T16:52:00Z', 'MEE'),
+      pubArticle('hq2', 'U.S. Military Strikes Iranian Missile Site Near Strait of Hormuz', '2026-11-17T20:14:00Z', 'gCaptain'),
+      pubArticle('ht1', 'Oman, Iran discuss safeguarding maritime corridors, as attacks in Hormuz increase', '2026-11-17T05:45:00Z', 'Reuters'),
+      pubArticle('ht2', 'Iran and Oman Hold Talks on Strait of Hormuz Security as Tanker Attacks Surge', '2026-11-17T10:00:00Z', 'OilPrice'),
+    ],
+  }], 'live', findPlaces);
+  assert.equal(hormuz.length, 5);
+});
+
+test('forecast and signal matching reject geo conflicts and weak token collisions', async () => {
+  const network = await loadNetwork(new URL('./data/', import.meta.url).pathname, 'demo');
+  const findPlaces = r => network.findPlaces(r);
+
+  const events = buildEvents([
+    {
+      kind: 'news',
+      records: [
+        {
+          id: 'rss:hormuz-closed', kind: 'news',
+          title: 'Iran Declares Strait of Hormuz Closed as ‘Unauthorised’ Vessel Hit',
+          time: {value: '2026-11-18T23:06:13.000Z'}, source: {publisher: 'EnergyNow'},
+        },
+        {
+          id: 'rss:xi-putin', kind: 'news',
+          title: 'Chinese President Xi pledges tariff cuts as Russian counterpart Putin criticises sanctions ahead of talks with US President Trump',
+          time: {value: '2026-11-19T03:39:28.000Z'}, source: {publisher: 'ANN'},
+        },
+        {
+          id: 'rss:hormuz-deal', kind: 'news',
+          title: 'Iran Says Deal on Strait of Hormuz is Close But Will Not Open the Waterway by Itself',
+          time: {value: '2026-11-17T16:33:10.000Z'}, source: {publisher: 'EnergyNow'},
+        },
+        {
+          id: 'rss:blockade', kind: 'news',
+          title: 'U.S. Targets Ship-to-Ship Transfers in Expanded Iran Maritime Blockade',
+          time: {value: '2026-11-18T18:38:00.000Z'}, source: {publisher: 'gCaptain'},
+        },
+        {
+          id: 'rss:old-suez', kind: 'news',
+          title: 'Shipping delays hit Suez Canal after vessel grounding',
+          time: {value: '2026-11-01T01:00:00.000Z'}, source: {publisher: 'Example'},
+        },
+      ],
+    },
+    {
+      kind: 'signal',
+      records: [
+        {
+          id: 'signal:portwatch:CP_SUEZ:2026-11-18', kind: 'signal',
+          title: '苏伊士运河船舶通行量异动', geoAnchors: ['CP_SUEZ'],
+          time: {value: '2026-11-18T00:00:00.000Z'}, source: {provider: 'IMF PortWatch'},
+        },
+      ],
+    },
+    {
+      kind: 'forecast',
+      records: [
+        {
+          id: 'forecast:bab', kind: 'forecast',
+          title: 'Bab el-Mandeb Strait effectively closed by December 31?',
+          geoAnchors: ['CP_BAB'],
+          time: {value: '2026-11-19T06:59:00.000Z'}, source: {provider: 'Polymarket'},
+        },
+        {
+          id: 'forecast:putin', kind: 'forecast',
+          title: 'Putin out as President of Russia by June 30, 2027?',
+          time: {value: '2026-11-19T06:59:00.000Z'}, source: {provider: 'Polymarket'},
+        },
+        {
+          id: 'forecast:nuke', kind: 'forecast',
+          title: 'US-Iran Final Nuclear Deal by December 31, 2026?',
+          time: {value: '2026-11-18T06:39:00.000Z'}, source: {provider: 'Polymarket'},
+        },
+        {
+          id: 'forecast:blockade', kind: 'forecast',
+          title: 'US announces end of Iranian blockade by December 31, 2026?',
+          time: {value: '2026-11-18T06:39:00.000Z'}, source: {provider: 'Polymarket'},
+        },
+      ],
+    },
+  ], 'live', findPlaces);
+
+  const attachedForecasts = events.flatMap(ev =>
+    ev.records.filter(r => r.kind === 'forecast').map(r => ({eventTitle: ev.title, forecastId: r.id})));
+  assert.deepEqual(attachedForecasts, [{
+    eventTitle: 'U.S. Targets Ship-to-Ship Transfers in Expanded Iran Maritime Blockade',
+    forecastId: 'forecast:blockade',
+  }]);
+
+  // PortWatch signal 17 days after old Suez news should stay standalone rather than attaching to stale news.
+  const suezNews = events.find(ev => ev.records.some(r => r.id === 'rss:old-suez'));
+  assert.equal(suezNews.records.length, 1);
+  assert.ok(events.some(ev => ev.records.length === 1 && ev.records[0].id === 'signal:portwatch:CP_SUEZ:2026-11-18'));
+});

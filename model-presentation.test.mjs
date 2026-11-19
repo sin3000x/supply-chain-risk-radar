@@ -293,3 +293,41 @@ test('intranet DeepSeek models get expanded max_tokens and tolerate think/fenced
   assert.equal(sentBodies[0].thinking,undefined);
   assert.equal(store.get(event.id).presentation.title,'美国全国航班地面停飞');
 });
+
+test('applyPresentation hides raw English latestUpdate once follow-up has been reviewed with no progress', () => {
+  const event = {
+    id: 'evt_pres',
+    title: stop.title,
+    records: [{...stop, role: 'report'}, {...resume, role: 'report'}],
+  };
+  const display = presentEvent(event);
+  assert.equal(display.latestUpdate.recordId, resume.id);
+
+  // Reviewed with update: null -> suppress raw English fallback.
+  const reviewed = applyPresentation(display, {
+    title: '美国全国航班地面停飞',
+    titleEvidence: {recordId: stop.id, quote: 'orders national ground stop'},
+    update: null,
+    processedIds: [resume.id],
+  });
+  assert.equal(reviewed.latestUpdate, undefined);
+
+  // Unreviewed newer report -> keep raw latestUpdate until model processes it.
+  const unreviewed = applyPresentation(display, {
+    title: '美国全国航班地面停飞',
+    titleEvidence: {recordId: stop.id, quote: 'orders national ground stop'},
+    update: null,
+    processedIds: [],
+  });
+  assert.equal(unreviewed.latestUpdate.text, resume.title);
+
+  // Reviewed with actual Chinese progress -> expose kind: 'progress'.
+  const withProgress = applyPresentation(display, {
+    title: '美国全国航班地面停飞',
+    titleEvidence: {recordId: stop.id, quote: 'orders national ground stop'},
+    update: {text: '航班已恢复起飞', occurredAt: '2026-11-14', precision: 'day', recordId: resume.id},
+    processedIds: [resume.id],
+  });
+  assert.equal(withProgress.latestUpdate.kind, 'progress');
+  assert.equal(withProgress.latestUpdate.text, '航班已恢复起飞');
+});

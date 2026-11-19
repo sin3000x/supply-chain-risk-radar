@@ -1226,7 +1226,9 @@ function renderEventBody(body, event) {
     entries.get(key).push(record);
   }
   const timelineSection = add(body,'section','','timeline-section');
-  add(timelineSection,'h3',`动态时间线 · ${entries.size}`);
+  add(timelineSection,'h3',entries.size !== event.records.length
+    ? `动态时间线 · ${entries.size} 节点（${event.records.length} 条记录）`
+    : `动态时间线 · ${entries.size}`);
   const timeline = add(timelineSection,'ol','','timeline');
   const eventHeadline = normalizeHeadline(event.title);
   const eventSummary = normalizeHeadline(event.summary);

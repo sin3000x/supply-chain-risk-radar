@@ -278,6 +278,33 @@ cmd_restart() {
   cmd_start
 }
 
+cmd_rebuild() {
+  check_node
+  local was_running=0
+  if is_running; then
+    was_running=1
+    if [[ -f "$STATE_FILE" ]]; then
+      local state_host="" state_port=""
+      # shellcheck disable=SC1090
+      source "$STATE_FILE"
+      state_host="${HOST:-}"
+      state_port="${PORT:-}"
+      [[ -n "$CLI_HOST" ]] || HOST="${state_host:-$HOST}"
+      [[ -n "$CLI_PORT" ]] || PORT="${state_port:-$PORT}"
+      export HOST PORT
+    fi
+    cmd_stop
+  fi
+
+  node --disable-warning=ExperimentalWarning "$APP_DIR/rebuild-events.mjs"
+
+  if (( was_running == 1 )); then
+    cmd_start
+  else
+    echo "事件库重建完成，可运行 $(basename "$0") start 启动服务。"
+  fi
+}
+
 cmd_status() {
   local sup_pid srv_pid
   sup_pid="$(read_pid "$SUPERVISOR_PID_FILE")"
@@ -326,6 +353,7 @@ usage() {
   start       后台启动服务并开启崩溃自动重启守护 (默认监听 ${HOST}:${PORT})
   stop        优雅停止服务与守护进程
   restart     重启服务
+  rebuild     备份并无损按当前规则重建 var/events.json（若在运行则自动停服后重启）
   status      查看运行状态、PID、健康检查与内网访问地址
   logs [N]    实时查看日志 (默认最近 100 行)
 
@@ -395,6 +423,7 @@ case "$CMD" in
   start)      cmd_start ;;
   stop)       cmd_stop ;;
   restart)    cmd_restart ;;
+  rebuild)    cmd_rebuild ;;
   status)     cmd_status ;;
   logs)       cmd_logs "${ARG1:-100}" ;;
   "")         usage ;;

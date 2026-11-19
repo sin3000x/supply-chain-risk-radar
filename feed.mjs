@@ -1,10 +1,14 @@
 import {classifyByKeyword} from './vendor/worldmonitor/threat-keyword-classifier.ts';
 import {normalizeArticleUrl} from './vendor/worldmonitor/article-identity.js';
+import {normalizeStoryText, stripAttributionSuffix} from './vendor/worldmonitor/story-identity.js';
 export const feeds = {
   news: 'news/v1/list-feed-digest?variant=full&lang=en',
   signal: 'intelligence/v1/list-cross-source-signals',
   forecast: 'forecast/v1/get-forecasts',
 };
+
+const PUB_TITLE_DEDUPE_MS = 24 * 3600_000;
+const isGoogleNewsUrl = url => typeof url === 'string' && url.includes('news.google.com');
 
 function time(value) {
   if (!value) return null;
@@ -15,15 +19,17 @@ export function normalize(kind, payload) {
   const source = kind === 'news' ? Object.values(payload.categories ?? {}).flatMap(bucket => bucket.items ?? [])
     : kind === 'signal' ? payload.signals : payload.forecasts;
   const seen = new Set();
-  return (source ?? []).flatMap(raw => {
+  const byPubTitle = new Map();
+  const records = [];
+  for (const raw of source ?? []) {
     const upstreamId = kind === 'news' ? raw.link : raw.id;
     const title = kind === 'signal' ? raw.summary : raw.title;
     // One article can arrive through several regional feeds or with tracking parameters.
     const identity = kind === 'news' ? normalizeArticleUrl(upstreamId) || upstreamId : upstreamId;
-    if (!upstreamId || !title || seen.has(identity)) return [];
+    if (!upstreamId || !title || seen.has(identity)) continue;
     seen.add(identity);
     const classification = kind === 'news' ? raw.threat ?? classifyByKeyword(title) : null;
-    return [{
+    const record = {
       id: `worldmonitor:${kind}:${upstreamId}`,
       kind, title,
       summary: kind === 'news' ? raw.snippet : kind === 'forecast' ? raw.scenario || raw.feedSummary : null,
@@ -44,6 +50,28 @@ export function normalize(kind, payload) {
         change:raw.caseFile?.changeSummary || null, resolution:raw.resolution ?? null,
       } : null,
       raw,
-    }];
-  });
+    };
+    if (kind === 'news') {
+      const publisher = (record.source.publisher ?? '').trim().toLowerCase();
+      const normTitle = normalizeStoryText(stripAttributionSuffix(record.title));
+      if (publisher && normTitle) {
+        const key = `${publisher}::${normTitle}`;
+        const prevIdx = byPubTitle.get(key);
+        if (prevIdx !== undefined) {
+          const prev = records[prevIdx];
+          const currAt = Date.parse(record.time.value ?? '');
+          const prevAt = Date.parse(prev.time.value ?? '');
+          if (Number.isFinite(currAt) && Number.isFinite(prevAt) && Math.abs(currAt - prevAt) <= PUB_TITLE_DEDUPE_MS) {
+            if (isGoogleNewsUrl(prev.source.url) && !isGoogleNewsUrl(record.source.url)) {
+              records[prevIdx] = record;
+            }
+            continue;
+          }
+        }
+        byPubTitle.set(key, records.length);
+      }
+    }
+    records.push(record);
+  }
+  return records;
 }

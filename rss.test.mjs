@@ -193,3 +193,30 @@ test('createFeedReader reports timeout cleanly and limits per-host concurrency',
     server.close();
   }
 });
+
+test('normalize deduplicates same-publisher same-headline items while preferring direct URLs', () => {
+  const publishedAt = '2026-11-17T20:14:20.000Z';
+  const gnews = {
+    title: 'U.S. Military Strikes Iranian Missile Site Near Strait of Hormuz',
+    link: 'https://news.google.com/rss/articles/CBMi123?oc=5',
+    source: 'gCaptain',
+    publishedAt,
+  };
+  const direct = {
+    title: 'U.S. Military Strikes Iranian Missile Site Near Strait of Hormuz',
+    link: 'https://gcaptain.com/u-s-military-strikes-iranian-missile-site/',
+    source: 'gCaptain',
+    publishedAt,
+  };
+  const otherOutlet = {
+    title: 'U.S. Military Strikes Iranian Missile Site Near Strait of Hormuz',
+    link: 'https://reuters.com/world/us-strikes-iran-site',
+    source: 'Reuters',
+    publishedAt,
+  };
+
+  const records = normalize('news', {categories: {a: {items: [gnews, otherOutlet]}, b: {items: [direct]}}});
+  assert.equal(records.length, 2);
+  assert.equal(records[0].source.url, direct.link);
+  assert.equal(records[1].source.publisher, 'Reuters');
+});

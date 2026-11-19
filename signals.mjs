@@ -229,7 +229,16 @@ function buildWmoSummary(item, expiresIso) {
   return parts.join('｜') || null;
 }
 
-export function parseWmoAlerts(payload, findPlaces, nowMs = Date.now()) {
+function extractWmoCountry(item) {
+  if (typeof item?.country === 'string' && /^[a-z]{2}$/i.test(item.country.trim())) {
+    return item.country.trim().toUpperCase();
+  }
+  const rel = item?.url || item?.capURL || '';
+  const match = String(rel).match(/^\/?([a-z]{2})-/i);
+  return match ? match[1].toUpperCase() : null;
+}
+
+export function parseWmoAlerts(payload, findPlaces, nowMs = Date.now(), { getNode } = {}) {
   const items = Array.isArray(payload?.items) ? payload.items : [];
   const seen = new Set();
   const signals = [];
@@ -240,7 +249,16 @@ export function parseWmoAlerts(payload, findPlaces, nowMs = Date.now()) {
     if (expiresIso && Date.parse(expiresIso) <= nowMs) continue;
 
     const text = [item.event, item.headline, item.areaDesc].filter(Boolean).join(' · ');
-    const places = findPlaces({ title: text, summary: item.areaDesc });
+    let places = findPlaces({ title: text, summary: item.areaDesc });
+    const alertCountry = extractWmoCountry(item);
+    if (alertCountry && typeof getNode === 'function') {
+      places = places.filter(nodeId => {
+        const node = getNode(nodeId);
+        if (!node) return true;
+        if (node.country) return node.country.toUpperCase() === alertCountry;
+        return node.type !== 'sea_area';
+      });
+    }
     if (!places.length) continue;
 
     const primaryNode = places[0];
@@ -280,7 +298,7 @@ export function parseWmoAlerts(payload, findPlaces, nowMs = Date.now()) {
   return signals;
 }
 
-export function createSignalReader({ findPlaces = () => [], fetchFn = globalThis.fetch, getSettings = () => ({}) } = {}) {
+export function createSignalReader({ findPlaces = () => [], getNode = null, fetchFn = globalThis.fetch, getSettings = () => ({}) } = {}) {
   const cache = new Map();
   let lastCheckedAt = 0;
   let lastSettingsKey = '';
@@ -309,7 +327,7 @@ export function createSignalReader({ findPlaces = () => [], fetchFn = globalThis
             signal: AbortSignal.timeout(15_000),
           });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          return parseWmoAlerts(await res.json(), findPlaces);
+          return parseWmoAlerts(await res.json(), findPlaces, Date.now(), { getNode });
         },
       },
     ];
