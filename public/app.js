@@ -1282,6 +1282,7 @@ const retryFailuresButton = el('retry-presentation-failures');
 function describeFailureReason(reason) {
   if (!reason) return '未记录具体原因（可能是早期重试耗尽，可点击下方重试）';
   if (reason.includes('not grounded')) return `原文引用校验未通过（防幻觉保护：模型给出的 titleQuote 未在首条报道中逐字出现 · ${reason}）`;
+  if (reason.includes('finish_reason=length')) return `模型输出达到长度上限被截断，导致 JSON 不完整（${reason}）`;
   if (reason.includes('not JSON') || reason.includes('not a JSON object')) return `模型返回内容不是合法 JSON（${reason}）`;
   if (reason.includes('translation count mismatch')) return `模型返回的翻译条数与输入不匹配（${reason}）`;
   if (reason.includes('non-Chinese')) return `模型返回为空、非中文或超出长度限制（${reason}）`;

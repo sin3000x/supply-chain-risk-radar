@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {buildEvents} from './events.mjs';
 import {openEventStore} from './event-store.mjs';
 import {applyPresentation,presentEvent} from './event-presentation.mjs';
-import {CREATE_PROMPT,UPDATE_PROMPT,createForecastTranslator,createPresentationQueue,planRequest} from './model-presentation.mjs';
+import {CREATE_PROMPT,UPDATE_PROMPT,createForecastTranslator,createPresentationQueue,extractJsonObject,planRequest} from './model-presentation.mjs';
 
 const profile = {baseUrl:'https://llm.example/v1',modelId:'test-model',apiKey:'k'};
 const article = (id,title,time,summary) => ({id:'rss:https://news.example/'+id,kind:'news',title,summary,time:{value:time},source:{}});
@@ -251,4 +251,45 @@ test('presentation queue status surfaces transport backoff, recovery, and perman
   const retried = queue.status([bad.id]);
   assert.equal(retried.failed,0);
   assert.equal(retried.failedItems.length,0);
+});
+
+test('extractJsonObject handles think tags, markdown fences, and prose with escaped braces', () => {
+  assert.deepEqual(extractJsonObject('{"title":"测试"}'),{title:'测试'});
+  assert.deepEqual(
+    extractJsonObject('<think>考虑 {"fake": 1} 后决定输出</think>\n```json\n{"title":"港口关闭","titleQuote":"port \\"closed\\" {today}"}\n```'),
+    {title:'港口关闭',titleQuote:'port "closed" {today}'},
+  );
+  assert.deepEqual(
+    extractJsonObject('结果如下：\n{"title":"航线中断","update":null}\n请查收。'),
+    {title:'航线中断',update:null},
+  );
+  assert.equal(extractJsonObject('{"title":"被截断'),null);
+});
+
+test('intranet DeepSeek models get expanded max_tokens and tolerate think/fenced JSON', async t => {
+  const directory = await mkdtemp(join(tmpdir(),'presentation-intranet-'));
+  t.after(() => rm(directory,{recursive:true,force:true}));
+  const store = await openEventStore(join(directory,'events.json'),()=>[]);
+  const sentBodies = [];
+  const fetchImpl = async (_url, init) => {
+    sentBodies.push(JSON.parse(init.body));
+    return {
+      ok:true,
+      json:async () => ({
+        choices:[{
+          finish_reason:'stop',
+          message:{content:'<think>analyze</think>\n```json\n{"title":"美国全国航班地面停飞","titleQuote":"orders national ground stop","update":null}\n```'},
+        }],
+      }),
+    };
+  };
+  const intranetProfile = {baseUrl:'http://deepseek.intranet.local:8000/v1',modelId:'DeepSeek-R1',apiKey:'k'};
+  const queue = createPresentationQueue({store,getProfile:()=>intranetProfile,fetchImpl});
+  const [event] = await store.update(buildEvents([{records:[stop]}],'live'));
+  queue.schedule([event.id]);
+  await queue.idle();
+  assert.equal(sentBodies.length,1);
+  assert.ok(sentBodies[0].max_tokens >= 2000);
+  assert.equal(sentBodies[0].thinking,undefined);
+  assert.equal(store.get(event.id).presentation.title,'美国全国航班地面停飞');
 });

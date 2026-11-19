@@ -122,13 +122,62 @@ export function interpret(plan, data, presentation = {}, model = null) {
   return next;
 }
 
+/**
+ * Extracts a JSON object from an LLM reply, tolerating <think> blocks, markdown code fences,
+ * and brief surrounding prose while ignoring braces inside string literals.
+ */
+export function extractJsonObject(raw) {
+  if (typeof raw !== 'string') return null;
+  const cleaned = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  if (!cleaned) return null;
+  const tryParse = text => {
+    try {
+      const value = JSON.parse(text);
+      return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+    } catch {
+      return null;
+    }
+  };
+  const direct = tryParse(cleaned);
+  if (direct) return direct;
+  for (const match of cleaned.matchAll(/```(?:json)?\s*([\s\S]*?)\s*```/gi)) {
+    const fenced = tryParse(match[1].trim());
+    if (fenced) return fenced;
+  }
+  for (let start = cleaned.indexOf('{'); start !== -1; start = cleaned.indexOf('{', start + 1)) {
+    let depth = 0, inString = false, escaped = false;
+    for (let i = start; i < cleaned.length; i++) {
+      const ch = cleaned[i];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (ch === '\\') escaped = true;
+        else if (ch === '"') inString = false;
+      } else if (ch === '"') {
+        inString = true;
+      } else if (ch === '{') {
+        depth++;
+      } else if (ch === '}') {
+        depth--;
+        if (depth === 0) {
+          const candidate = tryParse(cleaned.slice(start, i + 1));
+          if (candidate) return candidate;
+          break;
+        }
+      }
+    }
+  }
+  return null;
+}
+
 function createClient({apiKey,baseUrl,modelId}, fetchImpl) {
   const hostname = new URL(baseUrl).hostname;
   const openAI = hostname === 'api.openai.com';
-  const reasoning = openAI && /^(o\d|gpt-5)/i.test(modelId);
-  const deepSeek = hostname === 'api.deepseek.com';
-  return async function complete(mode, system, user, {maxTokens = 300} = {}) {
+  const officialDeepSeek = hostname === 'api.deepseek.com';
+  const openAIReasoning = openAI && /^(o\d|gpt-5)/i.test(modelId);
+  const mayThink = !officialDeepSeek && /(?:deepseek|reasoner|thinking|\br1\b|qwq|qwen3|^o\d|^gpt-5)/i.test(modelId);
+  return async function complete(mode, system, user, {maxTokens = 600} = {}) {
     let response;
+    const tokenLimit = openAIReasoning || mayThink ? Math.max(maxTokens, 2000) : maxTokens;
     try {
       response = await fetchImpl(baseUrl + '/chat/completions',{
         method:'POST',
@@ -137,11 +186,11 @@ function createClient({apiKey,baseUrl,modelId}, fetchImpl) {
         signal:AbortSignal.timeout(20_000),
         body:JSON.stringify({
           model:modelId,
-          ...(deepSeek && {thinking:{type:'disabled'}}),
+          ...(officialDeepSeek && {thinking:{type:'disabled'}}),
           // Reasoning tokens count toward the completion limit; keep them small but leave room.
-          ...(reasoning && {reasoning_effort:'low'}),
+          ...(openAIReasoning && {reasoning_effort:'low'}),
           response_format:{type:'json_object'},
-          [openAI ? 'max_completion_tokens' : 'max_tokens']:reasoning ? Math.max(maxTokens,2000) : maxTokens,
+          [openAI ? 'max_completion_tokens' : 'max_tokens']:tokenLimit,
           messages:[{role:'system',content:system},{role:'user',content:user}],
         }),
       });
@@ -156,11 +205,17 @@ function createClient({apiKey,baseUrl,modelId}, fetchImpl) {
         input:usage.prompt_tokens, output:usage.completion_tokens,
         cached:usage.prompt_cache_hit_tokens ?? usage.prompt_tokens_details?.cached_tokens ?? 0});
     }
-    try {
-      return JSON.parse(payload?.choices?.[0]?.message?.content ?? '');
-    } catch {
-      throw new ResponseError('reply is not JSON');
+    const choice = payload?.choices?.[0];
+    const content = choice?.message?.content ?? '';
+    const parsed = extractJsonObject(content);
+    if (parsed) return parsed;
+    const finishReason = choice?.finish_reason;
+    const preview = String(content).replace(/\s+/g,' ').trim().slice(0,160);
+    console.warn('Event presentation non-JSON reply:', {mode, finishReason, preview});
+    if (finishReason === 'length') {
+      throw new ResponseError('reply truncated before valid JSON (finish_reason=length)');
     }
+    throw new ResponseError('reply is not JSON');
   };
 }
 
