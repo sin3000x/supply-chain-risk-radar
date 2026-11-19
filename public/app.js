@@ -929,7 +929,6 @@ function buildRegionGroups(list, sortMode) {
       const latestUpdated = events.map(row => row.event.updatedAt).filter(Boolean).sort().at(-1) ?? '';
       return {id:geo.id, regionId, geo, events, lanes, latestUpdated};
     }).sort((a, b) => compareSpatial(a.geo, b.geo));
-    places.forEach((place, idx) => {place.spatialIndex = idx + 1;});
     const regionLanes = new Set(places.flatMap(place => [...place.lanes]));
     const latestUpdated = places.map(place => place.latestUpdated).filter(Boolean).sort().at(-1) ?? '';
     return {
@@ -1023,7 +1022,7 @@ function render() {
       add(corridor,'span','西 → 东：','corridor-axis');
       places.forEach((place, idx) => {
         if (idx > 0) add(corridor,'span','→','corridor-arrow').setAttribute('aria-hidden','true');
-        const step = add(corridor,'button',`${place.spatialIndex}. ${place.geo.label}`,'corridor-step');
+        const step = add(corridor,'button',place.geo.label,'corridor-step');
         step.type = 'button';
         step.dataset.placeId = place.id;
         step.dataset.region = regionId;
@@ -1035,7 +1034,7 @@ function render() {
     }
 
     for (const place of places) {
-      const {geo, events, lanes, latestUpdated, spatialIndex} = place;
+      const {geo, events, lanes, latestUpdated} = place;
       const section = add(regionSection,'details','','place-group');
       section.dataset.placeId = geo.id;
       section.dataset.region = regionId;
@@ -1051,7 +1050,6 @@ function render() {
       };
 
       const name = add(title,'span','','place-name');
-      if (regionId !== 'unknown') add(name,'span',String(spatialIndex),'place-index');
       add(name,'strong',geo.label);
       if (geo.nodeId) add(name,'code',geo.nodeId,'meta');
       const coord = formatCoord(geo.lon, geo.lat);

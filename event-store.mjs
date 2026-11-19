@@ -56,7 +56,7 @@ export async function openEventStore(path, findPlaces = () => [], { getWindowMs 
     } finally {await unlink(temporary).catch(()=>{});}
     stored = next;
   }
-  async function reconcile(incoming) {
+  async function reconcile(incoming, { retainNewsMs = 0, now = Date.now() } = {}) {
     const next = new Map(stored);
     // Track ownership strictly by primary record type so shared signals/forecasts never bridge unrelated news stories.
     const newsOwners = new Map();
@@ -220,10 +220,19 @@ export async function openEventStore(path, findPlaces = () => [], { getWindowMs 
       const event = resolve(next,id);
       if (event) result.set(event.id,event);
     }
+    if (retainNewsMs > 0 && Number.isFinite(now)) {
+      const cutoff = now - retainNewsMs;
+      for (const event of next.values()) {
+        if (event.mergedInto || result.has(event.id)) continue;
+        if (newsReports(event).length === 0) continue;
+        const ts = Date.parse(event.updatedAt ?? '');
+        if (Number.isFinite(ts) && ts >= cutoff) result.set(event.id, event);
+      }
+    }
     return [...result.values()].sort((a,b)=>(b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
   }
   return {
-    update(events) {return serialize(()=>reconcile(events));},
+    update(events, options) {return serialize(()=>reconcile(events, options));},
     /**
      * Replace the presentation of an issued event. `change` receives the current presentation and
      * returns the next one, or undefined to leave it alone. Events merged away are skipped.

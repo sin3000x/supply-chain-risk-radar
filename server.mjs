@@ -141,6 +141,13 @@ async function getFeed(kind, path, mode) {
   }
 }
 
+const LIVE_NEWS_RETENTION_HOURS = 48;
+const liveNewsRetentionHours = intake => (
+  intake.newsMaxAgeHours > 0
+    ? Math.min(LIVE_NEWS_RETENTION_HOURS, intake.newsMaxAgeHours)
+    : LIVE_NEWS_RETENTION_HOURS
+);
+
 function describeSourceRule(kind, mode, intake) {
   if (mode === 'sample') return '虚构演示样例，仅用于界面预览与功能验证';
   if (origin) return '通过自建 WorldMonitor API 拉取';
@@ -149,7 +156,7 @@ function describeSourceRule(kind, mode, intake) {
       ? `Google News 统一抓近 ${intake.googleNewsWindowDays} 天`
       : 'Google News 按各源默认 1–7 天';
     const ageRule = intake.newsMaxAgeHours > 0 ? ` · 仅保留近 ${intake.newsMaxAgeHours} 小时` : '';
-    return `每 5 分钟刷新 · 单源最多 30 条 · ${gnewsRule}${ageRule} · ${intake.clusterWindowHours} 小时内同事件归并`;
+    return `每 5 分钟刷新 · 单源最多 30 条 · ${gnewsRule}${ageRule} · ${intake.clusterWindowHours} 小时内同事件归并 · 近 ${liveNewsRetentionHours(intake)} 小时已入库新闻留存展示`;
   }
   if (kind === 'signal') {
     return `每 15 分钟刷新 · PortWatch 近 ${intake.portWatchWindowDays} 日均值对比上期/去年同期（异动 ≥${intake.portWatchThresholdPct}%）· WMO 严重/极端且未过期预警（最多 15 条）`;
@@ -174,14 +181,20 @@ async function buildFeed(mode) {
   let presentationPending = 0;
   let presentationStatus = null;
   if (mode === 'live') {
+    const retentionHours = liveNewsRetentionHours(intake);
     const fingerprint = createHash('sha256').update(JSON.stringify({
       intake,
+      retentionBucket: Math.floor(Date.now() / (5 * 60_000)),
       records: sources.map(source=>source.records.map(record=>
         [record.id,record.time.value,record.title,record.summary,record.region,record.geoAnchors])),
     })).digest('hex');
     if (fingerprint !== lastLive.fingerprint) {
       const clusterWindowMs = intake.clusterWindowHours * 3600_000;
-      const annotated = (await eventStore.update(buildEvents(sources,mode,findPlaces,{clusterWindowMs}))).map(present);
+      const retainNewsMs = retentionHours * 3600_000;
+      const annotated = (await eventStore.update(
+        buildEvents(sources,mode,findPlaces,{clusterWindowMs}),
+        {retainNewsMs},
+      )).map(present);
       lastLive = {fingerprint,events:annotated};
     }
     // Only queues events still missing a presentation; the response never waits for the model.

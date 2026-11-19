@@ -315,3 +315,93 @@ test('rebuildEventStore splits corrupted blackhole events, drops orphan forecast
     await rm(directory, {recursive: true, force: true});
   }
 });
+
+test('retainNewsMs keeps recent untouched news events without resurrecting old news, signals, forecasts, or merged redirects', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'event-store-retain-'));
+  try {
+    const storePath = join(directory, 'events.json');
+    const now = Date.parse('2026-11-19T08:00:00.000Z');
+    const isoHoursAgo = hours => new Date(now - hours * 3600_000).toISOString();
+
+    const recentNews = {
+      id: 'rss:recent-hormuz-closure',
+      kind: 'news',
+      title: 'Iran Declares Strait of Hormuz Closed as Vessel Hit',
+      time: {kind: 'published', value: isoHoursAgo(10)},
+      source: {publisher: 'EnergyNow.com'},
+    };
+    const oldNews = {
+      id: 'rss:old-suez-delay',
+      kind: 'news',
+      title: 'Suez Canal container ship briefly delayed before resuming transit',
+      time: {kind: 'published', value: isoHoursAgo(60)},
+      source: {publisher: 'gCaptain'},
+    };
+    const mergeA = {
+      id: 'rss:merge-a',
+      kind: 'news',
+      title: 'US flight authority orders national ground stop',
+      time: {kind: 'published', value: isoHoursAgo(14)},
+      source: {publisher: 'Reuters'},
+    };
+    const mergeB = {
+      id: 'rss:merge-b',
+      kind: 'news',
+      title: 'US flights resume after nationwide ground stop lifted',
+      time: {kind: 'published', value: isoHoursAgo(12)},
+      source: {publisher: 'AP'},
+    };
+    const standaloneSignal = {
+      id: 'signal:portwatch:PORT_YANTIAN:2026-11-19',
+      kind: 'signal',
+      title: '盐田港船舶通行量异动',
+      geoAnchors: ['PORT_YANTIAN'],
+      time: {kind: 'detected', value: isoHoursAgo(5)},
+      source: {provider: 'IMF PortWatch'},
+    };
+    const standaloneForecast = {
+      id: 'forecast:polymarket:hormuz-recent',
+      kind: 'forecast',
+      title: 'Will Iran close the Strait of Hormuz in 2026?',
+      time: {kind: 'updated', value: isoHoursAgo(2)},
+      source: {provider: 'Polymarket'},
+    };
+    const freshNews = {
+      id: 'rss:fresh-rotterdam-strike',
+      kind: 'news',
+      title: 'Rotterdam dockworkers begin 48-hour strike at container terminals',
+      time: {kind: 'published', value: isoHoursAgo(1)},
+      source: {publisher: 'BBC World'},
+    };
+
+    const store = await openEventStore(storePath, () => []);
+    const [evtA] = await store.update([{id: 'evt_merge_a', title: mergeA.title, topic: 'transport_disruption', records: [{...mergeA, role: 'report'}]}]);
+    const [evtB] = await store.update([{id: 'evt_merge_b', title: mergeB.title, records: [{...mergeB, role: 'report'}]}]);
+    assert.notEqual(evtA.id, evtB.id);
+
+    await store.update([
+      ...buildEvents([{records: [recentNews, oldNews, mergeA, mergeB]}], 'live'),
+      ...buildEvents([{kind: 'signal', records: [standaloneSignal]}], 'live'),
+      {id: 'evt_standalone_fc', title: standaloneForecast.title, records: [standaloneForecast], updatedAt: standaloneForecast.time.value},
+    ]);
+
+    const freshBatch = buildEvents([{records: [freshNews]}], 'live');
+    const retained = await store.update(freshBatch, {retainNewsMs: 48 * 3600_000, now});
+    const retainedIds = retained.map(event => event.id);
+
+    assert.equal(new Set(retainedIds).size, retainedIds.length, 'no duplicate IDs returned');
+    assert.equal(retained[0].records[0].id, freshNews.id, 'sorted by updatedAt descending');
+    assert.ok(retained.some(event => event.records.some(r => r.id === recentNews.id)), 'retains recent untouched news event');
+    assert.ok(retained.some(event => event.id === evtA.id && !event.mergedInto), 'keeps surviving merged event');
+    assert.ok(!retained.some(event => event.id === evtB.id || event.mergedInto), 'does not return merged redirect');
+    assert.ok(!retained.some(event => event.records?.some(r => r.id === oldNews.id)), 'excludes news older than retainNewsMs');
+    assert.ok(!retained.some(event => event.records?.some(r => r.id === standaloneSignal.id)), 'never retains untouched standalone signal');
+    assert.ok(!retained.some(event => event.records?.some(r => r.id === standaloneForecast.id)), 'never retains untouched standalone forecast');
+
+    const touchedOnly = await store.update(freshBatch);
+    assert.equal(touchedOnly.length, 1);
+    assert.equal(touchedOnly[0].records[0].id, freshNews.id);
+  } finally {
+    await rm(directory, {recursive: true, force: true});
+  }
+});
