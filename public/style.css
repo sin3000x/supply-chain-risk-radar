@@ -219,7 +219,19 @@ main { max-width: 1440px; margin: 0 auto; padding: 16px 24px 48px; }
 #map-title { margin-bottom: 0; }
 @media (min-width: 1080px) {
   .workspace { grid-template-columns: minmax(0, 1.45fr) minmax(380px, 1fr); }
-  #map-view { order: 0; position: sticky; top: 76px; }
+  #map-view {
+    order: 0;
+    position: sticky;
+    top: 76px;
+    align-content: start;
+    max-height: calc(100vh - 92px);
+    max-height: calc(100dvh - 92px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+    padding: 0 4px 10px 0;
+  }
 }
 
 /* Map */
