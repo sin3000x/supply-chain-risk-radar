@@ -6,14 +6,15 @@
     "westernPacific": {"label":"西太平洋","lon":150,"lat":21,"aliases":["Pacific","Western Pacific"],"nodes":"SEA_PACIFIC"},
     "oceania": {"label":"大洋洲","lon":142,"lat":-28,"aliases":["Oceania"]},
     "indianOcean": {"label":"印度洋","lon":75,"lat":-13,"aliases":["Indian Ocean"]},
-    "asia": {"label":"亚洲","lon":91,"lat":37,"aliases":["Asia"],"countries":"AZ GE KZ","nodes":"SEA_CASPIAN"},
+    "asia": {"label":"亚洲","lon":91,"lat":37,"aliases":["Asia","South Asia","Central Asia"],"countries":"AZ GE KZ","nodes":"SEA_CASPIAN"},
     "middleEast": {"label":"中东","lon":48,"lat":27,"aliases":["Middle East"],"countries":"AE EG KW QA SA TR","nodes":"CP_BAB CP_SUEZ CP_HORMUZ SEA_RED AS_MIDEAST"},
     "europe": {"label":"欧洲","lon":15,"lat":51,"aliases":["Europe","Western Europe","Southern Europe","Northern Europe","Eastern Europe","西欧","南欧","北欧","东欧","荷兰"],"countries":"BG BY DE ES GB GR HU IT MK NL PL RS RU SI SK","nodes":"CP_GIBRALTAR CP_DOVER CP_DANISH CP_DARDANELLES CP_BOSPHORUS SEA_MED SEA_BLACK HUBAP_EUR"},
     "arctic": {"label":"北极","lon":0,"lat":74,"aliases":["Arctic"]},
     "africa": {"label":"非洲","lon":16,"lat":3,"aliases":["Africa"],"countries":"ET"},
     "southernAfrica": {"label":"南部非洲","lon":26,"lat":-25,"aliases":["Southern Africa"],"countries":"MZ ZA","nodes":"CP_CAPE"},
     "northAmerica": {"label":"北美","lon":-98,"lat":43,"aliases":["North America"],"countries":"MX US","nodes":"CP_PANAMA"},
-    "southAmerica": {"label":"南美","lon":-60,"lat":-16,"aliases":["South America"],"countries":"BR CL CO PE"},
+    "southAmerica": {"label":"南美","lon":-60,"lat":-16,"aliases":["South America","Latin America"],"countries":"BR CL CO PE"},
+    "crossRegion": {"label":"跨区经贸与市场"},
     "unknown": {"label":"地点待确认"}
   },
   "coordinates": {

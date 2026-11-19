@@ -178,8 +178,10 @@ function setCameraBounds(minLon, maxLon, minLat, maxLat) {
   };
 }
 
+const nonMapRegions = new Set(['crossRegion', 'unknown']);
+
 function updateMapCamera(regionGroups, selectedRegion) {
-  if (!selectedRegion || selectedRegion === 'unknown') {
+  if (!selectedRegion || nonMapRegions.has(selectedRegion)) {
     mapCamera = {...GLOBAL_CAMERA};
     return;
   }
@@ -253,7 +255,7 @@ function centerCameraOnPlace(geo) {
 
 function layoutMapOverlays(regionGroups) {
   const activePlaces = regionGroups.flatMap(group =>
-    group.places.filter(place => place.regionId !== 'unknown' && hasCoords(place.geo)));
+    group.places.filter(place => !nonMapRegions.has(place.regionId) && hasCoords(place.geo)));
   const largest = Math.max(1, ...activePlaces.map(p => p.events.length));
   const projected = activePlaces.map(place => {
     const [nx, ny] = project(place.geo.lon, place.geo.lat);
@@ -447,12 +449,14 @@ fetch('/vendor/worldmonitor/countries.geojson')
   .catch(() => {mapState = 'unavailable';})
   .finally(renderMapNote);
 
+let crossRegionEvents = 0;
 let unmappedEvents = 0;
 function renderMapNote() {
   el('map-note').textContent = [
     mapState === 'unavailable' ? '底图暂不可用，可用区域筛选查看事件。'
       : mapCamera.zoomed ? '滚轮/按钮缩放、拖拽平移，点击节点定位对应地点事件。'
         : '节点按真实经纬度标注，支持滚轮/+−缩放和区域聚焦，虚线按自西向东连线。',
+    crossRegionEvents && `${crossRegionEvents} 个跨区经贸与市场事件（不落图）。`,
     unmappedEvents && `${unmappedEvents} 个事件地点待确认（未落图）。`,
   ].filter(Boolean).join(' ');
 }
@@ -547,6 +551,7 @@ function renderRegionControls(rows) {
     chip.onmouseleave = () => {if (hoveredRegionId === id) {hoveredRegionId = null; syncGeoHighlight();}};
   }
   regionControl.value = selected;
+  crossRegionEvents = counts.get('crossRegion') ?? 0;
   unmappedEvents = counts.get('unknown') ?? 0;
 }
 
@@ -657,7 +662,7 @@ const cache = new Map();
 const pending = new Map();
 const errors = new Map();
 const modeKey = 'external-event-mode';
-const snapshotKey = 'external-event-live-v3';
+const snapshotKey = 'external-event-live-v4';
 const modeInputs = [...document.querySelectorAll('input[name="mode"]')];
 const currentMode = () => modeInputs.find(input => input.checked)?.value ?? 'sample';
 const savedMode = store.get('localStorage',modeKey);
@@ -941,9 +946,10 @@ function buildRegionGroups(list, sortMode) {
     };
   });
 
+  const tailRank = id => id === 'unknown' ? 2 : id === 'crossRegion' ? 1 : 0;
   return groups.sort((a, b) => {
-    const unknownDiff = Number(a.regionId === 'unknown') - Number(b.regionId === 'unknown');
-    if (unknownDiff) return unknownDiff;
+    const tailDiff = tailRank(a.regionId) - tailRank(b.regionId);
+    if (tailDiff) return tailDiff;
     if (sortMode === 'newest') return b.latestUpdated.localeCompare(a.latestUpdated);
     if (sortMode === 'routes') return b.laneCount - a.laneCount || b.latestUpdated.localeCompare(a.latestUpdated);
     return orderIndex(a.regionId) - orderIndex(b.regionId);
@@ -1006,9 +1012,9 @@ function render() {
     const titleRow = add(header,'div','','region-title-row');
     add(titleRow,'h3',label,'region-title');
     const regionStats = add(titleRow,'div','','region-stats');
-    add(regionStats,'span',regionId === 'unknown' ? `${eventCount} 个事件` : `${places.length} 个地点 · ${eventCount} 个事件`);
+    add(regionStats,'span',nonMapRegions.has(regionId) ? `${eventCount} 个事件` : `${places.length} 个地点 · ${eventCount} 个事件`);
     if (laneCount) add(regionStats,'span',`${laneCount} 条线路`,'accent');
-    if (regionId !== 'unknown') {
+    if (!nonMapRegions.has(regionId)) {
       const focusBtn = add(titleRow,'button',selectedRegion === regionId ? '已聚焦' : '聚焦区域','region-focus');
       focusBtn.type = 'button';
       focusBtn.setAttribute('aria-pressed', String(selectedRegion === regionId));

@@ -126,7 +126,7 @@ test('military strikes are not classified as labor_action and oil price stories 
     'Iran says it targeted US military radar in Bahrain in retaliatory strike',
     'Oil tanker burns after mine strike in Strait of Hormuz',
     'Thailand Says US Agrees to Lower Forced-Labor Tariff to 10%',
-    'European Union imposes sanctions on four Haiti gangs, citing killing, rape of children',
+    'European Union imposes sanctions on Russian shadow fleet tankers',
   ];
   const strikeEvents = buildEvents([{
     records: strikeHeadlines.map((title, i) => article(`s${i}`, title, `2026-11-18T0${i}:00:00Z`)),
@@ -164,15 +164,15 @@ test('clusters separate conflicting actors and distinct Hormuz incidents while m
     id, kind: 'news', title, time: {value: time}, source: {publisher},
   });
 
-  // 1. Australia vs UK West Bank sanctions merge internally, never across countries.
+  // 1. Australia vs UK sanctions merge internally, never across countries.
   const sanctions = buildEvents([{
     records: [
-      pubArticle('au1', 'Australia Imposes New Sanctions Targeting West Bank Settlement Expansion', '2026-11-17T21:17:00Z', 'Haaretz'),
-      pubArticle('au2', 'Australia sanctions Israeli settlers, organisations over West Bank expansion', '2026-11-18T00:24:00Z', 'Al-Monitor'),
-      pubArticle('au3', 'Australia sanctions three Israelis and four organizations over West Bank settlements, following UK sanctions', '2026-11-18T05:03:00Z', 'i24NEWS'),
-      pubArticle('uk1', 'Israel vows retaliation after UK sanctions firms for West Bank settlements', '2026-11-17T17:20:00Z', 'Al-Monitor'),
-      pubArticle('uk2', 'UK sanctions firms over Israeli West Bank settlements', '2026-11-17T18:27:00Z', 'BBC World'),
-      pubArticle('uk3', 'Israel delays building contracts for West Bank settlement after UK sanctions', '2026-11-18T14:05:00Z', 'Guardian World'),
+      pubArticle('au1', 'Australia Imposes New Sanctions Targeting Iran Shadow Fleet Expansion', '2026-11-17T21:17:00Z', 'Haaretz'),
+      pubArticle('au2', 'Australia announces sanctions on Iranian oil tankers, organisations over shadow fleet expansion', '2026-11-18T00:24:00Z', 'Al-Monitor'),
+      pubArticle('au3', 'Australia targets three Iranian tankers and four organizations in new sanctions, following UK sanctions', '2026-11-18T05:03:00Z', 'i24NEWS'),
+      pubArticle('uk1', 'Iran imposes retaliatory bans after UK targets Iranian drone firms with sanctions', '2026-11-17T17:20:00Z', 'Al-Monitor'),
+      pubArticle('uk2', 'UK announces sanctions on Iranian drone firms', '2026-11-17T18:27:00Z', 'BBC World'),
+      pubArticle('uk3', 'Iran delays building contracts for drone firms after UK imposes sanctions', '2026-11-18T14:05:00Z', 'Guardian World'),
     ],
   }], 'live', findPlaces);
   assert.equal(sanctions.length, 2);
@@ -301,4 +301,66 @@ test('forecast and signal matching reject geo conflicts and weak token collision
   const suezNews = events.find(ev => ev.records.some(r => r.id === 'rss:old-suez'));
   assert.equal(suezNews.records.length, 1);
   assert.ok(events.some(ev => ev.records.length === 1 && ev.records[0].id === 'signal:portwatch:CP_SUEZ:2026-11-18'));
+});
+
+test('createEventLocator resolves single-country hubs, regional titles, site prepositions, major US ports, and cross-region trade/market buckets', async () => {
+  const network = await loadNetwork(new URL('./data/', import.meta.url).pathname, 'demo');
+  const locate = createEventLocator(network);
+
+  // Single-country secondary city deduplication (Iran -> tehran, India -> newdelhi).
+  assert.equal(locate({title: 'More Iran war? US military buildup and fresh attacks in Gulf fuel fears of escalation', topic: 'security_development'}).id, 'tehran');
+  assert.equal(locate({title: "India's wholesale inflation accelerates to 12.29% in October on fuel price surge", topic: 'market_change'}).id, 'newdelhi');
+
+  // Prepositional site disambiguation across two countries.
+  assert.equal(locate({title: 'Iran launches drone attacks against US military base in Bahrain', topic: 'security_development'}).id, 'manama');
+  assert.equal(locate({title: 'Anti-Houthi forces retreat in Yemen as Iran strikes Bahrain', topic: 'security_development'}).id, 'yemen');
+
+  // Shared region across multi-country events.
+  assert.equal(locate({title: 'Indonesia president conveys apology to Singapore, Malaysia over wildfire haze', topic: 'natural_hazard'}).region, 'southeastAsia');
+
+  // Regional names in titles & guard against bare "strike" triggering US contextual alias.
+  assert.equal(locate({title: 'Storm Charles causes floods and flight cancellations across southern Europe', topic: 'transport_disruption'}).region, 'europe');
+  assert.equal(locate({title: 'US Now Has Three Carrier Strike Groups In Middle East As Roosevelt Arrives', topic: 'security_development'}).region, 'middleEast');
+
+  // Major US ports and expanded US outage context.
+  const laLoc = locate({title: 'Strike Threat Looms at Ports of Los Angeles and Long Beach as Labor Talks Stall', topic: 'transport_disruption'});
+  assert.equal(laLoc.id, 'port-la-lb');
+  assert.equal(laLoc.region, 'northAmerica');
+  assert.equal(locate({title: 'Classified US national security communications network hit by outage, NSA says', topic: 'infrastructure_incident'}).id, 'washington');
+  assert.equal(locate({title: 'United Airlines resolves tech outage that delayed flights', topic: 'transport_disruption'}).id, 'washington');
+
+  // Cross-border / multilateral trade policy vs single-polity trade policy.
+  assert.deepEqual(
+    {
+      id: locate({title: 'US imposes new chip sanctions aimed at China', topic: 'trade_policy'}).id,
+      region: locate({title: 'US imposes new chip sanctions aimed at China', topic: 'trade_policy'}).region,
+    },
+    {id: 'cross:trade_policy', region: 'crossRegion'},
+  );
+  assert.equal(locate({title: 'EU governments authorise signature of trade deal agreement with Indonesia', topic: 'trade_policy'}).region, 'crossRegion');
+  assert.equal(locate({title: 'New Congress could take up tariff bills amid USMCA talks', topic: 'trade_policy'}).region, 'crossRegion');
+  assert.equal(locate({title: 'Japan announces unilateral export control reform', topic: 'trade_policy'}).region, 'eastAsia');
+
+  // Single-location vs global market_change, while keeping routeRelevant: false (0 networkMatches).
+  const hormuzOil = {title: 'Oil prices rise after Strait of Hormuz attacks', topic: 'market_change', routeRelevant: false, records: []};
+  assert.equal(locate(hormuzOil).id, 'CP_HORMUZ');
+  assert.equal(network.annotate(hormuzOil).networkMatches.length, 0);
+  assert.equal(locate({title: 'Europe EV sales jump in October as high oil prices, subsidies fuel demand', topic: 'market_change'}).region, 'europe');
+  const globalOil = locate({title: 'Oil prices fall as higher US crude stocks temper supply risks', topic: 'market_change'});
+  assert.deepEqual({id: globalOil.id, region: globalOil.region}, {id: 'cross:market_change', region: 'crossRegion'});
+});
+
+test('nonSupplyChainNoise drops off-topic domestic lawsuits and settler/gang sanctions while keeping shipping and chip sanctions', () => {
+  const records = [
+    article('noise1', 'Australia Imposes New Sanctions Targeting West Bank Settlement Expansion', '2026-11-18T19:11:00Z'),
+    article('noise1b', 'Australia imposes new sanctions over illegal settlement expansion in occupied West Bank', '2026-11-18T19:12:00Z'),
+    article('noise2', 'European Union imposes sanctions on four Haiti gangs, citing killing, rape of children', '2026-11-16T18:56:00Z'),
+    article('noise3', 'Washington federal court compels tariff-refund class action to individual arbitration based on Xbox warranty agreement', '2026-11-18T20:25:00Z'),
+    article('noise4', 'Ecuadorian fishermen sue Trump administration over drone strike', '2026-11-18T01:04:00Z'),
+    article('keep1', 'US imposes new chip sanctions aimed at China', '2026-11-19T05:18:00Z'),
+    article('keep2', 'EU extends sanctions to nearly all major Russian banks', '2026-11-16T16:09:00Z'),
+  ];
+  const events = buildEvents([{records}], 'live');
+  const keptIds = events.flatMap(ev => ev.records.map(r => r.id));
+  assert.deepEqual(keptIds.sort(), ['keep1', 'keep2']);
 });

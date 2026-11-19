@@ -25,10 +25,12 @@ const topics = [
 ];
 
 const marketChangeRule = topics.find(([key]) => key === 'market_change');
+const nonSupplyChainNoise = /\b(?:west\s+bank\s+settle\w*|israeli\s+settle\w*|illegal\s+settle\w*|settlement\s+expansion|settler\s+(?:sanctions?|violence)|haiti\s+gangs?|street\s+gangs?|class\s+action|individual\s+arbitration|warranty\s+agreement|\bxbox\b|fishermen\s+sue)\b/i;
 
 /** Classify a news headline into one of the radar topics, or undefined if unrelated. */
 export function classifyTopic(title) {
   const text = title ?? '';
+  if (nonSupplyChainNoise.test(text)) return undefined;
   if (marketLead.test(text) && marketChangeRule[1].test(text) && marketChangeRule[2].test(text)) {
     return 'market_change';
   }
