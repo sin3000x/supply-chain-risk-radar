@@ -12,7 +12,7 @@
 
 可用 `PORT` 更改本机监听端口。页面支持浅色、深色、跟随系统，能筛选并导出 JSON。`GET /api/feed?mode=sample|live` 返回事件（含其全部记录）及来源状态，来源只给状态和记录数；`raw` 保留接入层原始字段。
 
-默认载入仓库内的 `data/nodes.json` 和 `data/lanes.json`。复制或克隆本仓库即可运行，不需要父目录或另一个 WorldMonitor 仓库。卡片按明确的事件节点或报道提及地点查询关联线路。可用 `RISK_NETWORK_DATA_DIR` 指定另一份兼容的节点及线路目录。
+默认载入仓库内的 `data/nodes.json` 和 `data/lanes.json`。复制或克隆本仓库即可运行，不需要父目录或另一个 WorldMonitor 仓库。卡片按明确的事件节点或报道提及地点查询关联线路。可用 `RISK_NETWORK_DATA_DIR` 指定另一份兼容的节点及线路目录，用 `GEOGRAPHY_CONFIG_PATH` 指定地理区域/坐标覆盖文件，用 `NEWS_SOURCES_PATH` 指定自定义新闻源清单。
 
 实时新闻先筛出航道安全、运输运行、经贸政策、地缘安全、灾害、市场变化和设施事故。新闻归并使用 WorldMonitor 的标题聚类，再按 48 小时窗口切分。媒体同源和转载识别、新闻关键词分类、文章网址去重（忽略跟踪参数）也复用 WorldMonitor。评论在匹配唯一事件时以背景分析附上；不参与线路匹配。卡片保留来源链接，归并按每次拉取的快照计算。
 

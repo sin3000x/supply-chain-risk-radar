@@ -1,221 +1,1093 @@
 {
-  "maritimeTopicAliases": ["Red Sea", "Hormuz", "Bab el-Mandeb", "Bab el Mandeb", "Bab-el-Mandeb"],
+  "maritimeTopicAliases": [
+    "Red Sea",
+    "Hormuz",
+    "Bab el-Mandeb",
+    "Bab el Mandeb",
+    "Bab-el-Mandeb"
+  ],
   "regions": {
-    "eastAsia": {"label":"东亚","lon":117,"lat":38,"aliases":["East Asia"],"countries":"CN HK JP","nodes":"CP_TAIWAN CP_KOREA SEA_PRD BORDER_SZ_HK BORDER_HZMB"},
-    "southeastAsia": {"label":"东南亚","lon":106,"lat":10,"aliases":["Southeast Asia"],"countries":"ID MY PH SG TH","nodes":"CP_MALACCA CP_SINGAPORE CP_SUNDA CP_KARIMATA CP_LUZON SEA_SCS"},
-    "westernPacific": {"label":"西太平洋","lon":150,"lat":21,"aliases":["Pacific","Western Pacific"],"nodes":"SEA_PACIFIC"},
-    "oceania": {"label":"大洋洲","lon":142,"lat":-28,"aliases":["Oceania"]},
-    "indianOcean": {"label":"印度洋","lon":75,"lat":-13,"aliases":["Indian Ocean"]},
-    "asia": {"label":"亚洲","lon":91,"lat":37,"aliases":["Asia","South Asia","Central Asia"],"countries":"AZ GE KZ","nodes":"SEA_CASPIAN"},
-    "middleEast": {"label":"中东","lon":48,"lat":27,"aliases":["Middle East"],"countries":"AE EG KW QA SA TR","nodes":"CP_BAB CP_SUEZ CP_HORMUZ SEA_RED AS_MIDEAST"},
-    "europe": {"label":"欧洲","lon":15,"lat":51,"aliases":["Europe","Western Europe","Southern Europe","Northern Europe","Eastern Europe","西欧","南欧","北欧","东欧","荷兰"],"countries":"BG BY DE ES GB GR HU IT MK NL PL RS RU SI SK","nodes":"CP_GIBRALTAR CP_DOVER CP_DANISH CP_DARDANELLES CP_BOSPHORUS SEA_MED SEA_BLACK HUBAP_EUR"},
-    "arctic": {"label":"北极","lon":0,"lat":74,"aliases":["Arctic"]},
-    "africa": {"label":"非洲","lon":16,"lat":3,"aliases":["Africa"],"countries":"ET"},
-    "southernAfrica": {"label":"南部非洲","lon":26,"lat":-25,"aliases":["Southern Africa"],"countries":"MZ ZA","nodes":"CP_CAPE"},
-    "northAmerica": {"label":"北美","lon":-98,"lat":43,"aliases":["North America"],"countries":"MX US","nodes":"CP_PANAMA"},
-    "southAmerica": {"label":"南美","lon":-60,"lat":-16,"aliases":["South America","Latin America"],"countries":"BR CL CO PE"},
-    "crossRegion": {"label":"跨区经贸与市场"},
-    "unknown": {"label":"地点待确认"}
+    "eastAsia": {
+      "label": "东亚",
+      "lon": 117,
+      "lat": 38,
+      "aliases": [
+        "East Asia"
+      ],
+      "countries": "CN HK JP",
+      "nodes": "CP_TAIWAN CP_KOREA SEA_PRD BORDER_SZ_HK BORDER_HZMB"
+    },
+    "southeastAsia": {
+      "label": "东南亚",
+      "lon": 106,
+      "lat": 10,
+      "aliases": [
+        "Southeast Asia"
+      ],
+      "countries": "ID MY PH SG TH",
+      "nodes": "CP_MALACCA CP_SINGAPORE CP_SUNDA CP_KARIMATA CP_LUZON SEA_SCS"
+    },
+    "westernPacific": {
+      "label": "西太平洋",
+      "lon": 150,
+      "lat": 21,
+      "aliases": [
+        "Pacific",
+        "Western Pacific"
+      ],
+      "nodes": "SEA_PACIFIC"
+    },
+    "oceania": {
+      "label": "大洋洲",
+      "lon": 142,
+      "lat": -28,
+      "aliases": [
+        "Oceania"
+      ]
+    },
+    "indianOcean": {
+      "label": "印度洋",
+      "lon": 75,
+      "lat": -13,
+      "aliases": [
+        "Indian Ocean"
+      ]
+    },
+    "asia": {
+      "label": "亚洲",
+      "lon": 91,
+      "lat": 37,
+      "aliases": [
+        "Asia",
+        "South Asia",
+        "Central Asia"
+      ],
+      "countries": "AZ GE KZ",
+      "nodes": "SEA_CASPIAN"
+    },
+    "middleEast": {
+      "label": "中东",
+      "lon": 48,
+      "lat": 27,
+      "aliases": [
+        "Middle East"
+      ],
+      "countries": "AE EG JO KW OM QA SA TR",
+      "nodes": "CP_BAB CP_SUEZ CP_HORMUZ SEA_RED AS_MIDEAST"
+    },
+    "europe": {
+      "label": "欧洲",
+      "lon": 15,
+      "lat": 51,
+      "aliases": [
+        "Europe",
+        "Western Europe",
+        "Southern Europe",
+        "Northern Europe",
+        "Eastern Europe",
+        "西欧",
+        "南欧",
+        "北欧",
+        "东欧",
+        "荷兰"
+      ],
+      "countries": "BG BY DE ES GB GR HU IT MK NL PL RS RU SI SK",
+      "nodes": "CP_GIBRALTAR CP_DOVER CP_DANISH CP_DARDANELLES CP_BOSPHORUS SEA_MED SEA_BLACK HUBAP_EUR"
+    },
+    "arctic": {
+      "label": "北极",
+      "lon": 0,
+      "lat": 74,
+      "aliases": [
+        "Arctic"
+      ]
+    },
+    "africa": {
+      "label": "非洲",
+      "lon": 16,
+      "lat": 3,
+      "aliases": [
+        "Africa"
+      ],
+      "countries": "DJ ET SO"
+    },
+    "southernAfrica": {
+      "label": "南部非洲",
+      "lon": 26,
+      "lat": -25,
+      "aliases": [
+        "Southern Africa"
+      ],
+      "countries": "MZ ZA",
+      "nodes": "CP_CAPE"
+    },
+    "northAmerica": {
+      "label": "北美",
+      "lon": -98,
+      "lat": 43,
+      "aliases": [
+        "North America"
+      ],
+      "countries": "MX US",
+      "nodes": "CP_PANAMA"
+    },
+    "southAmerica": {
+      "label": "南美",
+      "lon": -60,
+      "lat": -16,
+      "aliases": [
+        "South America",
+        "Latin America"
+      ],
+      "countries": "BR CL CO PE"
+    },
+    "crossRegion": {
+      "label": "跨区经贸与市场"
+    },
+    "unknown": {
+      "label": "地点待确认"
+    }
   },
   "coordinates": {
-    "CITY_SZ": [114.06, 22.54],
-    "CITY_HK": [114.17, 22.32],
-    "CITY_GZ": [113.26, 23.13],
-    "CITY_DXB": [55.27, 25.20],
-    "CITY_AMS": [4.90, 52.37],
-    "CITY_BUD": [19.04, 47.50],
-    "CITY_IST": [28.98, 41.01],
-    "CITY_LON": [-0.13, 51.51],
-    "CITY_MAD": [-3.70, 40.42],
-    "CITY_ROM": [12.50, 41.90],
-    "CITY_WAW": [21.01, 52.23],
-    "CITY_JNB": [28.05, -26.20],
-    "CITY_RUH": [46.68, 24.71],
-    "CITY_CAI": [31.24, 30.04],
-    "CITY_KWI": [47.98, 29.38],
-    "CITY_DOH": [51.53, 25.29],
-    "CITY_MEX": [-99.13, 19.43],
-    "CITY_BOG": [-74.07, 4.71],
-    "CITY_SCL": [-70.67, -33.45],
-    "CITY_LIM": [-77.04, -12.05],
-    "CITY_SAO": [-46.63, -23.55],
-    "CITY_MOW": [37.62, 55.76],
-    "CITY_KUL": [101.69, 3.14],
-    "CITY_MNL": [120.98, 14.60],
-    "CITY_BKK": [100.50, 13.76],
-    "CITY_JKT": [106.85, -6.21],
-    "CITY_TYO": [139.69, 35.69],
-    "CITY_BTH": [104.03, 1.13],
-    "CTY_CN": [104.20, 35.86],
-    "CTY_HK": [114.17, 22.32],
-    "CTY_AE": [53.85, 23.42],
-    "CTY_NL": [5.29, 52.13],
-    "CTY_HU": [19.50, 47.16],
-    "CTY_TR": [35.24, 38.96],
-    "CTY_GB": [-3.44, 55.38],
-    "CTY_ES": [-3.75, 40.46],
-    "CTY_IT": [12.57, 41.87],
-    "CTY_PL": [19.15, 51.92],
-    "CTY_ZA": [22.94, -30.56],
-    "CTY_SA": [45.08, 23.89],
-    "CTY_EG": [30.80, 26.82],
-    "CTY_KW": [47.48, 29.31],
-    "CTY_QA": [51.18, 25.35],
-    "CTY_MX": [-102.55, 23.63],
-    "CTY_CO": [-74.30, 4.57],
-    "CTY_CL": [-71.54, -35.68],
-    "CTY_PE": [-75.02, -9.19],
-    "CTY_BR": [-51.93, -14.24],
-    "CTY_RU": [44.00, 56.50],
-    "CTY_MY": [101.98, 4.21],
-    "CTY_PH": [121.77, 12.88],
-    "CTY_TH": [100.99, 15.87],
-    "CTY_ID": [113.92, -0.79],
-    "CTY_JP": [138.25, 36.20],
-    "CTY_KZ": [66.92, 48.02],
-    "CTY_BY": [27.95, 53.71],
-    "CTY_AZ": [47.58, 40.14],
-    "CTY_GE": [43.36, 42.32],
-    "CTY_SK": [19.70, 48.67],
-    "CTY_DE": [10.45, 51.17],
-    "CTY_SI": [15.00, 46.15],
-    "CTY_GR": [21.82, 39.07],
-    "CTY_MK": [21.75, 41.61],
-    "CTY_RS": [21.01, 44.02],
-    "CTY_BG": [25.49, 42.73],
-    "CTY_MZ": [35.53, -18.67],
-    "CTY_SG": [103.82, 1.35],
-    "CP_MALACCA": [101.50, 2.50],
-    "CP_SINGAPORE": [103.85, 1.22],
-    "CP_SUNDA": [105.80, -6.00],
-    "CP_KARIMATA": [108.80, -2.20],
-    "CP_TAIWAN": [119.50, 24.50],
-    "CP_LUZON": [121.50, 20.50],
-    "CP_KOREA": [129.50, 34.50],
-    "CP_BAB": [43.33, 12.58],
-    "CP_SUEZ": [32.35, 30.58],
-    "CP_HORMUZ": [56.25, 26.56],
-    "CP_GIBRALTAR": [-5.50, 35.96],
-    "CP_DOVER": [1.45, 51.05],
-    "CP_DANISH": [11.00, 55.60],
-    "CP_DARDANELLES": [26.40, 40.15],
-    "CP_BOSPHORUS": [29.07, 41.12],
-    "CP_PANAMA": [-79.68, 9.08],
-    "CP_CAPE": [18.47, -34.36],
-    "SEA_SCS": [114.00, 12.00],
-    "SEA_PRD": [113.75, 22.30],
-    "SEA_RED": [38.50, 20.00],
-    "SEA_MED": [18.00, 35.00],
-    "SEA_BLACK": [34.00, 43.30],
-    "SEA_PACIFIC": [155.00, 22.00],
-    "SEA_CASPIAN": [50.80, 41.50],
-    "AS_RUSSIA": [50.00, 58.00],
-    "AS_MIDEAST": [46.00, 28.00],
-    "PORT_YANTIAN": [114.27, 22.57],
-    "PORT_SHEKOU": [113.90, 22.48],
-    "PORT_NANSHA": [113.66, 22.66],
-    "PORT_KWAITSING": [114.12, 22.34],
-    "PORT_JEBELALI": [55.05, 25.00],
-    "PORT_KHORFAKKAN": [56.36, 25.35],
-    "PORT_DAMMAM": [50.19, 26.47],
-    "PORT_JEDDAH": [39.17, 21.49],
-    "PORT_SHUWAIKH": [47.92, 29.36],
-    "PORT_HAMAD": [51.61, 25.03],
-    "PORT_AINSOKHNA": [32.36, 29.66],
-    "PORT_PORTSAID": [32.31, 31.26],
-    "PORT_AMBARLI": [28.68, 40.97],
-    "PORT_MERSIN": [34.65, 36.80],
-    "PORT_ROTTERDAM": [4.48, 51.95],
-    "PORT_FELIXSTOWE": [1.35, 51.96],
-    "PORT_LONDONGATEWAY": [0.47, 51.50],
-    "PORT_SOUTHAMPTON": [-1.41, 50.90],
-    "PORT_VALENCIA": [-0.32, 39.44],
-    "PORT_BARCELONA": [2.18, 41.35],
-    "PORT_ALGECIRAS": [-5.44, 36.13],
-    "PORT_GENOA": [8.92, 44.41],
-    "PORT_CIVITAVECCHIA": [11.79, 42.09],
-    "PORT_GIOIATAURO": [15.90, 38.43],
-    "PORT_KOPER": [13.73, 45.55],
-    "PORT_PIRAEUS": [23.62, 37.94],
-    "PORT_HAMBURG": [9.97, 53.54],
-    "PORT_GDANSK": [18.67, 54.40],
-    "PORT_DURBAN": [31.03, -29.87],
-    "PORT_MAPUTO": [32.57, -25.97],
-    "PORT_MANZANILLO": [-104.31, 19.06],
-    "PORT_LAZAROCARDENAS": [-102.18, 17.94],
-    "PORT_VERACRUZ": [-96.13, 19.20],
-    "PORT_BUENAVENTURA": [-77.08, 3.89],
-    "PORT_CARTAGENA": [-75.53, 10.39],
-    "PORT_SANANTONIO": [-71.62, -33.59],
-    "PORT_VALPARAISO": [-71.63, -33.04],
-    "PORT_CALLAO": [-77.15, -12.05],
-    "PORT_CHANCAY": [-77.27, -11.58],
-    "PORT_SANTOS": [-46.32, -23.96],
-    "PORT_KLANG": [101.39, 3.00],
-    "PORT_TPP": [103.55, 1.36],
-    "PORT_LAEMCHABANG": [100.88, 13.08],
-    "PORT_BANGKOK": [100.57, 13.70],
-    "PORT_TANJUNGPRIOK": [106.88, -6.10],
-    "PORT_MANILA": [120.96, 14.59],
-    "PORT_BATANGAS": [121.05, 13.75],
-    "PORT_BATAM": [104.01, 1.16],
-    "PORT_SINGAPORE": [103.78, 1.26],
-    "PORT_YOKOHAMA": [139.65, 35.45],
-    "PORT_VOSTOCHNY": [133.07, 42.73],
-    "PORT_STPETERSBURG": [30.22, 59.89],
-    "PORT_NOVOROSSIYSK": [37.78, 44.72],
-    "AP_SZX": [113.81, 22.64],
-    "AP_HKG": [113.91, 22.31],
-    "AP_CAN": [113.30, 23.39],
-    "AP_DXB": [55.36, 25.25],
-    "AP_DWC": [55.16, 24.90],
-    "AP_RUH": [46.70, 24.96],
-    "AP_KWI": [47.97, 29.23],
-    "AP_DOH": [51.61, 25.27],
-    "AP_CAI": [31.41, 30.12],
-    "AP_IST": [28.75, 41.28],
-    "AP_AMS": [4.76, 52.31],
-    "AP_LHR": [-0.45, 51.47],
-    "AP_MAD": [-3.57, 40.47],
-    "AP_FCO": [12.25, 41.80],
-    "AP_BUD": [19.26, 47.44],
-    "AP_WAW": [20.97, 52.17],
-    "AP_JNB": [28.25, -26.14],
-    "AP_MEX": [-99.07, 19.44],
-    "AP_BOG": [-74.15, 4.70],
-    "AP_SCL": [-70.79, -33.39],
-    "AP_LIM": [-77.11, -12.02],
-    "AP_GRU": [-46.47, -23.43],
-    "AP_VCP": [-47.13, -23.01],
-    "AP_SVO": [37.41, 55.97],
-    "AP_DME": [37.91, 55.41],
-    "AP_KUL": [101.71, 2.75],
-    "AP_MNL": [121.02, 14.51],
-    "AP_CRK": [120.56, 15.19],
-    "AP_BKK": [100.75, 13.69],
-    "AP_CGK": [106.66, -6.13],
-    "AP_NRT": [140.39, 35.76],
-    "AP_HND": [139.78, 35.55],
-    "AP_BTH": [104.12, 1.12],
-    "AP_SIN": [103.99, 1.36],
-    "HUBAP_ADD": [38.80, 8.98],
-    "HUBAP_US": [-118.41, 33.94],
-    "HUBAP_EUR": [8.56, 50.03],
-    "RAIL_SOUTHCHINA": [113.26, 23.13],
-    "RB_ALASHANKOU": [82.57, 45.17],
-    "RB_KHORGOS": [80.42, 44.21],
-    "RB_MALASZEWICZE": [23.51, 52.02],
-    "RB_MANZHOULI": [117.45, 49.59],
-    "RB_ZABAYKALSK": [117.33, 49.65],
-    "CORR_TRANSSIB": [82.93, 55.01],
-    "RAIL_DUISBURG": [6.76, 51.43],
-    "BORDER_SZ_HK": [114.07, 22.52],
-    "BORDER_HZMB": [113.84, 22.28],
-    "CORR_DMM_RUH": [48.40, 25.60],
-    "CORR_JED_RUH": [42.90, 23.10],
-    "CORR_N3": [29.50, -28.00],
-    "CORR_MAPUTO": [30.30, -26.00],
-    "CORR_MX_PORT": [-101.70, 19.25],
-    "CORR_BUENAVENTURA": [-75.50, 4.30]
+    "CITY_SZ": [
+      114.06,
+      22.54
+    ],
+    "CITY_HK": [
+      114.17,
+      22.32
+    ],
+    "CITY_GZ": [
+      113.26,
+      23.13
+    ],
+    "CITY_DXB": [
+      55.27,
+      25.2
+    ],
+    "CITY_AMS": [
+      4.9,
+      52.37
+    ],
+    "CITY_BUD": [
+      19.04,
+      47.5
+    ],
+    "CITY_IST": [
+      28.98,
+      41.01
+    ],
+    "CITY_LON": [
+      -0.13,
+      51.51
+    ],
+    "CITY_MAD": [
+      -3.7,
+      40.42
+    ],
+    "CITY_ROM": [
+      12.5,
+      41.9
+    ],
+    "CITY_WAW": [
+      21.01,
+      52.23
+    ],
+    "CITY_JNB": [
+      28.05,
+      -26.2
+    ],
+    "CITY_RUH": [
+      46.68,
+      24.71
+    ],
+    "CITY_CAI": [
+      31.24,
+      30.04
+    ],
+    "CITY_KWI": [
+      47.98,
+      29.38
+    ],
+    "CITY_DOH": [
+      51.53,
+      25.29
+    ],
+    "CITY_MEX": [
+      -99.13,
+      19.43
+    ],
+    "CITY_BOG": [
+      -74.07,
+      4.71
+    ],
+    "CITY_SCL": [
+      -70.67,
+      -33.45
+    ],
+    "CITY_LIM": [
+      -77.04,
+      -12.05
+    ],
+    "CITY_SAO": [
+      -46.63,
+      -23.55
+    ],
+    "CITY_MOW": [
+      37.62,
+      55.76
+    ],
+    "CITY_KUL": [
+      101.69,
+      3.14
+    ],
+    "CITY_MNL": [
+      120.98,
+      14.6
+    ],
+    "CITY_BKK": [
+      100.5,
+      13.76
+    ],
+    "CITY_JKT": [
+      106.85,
+      -6.21
+    ],
+    "CITY_TYO": [
+      139.69,
+      35.69
+    ],
+    "CITY_BTH": [
+      104.03,
+      1.13
+    ],
+    "CTY_CN": [
+      104.2,
+      35.86
+    ],
+    "CTY_HK": [
+      114.17,
+      22.32
+    ],
+    "CTY_AE": [
+      53.85,
+      23.42
+    ],
+    "CTY_NL": [
+      5.29,
+      52.13
+    ],
+    "CTY_HU": [
+      19.5,
+      47.16
+    ],
+    "CTY_TR": [
+      35.24,
+      38.96
+    ],
+    "CTY_GB": [
+      -3.44,
+      55.38
+    ],
+    "CTY_ES": [
+      -3.75,
+      40.46
+    ],
+    "CTY_IT": [
+      12.57,
+      41.87
+    ],
+    "CTY_PL": [
+      19.15,
+      51.92
+    ],
+    "CTY_ZA": [
+      22.94,
+      -30.56
+    ],
+    "CTY_SA": [
+      45.08,
+      23.89
+    ],
+    "CTY_EG": [
+      30.8,
+      26.82
+    ],
+    "CTY_KW": [
+      47.48,
+      29.31
+    ],
+    "CTY_QA": [
+      51.18,
+      25.35
+    ],
+    "CTY_MX": [
+      -102.55,
+      23.63
+    ],
+    "CTY_CO": [
+      -74.3,
+      4.57
+    ],
+    "CTY_CL": [
+      -71.54,
+      -35.68
+    ],
+    "CTY_PE": [
+      -75.02,
+      -9.19
+    ],
+    "CTY_BR": [
+      -51.93,
+      -14.24
+    ],
+    "CTY_RU": [
+      44,
+      56.5
+    ],
+    "CTY_MY": [
+      101.98,
+      4.21
+    ],
+    "CTY_PH": [
+      121.77,
+      12.88
+    ],
+    "CTY_TH": [
+      100.99,
+      15.87
+    ],
+    "CTY_ID": [
+      113.92,
+      -0.79
+    ],
+    "CTY_JP": [
+      138.25,
+      36.2
+    ],
+    "CTY_KZ": [
+      66.92,
+      48.02
+    ],
+    "CTY_BY": [
+      27.95,
+      53.71
+    ],
+    "CTY_AZ": [
+      47.58,
+      40.14
+    ],
+    "CTY_GE": [
+      43.36,
+      42.32
+    ],
+    "CTY_SK": [
+      19.7,
+      48.67
+    ],
+    "CTY_DE": [
+      10.45,
+      51.17
+    ],
+    "CTY_SI": [
+      15,
+      46.15
+    ],
+    "CTY_GR": [
+      21.82,
+      39.07
+    ],
+    "CTY_MK": [
+      21.75,
+      41.61
+    ],
+    "CTY_RS": [
+      21.01,
+      44.02
+    ],
+    "CTY_BG": [
+      25.49,
+      42.73
+    ],
+    "CTY_SG": [
+      103.82,
+      1.35
+    ],
+    "CP_MALACCA": [
+      101.5,
+      2.5
+    ],
+    "CP_SINGAPORE": [
+      103.85,
+      1.22
+    ],
+    "CP_SUNDA": [
+      105.8,
+      -6
+    ],
+    "CP_KARIMATA": [
+      108.8,
+      -2.2
+    ],
+    "CP_TAIWAN": [
+      119.5,
+      24.5
+    ],
+    "CP_LUZON": [
+      121.5,
+      20.5
+    ],
+    "CP_KOREA": [
+      129.5,
+      34.5
+    ],
+    "CP_BAB": [
+      43.33,
+      12.58
+    ],
+    "CP_SUEZ": [
+      32.35,
+      30.58
+    ],
+    "CP_HORMUZ": [
+      56.25,
+      26.56
+    ],
+    "CP_GIBRALTAR": [
+      -5.5,
+      35.96
+    ],
+    "CP_DOVER": [
+      1.45,
+      51.05
+    ],
+    "CP_DANISH": [
+      11,
+      55.6
+    ],
+    "CP_DARDANELLES": [
+      26.4,
+      40.15
+    ],
+    "CP_BOSPHORUS": [
+      29.07,
+      41.12
+    ],
+    "CP_PANAMA": [
+      -79.68,
+      9.08
+    ],
+    "CP_CAPE": [
+      18.47,
+      -34.36
+    ],
+    "SEA_SCS": [
+      114,
+      12
+    ],
+    "SEA_PRD": [
+      113.75,
+      22.3
+    ],
+    "SEA_RED": [
+      38.5,
+      20
+    ],
+    "SEA_MED": [
+      18,
+      35
+    ],
+    "SEA_BLACK": [
+      34,
+      43.3
+    ],
+    "SEA_PACIFIC": [
+      155,
+      22
+    ],
+    "SEA_CASPIAN": [
+      50.8,
+      41.5
+    ],
+    "AS_RUSSIA": [
+      50,
+      58
+    ],
+    "AS_MIDEAST": [
+      46,
+      28
+    ],
+    "PORT_YANTIAN": [
+      114.27,
+      22.57
+    ],
+    "PORT_SHEKOU": [
+      113.9,
+      22.48
+    ],
+    "PORT_NANSHA": [
+      113.66,
+      22.66
+    ],
+    "PORT_JEBELALI": [
+      55.05,
+      25
+    ],
+    "PORT_DAMMAM": [
+      50.19,
+      26.47
+    ],
+    "PORT_JEDDAH": [
+      39.17,
+      21.49
+    ],
+    "PORT_SHUWAIKH": [
+      47.92,
+      29.36
+    ],
+    "PORT_HAMAD": [
+      51.61,
+      25.03
+    ],
+    "PORT_PORTSAID": [
+      32.31,
+      31.26
+    ],
+    "PORT_AMBARLI": [
+      28.68,
+      40.97
+    ],
+    "PORT_MERSIN": [
+      34.65,
+      36.8
+    ],
+    "PORT_ROTTERDAM": [
+      4.48,
+      51.95
+    ],
+    "PORT_FELIXSTOWE": [
+      1.35,
+      51.96
+    ],
+    "PORT_LONDONGATEWAY": [
+      0.47,
+      51.5
+    ],
+    "PORT_SOUTHAMPTON": [
+      -1.41,
+      50.9
+    ],
+    "PORT_VALENCIA": [
+      -0.32,
+      39.44
+    ],
+    "PORT_BARCELONA": [
+      2.18,
+      41.35
+    ],
+    "PORT_ALGECIRAS": [
+      -5.44,
+      36.13
+    ],
+    "PORT_GENOA": [
+      8.92,
+      44.41
+    ],
+    "PORT_CIVITAVECCHIA": [
+      11.79,
+      42.09
+    ],
+    "PORT_GIOIATAURO": [
+      15.9,
+      38.43
+    ],
+    "PORT_KOPER": [
+      13.73,
+      45.55
+    ],
+    "PORT_PIRAEUS": [
+      23.62,
+      37.94
+    ],
+    "PORT_HAMBURG": [
+      9.97,
+      53.54
+    ],
+    "PORT_GDANSK": [
+      18.67,
+      54.4
+    ],
+    "PORT_DURBAN": [
+      31.03,
+      -29.87
+    ],
+    "PORT_MANZANILLO": [
+      -104.31,
+      19.06
+    ],
+    "PORT_LAZAROCARDENAS": [
+      -102.18,
+      17.94
+    ],
+    "PORT_VERACRUZ": [
+      -96.13,
+      19.2
+    ],
+    "PORT_BUENAVENTURA": [
+      -77.08,
+      3.89
+    ],
+    "PORT_CARTAGENA": [
+      -75.53,
+      10.39
+    ],
+    "PORT_SANANTONIO": [
+      -71.62,
+      -33.59
+    ],
+    "PORT_VALPARAISO": [
+      -71.63,
+      -33.04
+    ],
+    "PORT_CALLAO": [
+      -77.15,
+      -12.05
+    ],
+    "PORT_CHANCAY": [
+      -77.27,
+      -11.58
+    ],
+    "PORT_SANTOS": [
+      -46.32,
+      -23.96
+    ],
+    "PORT_KLANG": [
+      101.39,
+      3
+    ],
+    "PORT_TPP": [
+      103.55,
+      1.36
+    ],
+    "PORT_LAEMCHABANG": [
+      100.88,
+      13.08
+    ],
+    "PORT_BANGKOK": [
+      100.57,
+      13.7
+    ],
+    "PORT_TANJUNGPRIOK": [
+      106.88,
+      -6.1
+    ],
+    "PORT_MANILA": [
+      120.96,
+      14.59
+    ],
+    "PORT_BATANGAS": [
+      121.05,
+      13.75
+    ],
+    "PORT_BATAM": [
+      104.01,
+      1.16
+    ],
+    "PORT_SINGAPORE": [
+      103.78,
+      1.26
+    ],
+    "PORT_YOKOHAMA": [
+      139.65,
+      35.45
+    ],
+    "PORT_VOSTOCHNY": [
+      133.07,
+      42.73
+    ],
+    "PORT_STPETERSBURG": [
+      30.22,
+      59.89
+    ],
+    "PORT_NOVOROSSIYSK": [
+      37.78,
+      44.72
+    ],
+    "AP_SZX": [
+      113.81,
+      22.64
+    ],
+    "AP_HKG": [
+      113.91,
+      22.31
+    ],
+    "AP_CAN": [
+      113.3,
+      23.39
+    ],
+    "AP_DXB": [
+      55.36,
+      25.25
+    ],
+    "AP_DWC": [
+      55.16,
+      24.9
+    ],
+    "AP_RUH": [
+      46.7,
+      24.96
+    ],
+    "AP_KWI": [
+      47.97,
+      29.23
+    ],
+    "AP_DOH": [
+      51.61,
+      25.27
+    ],
+    "AP_CAI": [
+      31.41,
+      30.12
+    ],
+    "AP_IST": [
+      28.75,
+      41.28
+    ],
+    "AP_AMS": [
+      4.76,
+      52.31
+    ],
+    "AP_LHR": [
+      -0.45,
+      51.47
+    ],
+    "AP_MAD": [
+      -3.57,
+      40.47
+    ],
+    "AP_FCO": [
+      12.25,
+      41.8
+    ],
+    "AP_BUD": [
+      19.26,
+      47.44
+    ],
+    "AP_WAW": [
+      20.97,
+      52.17
+    ],
+    "AP_JNB": [
+      28.25,
+      -26.14
+    ],
+    "AP_MEX": [
+      -99.07,
+      19.44
+    ],
+    "AP_BOG": [
+      -74.15,
+      4.7
+    ],
+    "AP_SCL": [
+      -70.79,
+      -33.39
+    ],
+    "AP_LIM": [
+      -77.11,
+      -12.02
+    ],
+    "AP_GRU": [
+      -46.47,
+      -23.43
+    ],
+    "AP_VCP": [
+      -47.13,
+      -23.01
+    ],
+    "AP_SVO": [
+      37.41,
+      55.97
+    ],
+    "AP_DME": [
+      37.91,
+      55.41
+    ],
+    "AP_KUL": [
+      101.71,
+      2.75
+    ],
+    "AP_MNL": [
+      121.02,
+      14.51
+    ],
+    "AP_CRK": [
+      120.56,
+      15.19
+    ],
+    "AP_BKK": [
+      100.75,
+      13.69
+    ],
+    "AP_CGK": [
+      106.66,
+      -6.13
+    ],
+    "AP_NRT": [
+      140.39,
+      35.76
+    ],
+    "AP_HND": [
+      139.78,
+      35.55
+    ],
+    "AP_BTH": [
+      104.12,
+      1.12
+    ],
+    "AP_SIN": [
+      103.99,
+      1.36
+    ],
+    "HUBAP_US": [
+      -118.41,
+      33.94
+    ],
+    "HUBAP_EUR": [
+      8.56,
+      50.03
+    ],
+    "RAIL_SOUTHCHINA": [
+      113.26,
+      23.13
+    ],
+    "RB_ALASHANKOU": [
+      82.57,
+      45.17
+    ],
+    "RB_KHORGOS": [
+      80.42,
+      44.21
+    ],
+    "RB_MALASZEWICZE": [
+      23.51,
+      52.02
+    ],
+    "RB_MANZHOULI": [
+      117.45,
+      49.59
+    ],
+    "RB_ZABAYKALSK": [
+      117.33,
+      49.65
+    ],
+    "CORR_TRANSSIB": [
+      82.93,
+      55.01
+    ],
+    "RAIL_DUISBURG": [
+      6.76,
+      51.43
+    ],
+    "BORDER_SZ_HK": [
+      114.07,
+      22.52
+    ],
+    "BORDER_HZMB": [
+      113.84,
+      22.28
+    ],
+    "CORR_DMM_RUH": [
+      48.4,
+      25.6
+    ],
+    "CORR_JED_RUH": [
+      42.9,
+      23.1
+    ],
+    "CORR_N3": [
+      29.5,
+      -28
+    ],
+    "CORR_MX_PORT": [
+      -101.7,
+      19.25
+    ],
+    "CORR_BUENAVENTURA": [
+      -75.5,
+      4.3
+    ],
+    "CTY_OM": [
+      55.98,
+      21.47
+    ],
+    "CITY_MCT": [
+      58.41,
+      23.59
+    ],
+    "CTY_ET": [
+      40.49,
+      9.15
+    ],
+    "CITY_ADD": [
+      38.75,
+      9.03
+    ],
+    "CTY_DJ": [
+      42.59,
+      11.83
+    ],
+    "CTY_SO": [
+      46.2,
+      5.15
+    ],
+    "CTY_JO": [
+      36.24,
+      30.59
+    ],
+    "CITY_AMM": [
+      35.93,
+      31.95
+    ],
+    "PORT_CHIWAN": [
+      113.89,
+      22.47
+    ],
+    "PORT_MAWAN": [
+      113.88,
+      22.49
+    ],
+    "PORT_DACHANBAY": [
+      113.86,
+      22.53
+    ],
+    "PORT_HK_HIT": [
+      114.12,
+      22.34
+    ],
+    "PORT_HK_ACT": [
+      114.11,
+      22.33
+    ],
+    "PORT_KHALIFA": [
+      54.65,
+      24.81
+    ],
+    "PORT_SHARJAH": [
+      55.37,
+      25.36
+    ],
+    "AP_AUH": [
+      54.65,
+      24.43
+    ],
+    "AP_SHJ": [
+      55.52,
+      25.33
+    ],
+    "PORT_JUBAIL": [
+      49.68,
+      27.01
+    ],
+    "PORT_YANBU": [
+      38.06,
+      24.08
+    ],
+    "AP_JED": [
+      39.16,
+      21.68
+    ],
+    "AP_DMM": [
+      49.8,
+      26.47
+    ],
+    "PORT_SALALAH": [
+      54,
+      16.94
+    ],
+    "PORT_MUSCAT": [
+      58.57,
+      23.63
+    ],
+    "PORT_DUQM": [
+      57.71,
+      19.67
+    ],
+    "AP_MCT": [
+      58.28,
+      23.59
+    ],
+    "AP_SLL": [
+      54.09,
+      17.04
+    ],
+    "PORT_DJIBOUTI": [
+      43.13,
+      11.6
+    ],
+    "PORT_BERBERA": [
+      45.01,
+      10.44
+    ],
+    "AP_ADD": [
+      38.8,
+      8.98
+    ],
+    "PORT_IZMIR": [
+      27.14,
+      38.44
+    ],
+    "AP_SAW": [
+      29.31,
+      40.9
+    ],
+    "AP_ESB": [
+      32.99,
+      40.13
+    ],
+    "PORT_AQABA": [
+      34.99,
+      29.52
+    ],
+    "AP_AMM": [
+      35.99,
+      31.72
+    ],
+    "PORT_ALEXANDRIA": [
+      29.88,
+      31.19
+    ],
+    "PORT_SUEZ": [
+      32.56,
+      29.95
+    ],
+    "PORT_DAMIETTA": [
+      31.76,
+      31.46
+    ],
+    "PORT_SHUAIBA": [
+      48.16,
+      29.04
+    ],
+    "PORT_CAPETOWN": [
+      18.43,
+      -33.91
+    ],
+    "PORT_NGQURA": [
+      25.69,
+      -33.8
+    ],
+    "PORT_PORTELIZABETH": [
+      25.63,
+      -33.96
+    ],
+    "AP_CPT": [
+      18.6,
+      -33.97
+    ],
+    "AP_DUR": [
+      31.12,
+      -29.61
+    ]
   }
 }

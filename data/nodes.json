@@ -5,6 +5,9 @@
   "name_zh": "深圳",
   "name_en": "Shenzhen",
   "country": "CN",
+  "region": "eastAsia",
+  "lon": 114.06,
+  "lat": 22.54,
   "aliases": [
    "Shenzhen",
    "SZ"
@@ -16,6 +19,9 @@
   "name_zh": "香港",
   "name_en": "Hong Kong",
   "country": "HK",
+  "region": "eastAsia",
+  "lon": 114.17,
+  "lat": 22.32,
   "aliases": [
    "Hong Kong",
    "HKG"
@@ -27,6 +33,9 @@
   "name_zh": "广州",
   "name_en": "Guangzhou",
   "country": "CN",
+  "region": "eastAsia",
+  "lon": 113.26,
+  "lat": 23.13,
   "aliases": [
    "Guangzhou",
    "GZ"
@@ -38,6 +47,9 @@
   "name_zh": "迪拜",
   "name_en": "Dubai",
   "country": "AE",
+  "region": "middleEast",
+  "lon": 55.27,
+  "lat": 25.2,
   "aliases": [
    "Dubai"
   ]
@@ -48,6 +60,9 @@
   "name_zh": "阿姆斯特丹",
   "name_en": "Amsterdam",
   "country": "NL",
+  "region": "europe",
+  "lon": 4.9,
+  "lat": 52.37,
   "aliases": [
    "Amsterdam"
   ]
@@ -58,6 +73,9 @@
   "name_zh": "布达佩斯",
   "name_en": "Budapest",
   "country": "HU",
+  "region": "europe",
+  "lon": 19.04,
+  "lat": 47.5,
   "aliases": [
    "Budapest"
   ]
@@ -68,6 +86,9 @@
   "name_zh": "伊斯坦布尔",
   "name_en": "Istanbul",
   "country": "TR",
+  "region": "middleEast",
+  "lon": 28.98,
+  "lat": 41.01,
   "aliases": [
    "Istanbul"
   ]
@@ -78,6 +99,9 @@
   "name_zh": "伦敦",
   "name_en": "London",
   "country": "GB",
+  "region": "europe",
+  "lon": -0.13,
+  "lat": 51.51,
   "aliases": [
    "London"
   ]
@@ -88,6 +112,9 @@
   "name_zh": "马德里",
   "name_en": "Madrid",
   "country": "ES",
+  "region": "europe",
+  "lon": -3.7,
+  "lat": 40.42,
   "aliases": [
    "Madrid"
   ]
@@ -98,6 +125,9 @@
   "name_zh": "罗马",
   "name_en": "Rome",
   "country": "IT",
+  "region": "europe",
+  "lon": 12.5,
+  "lat": 41.9,
   "aliases": [
    "Rome",
    "Roma"
@@ -109,6 +139,9 @@
   "name_zh": "华沙",
   "name_en": "Warsaw",
   "country": "PL",
+  "region": "europe",
+  "lon": 21.01,
+  "lat": 52.23,
   "aliases": [
    "Warsaw"
   ]
@@ -119,6 +152,9 @@
   "name_zh": "约翰内斯堡",
   "name_en": "Johannesburg",
   "country": "ZA",
+  "region": "southernAfrica",
+  "lon": 28.05,
+  "lat": -26.2,
   "aliases": [
    "Johannesburg",
    "Joburg"
@@ -130,6 +166,9 @@
   "name_zh": "利雅得",
   "name_en": "Riyadh",
   "country": "SA",
+  "region": "middleEast",
+  "lon": 46.68,
+  "lat": 24.71,
   "aliases": [
    "Riyadh"
   ]
@@ -140,6 +179,9 @@
   "name_zh": "开罗",
   "name_en": "Cairo",
   "country": "EG",
+  "region": "middleEast",
+  "lon": 31.24,
+  "lat": 30.04,
   "aliases": [
    "Cairo"
   ]
@@ -150,6 +192,9 @@
   "name_zh": "科威特城",
   "name_en": "Kuwait City",
   "country": "KW",
+  "region": "middleEast",
+  "lon": 47.98,
+  "lat": 29.38,
   "aliases": [
    "Kuwait City"
   ]
@@ -160,6 +205,9 @@
   "name_zh": "多哈",
   "name_en": "Doha",
   "country": "QA",
+  "region": "middleEast",
+  "lon": 51.53,
+  "lat": 25.29,
   "aliases": [
    "Doha"
   ]
@@ -170,6 +218,9 @@
   "name_zh": "墨西哥城",
   "name_en": "Mexico City",
   "country": "MX",
+  "region": "northAmerica",
+  "lon": -99.13,
+  "lat": 19.43,
   "aliases": [
    "Mexico City",
    "CDMX"
@@ -181,6 +232,9 @@
   "name_zh": "波哥大",
   "name_en": "Bogota",
   "country": "CO",
+  "region": "southAmerica",
+  "lon": -74.07,
+  "lat": 4.71,
   "aliases": [
    "Bogota",
    "Bogotá"
@@ -192,6 +246,9 @@
   "name_zh": "圣地亚哥",
   "name_en": "Santiago",
   "country": "CL",
+  "region": "southAmerica",
+  "lon": -70.67,
+  "lat": -33.45,
   "aliases": [
    "Santiago de Chile"
   ]
@@ -202,6 +259,9 @@
   "name_zh": "利马",
   "name_en": "Lima",
   "country": "PE",
+  "region": "southAmerica",
+  "lon": -77.04,
+  "lat": -12.05,
   "aliases": [
    "Lima"
   ]
@@ -212,6 +272,9 @@
   "name_zh": "圣保罗",
   "name_en": "Sao Paulo",
   "country": "BR",
+  "region": "southAmerica",
+  "lon": -46.63,
+  "lat": -23.55,
   "aliases": [
    "São Paulo",
    "Sao Paulo"
@@ -223,6 +286,9 @@
   "name_zh": "莫斯科",
   "name_en": "Moscow",
   "country": "RU",
+  "region": "europe",
+  "lon": 37.62,
+  "lat": 55.76,
   "aliases": [
    "Moscow"
   ]
@@ -233,6 +299,9 @@
   "name_zh": "吉隆坡",
   "name_en": "Kuala Lumpur",
   "country": "MY",
+  "region": "southeastAsia",
+  "lon": 101.69,
+  "lat": 3.14,
   "aliases": [
    "Kuala Lumpur",
    "KL"
@@ -244,6 +313,9 @@
   "name_zh": "马尼拉",
   "name_en": "Manila",
   "country": "PH",
+  "region": "southeastAsia",
+  "lon": 120.98,
+  "lat": 14.6,
   "aliases": [
    "Manila"
   ]
@@ -254,6 +326,9 @@
   "name_zh": "曼谷",
   "name_en": "Bangkok",
   "country": "TH",
+  "region": "southeastAsia",
+  "lon": 100.5,
+  "lat": 13.76,
   "aliases": [
    "Bangkok"
   ]
@@ -264,6 +339,9 @@
   "name_zh": "雅加达",
   "name_en": "Jakarta",
   "country": "ID",
+  "region": "southeastAsia",
+  "lon": 106.85,
+  "lat": -6.21,
   "aliases": [
    "Jakarta"
   ]
@@ -274,6 +352,9 @@
   "name_zh": "东京",
   "name_en": "Tokyo",
   "country": "JP",
+  "region": "eastAsia",
+  "lon": 139.69,
+  "lat": 35.69,
   "aliases": [
    "Tokyo"
   ]
@@ -284,9 +365,51 @@
   "name_zh": "巴淡岛",
   "name_en": "Batam",
   "country": "ID",
+  "region": "southeastAsia",
+  "lon": 104.03,
+  "lat": 1.13,
   "aliases": [
    "Batam",
    "Batam Island"
+  ]
+ },
+ {
+  "id": "CITY_MCT",
+  "type": "city",
+  "name_zh": "马斯喀特",
+  "name_en": "Muscat",
+  "country": "OM",
+  "region": "middleEast",
+  "lon": 58.41,
+  "lat": 23.59,
+  "aliases": [
+   "Muscat"
+  ]
+ },
+ {
+  "id": "CITY_ADD",
+  "type": "city",
+  "name_zh": "亚的斯亚贝巴",
+  "name_en": "Addis Ababa",
+  "country": "ET",
+  "region": "africa",
+  "lon": 38.75,
+  "lat": 9.03,
+  "aliases": [
+   "Addis Ababa"
+  ]
+ },
+ {
+  "id": "CITY_AMM",
+  "type": "city",
+  "name_zh": "安曼",
+  "name_en": "Amman",
+  "country": "JO",
+  "region": "middleEast",
+  "lon": 35.93,
+  "lat": 31.95,
+  "aliases": [
+   "Amman"
   ]
  },
  {
@@ -295,6 +418,9 @@
   "name_zh": "中国大陆",
   "name_en": "China (mainland)",
   "country": "CN",
+  "region": "eastAsia",
+  "lon": 104.2,
+  "lat": 35.86,
   "aliases": [
    "China",
    "中国"
@@ -306,6 +432,9 @@
   "name_zh": "中国香港",
   "name_en": "Hong Kong SAR",
   "country": "HK",
+  "region": "eastAsia",
+  "lon": 114.17,
+  "lat": 22.32,
   "aliases": [
    "Hong Kong"
   ]
@@ -316,6 +445,9 @@
   "name_zh": "阿联酋",
   "name_en": "UAE",
   "country": "AE",
+  "region": "middleEast",
+  "lon": 53.85,
+  "lat": 23.42,
   "aliases": [
    "United Arab Emirates"
   ]
@@ -326,6 +458,9 @@
   "name_zh": "荷兰",
   "name_en": "Netherlands",
   "country": "NL",
+  "region": "europe",
+  "lon": 5.29,
+  "lat": 52.13,
   "aliases": []
  },
  {
@@ -334,6 +469,9 @@
   "name_zh": "匈牙利",
   "name_en": "Hungary",
   "country": "HU",
+  "region": "europe",
+  "lon": 19.5,
+  "lat": 47.16,
   "aliases": []
  },
  {
@@ -342,6 +480,9 @@
   "name_zh": "土耳其",
   "name_en": "Türkiye",
   "country": "TR",
+  "region": "middleEast",
+  "lon": 35.24,
+  "lat": 38.96,
   "aliases": [
    "Turkey"
   ]
@@ -352,6 +493,9 @@
   "name_zh": "英国",
   "name_en": "United Kingdom",
   "country": "GB",
+  "region": "europe",
+  "lon": -3.44,
+  "lat": 55.38,
   "aliases": [
    "UK",
    "Britain"
@@ -363,6 +507,9 @@
   "name_zh": "西班牙",
   "name_en": "Spain",
   "country": "ES",
+  "region": "europe",
+  "lon": -3.75,
+  "lat": 40.46,
   "aliases": []
  },
  {
@@ -371,6 +518,9 @@
   "name_zh": "意大利",
   "name_en": "Italy",
   "country": "IT",
+  "region": "europe",
+  "lon": 12.57,
+  "lat": 41.87,
   "aliases": []
  },
  {
@@ -379,6 +529,9 @@
   "name_zh": "波兰",
   "name_en": "Poland",
   "country": "PL",
+  "region": "europe",
+  "lon": 19.15,
+  "lat": 51.92,
   "aliases": []
  },
  {
@@ -387,6 +540,9 @@
   "name_zh": "南非",
   "name_en": "South Africa",
   "country": "ZA",
+  "region": "southernAfrica",
+  "lon": 22.94,
+  "lat": -30.56,
   "aliases": []
  },
  {
@@ -395,6 +551,9 @@
   "name_zh": "沙特阿拉伯",
   "name_en": "Saudi Arabia",
   "country": "SA",
+  "region": "middleEast",
+  "lon": 45.08,
+  "lat": 23.89,
   "aliases": [
    "Saudi"
   ]
@@ -405,6 +564,9 @@
   "name_zh": "埃及",
   "name_en": "Egypt",
   "country": "EG",
+  "region": "middleEast",
+  "lon": 30.8,
+  "lat": 26.82,
   "aliases": []
  },
  {
@@ -413,6 +575,9 @@
   "name_zh": "科威特",
   "name_en": "Kuwait",
   "country": "KW",
+  "region": "middleEast",
+  "lon": 47.48,
+  "lat": 29.31,
   "aliases": []
  },
  {
@@ -421,6 +586,9 @@
   "name_zh": "卡塔尔",
   "name_en": "Qatar",
   "country": "QA",
+  "region": "middleEast",
+  "lon": 51.18,
+  "lat": 25.35,
   "aliases": []
  },
  {
@@ -429,6 +597,9 @@
   "name_zh": "墨西哥",
   "name_en": "Mexico",
   "country": "MX",
+  "region": "northAmerica",
+  "lon": -102.55,
+  "lat": 23.63,
   "aliases": []
  },
  {
@@ -437,6 +608,9 @@
   "name_zh": "哥伦比亚",
   "name_en": "Colombia",
   "country": "CO",
+  "region": "southAmerica",
+  "lon": -74.3,
+  "lat": 4.57,
   "aliases": []
  },
  {
@@ -445,6 +619,9 @@
   "name_zh": "智利",
   "name_en": "Chile",
   "country": "CL",
+  "region": "southAmerica",
+  "lon": -71.54,
+  "lat": -35.68,
   "aliases": []
  },
  {
@@ -453,6 +630,9 @@
   "name_zh": "秘鲁",
   "name_en": "Peru",
   "country": "PE",
+  "region": "southAmerica",
+  "lon": -75.02,
+  "lat": -9.19,
   "aliases": []
  },
  {
@@ -461,6 +641,9 @@
   "name_zh": "巴西",
   "name_en": "Brazil",
   "country": "BR",
+  "region": "southAmerica",
+  "lon": -51.93,
+  "lat": -14.24,
   "aliases": []
  },
  {
@@ -469,6 +652,9 @@
   "name_zh": "俄罗斯",
   "name_en": "Russia",
   "country": "RU",
+  "region": "europe",
+  "lon": 44,
+  "lat": 56.5,
   "aliases": []
  },
  {
@@ -477,6 +663,9 @@
   "name_zh": "马来西亚",
   "name_en": "Malaysia",
   "country": "MY",
+  "region": "southeastAsia",
+  "lon": 101.98,
+  "lat": 4.21,
   "aliases": []
  },
  {
@@ -485,6 +674,9 @@
   "name_zh": "菲律宾",
   "name_en": "Philippines",
   "country": "PH",
+  "region": "southeastAsia",
+  "lon": 121.77,
+  "lat": 12.88,
   "aliases": []
  },
  {
@@ -493,6 +685,9 @@
   "name_zh": "泰国",
   "name_en": "Thailand",
   "country": "TH",
+  "region": "southeastAsia",
+  "lon": 100.99,
+  "lat": 15.87,
   "aliases": []
  },
  {
@@ -501,6 +696,9 @@
   "name_zh": "印度尼西亚",
   "name_en": "Indonesia",
   "country": "ID",
+  "region": "southeastAsia",
+  "lon": 113.92,
+  "lat": -0.79,
   "aliases": [
    "Indonesia"
   ]
@@ -511,6 +709,9 @@
   "name_zh": "日本",
   "name_en": "Japan",
   "country": "JP",
+  "region": "eastAsia",
+  "lon": 138.25,
+  "lat": 36.2,
   "aliases": []
  },
  {
@@ -519,6 +720,9 @@
   "name_zh": "哈萨克斯坦",
   "name_en": "Kazakhstan",
   "country": "KZ",
+  "region": "asia",
+  "lon": 66.92,
+  "lat": 48.02,
   "aliases": []
  },
  {
@@ -527,6 +731,9 @@
   "name_zh": "白俄罗斯",
   "name_en": "Belarus",
   "country": "BY",
+  "region": "europe",
+  "lon": 27.95,
+  "lat": 53.71,
   "aliases": []
  },
  {
@@ -535,6 +742,9 @@
   "name_zh": "阿塞拜疆",
   "name_en": "Azerbaijan",
   "country": "AZ",
+  "region": "asia",
+  "lon": 47.58,
+  "lat": 40.14,
   "aliases": []
  },
  {
@@ -543,6 +753,9 @@
   "name_zh": "格鲁吉亚",
   "name_en": "Georgia",
   "country": "GE",
+  "region": "asia",
+  "lon": 43.36,
+  "lat": 42.32,
   "aliases": []
  },
  {
@@ -551,6 +764,9 @@
   "name_zh": "斯洛伐克",
   "name_en": "Slovakia",
   "country": "SK",
+  "region": "europe",
+  "lon": 19.7,
+  "lat": 48.67,
   "aliases": []
  },
  {
@@ -559,6 +775,9 @@
   "name_zh": "德国",
   "name_en": "Germany",
   "country": "DE",
+  "region": "europe",
+  "lon": 10.45,
+  "lat": 51.17,
   "aliases": []
  },
  {
@@ -567,6 +786,9 @@
   "name_zh": "斯洛文尼亚",
   "name_en": "Slovenia",
   "country": "SI",
+  "region": "europe",
+  "lon": 15,
+  "lat": 46.15,
   "aliases": []
  },
  {
@@ -575,6 +797,9 @@
   "name_zh": "希腊",
   "name_en": "Greece",
   "country": "GR",
+  "region": "europe",
+  "lon": 21.82,
+  "lat": 39.07,
   "aliases": []
  },
  {
@@ -583,6 +808,9 @@
   "name_zh": "北马其顿",
   "name_en": "North Macedonia",
   "country": "MK",
+  "region": "europe",
+  "lon": 21.75,
+  "lat": 41.61,
   "aliases": []
  },
  {
@@ -591,6 +819,9 @@
   "name_zh": "塞尔维亚",
   "name_en": "Serbia",
   "country": "RS",
+  "region": "europe",
+  "lon": 21.01,
+  "lat": 44.02,
   "aliases": []
  },
  {
@@ -599,14 +830,9 @@
   "name_zh": "保加利亚",
   "name_en": "Bulgaria",
   "country": "BG",
-  "aliases": []
- },
- {
-  "id": "CTY_MZ",
-  "type": "country",
-  "name_zh": "莫桑比克",
-  "name_en": "Mozambique",
-  "country": "MZ",
+  "region": "europe",
+  "lon": 25.49,
+  "lat": 42.73,
   "aliases": []
  },
  {
@@ -615,6 +841,69 @@
   "name_zh": "新加坡",
   "name_en": "Singapore",
   "country": "SG",
+  "region": "southeastAsia",
+  "lon": 103.82,
+  "lat": 1.35,
+  "aliases": []
+ },
+ {
+  "id": "CTY_OM",
+  "type": "country",
+  "name_zh": "阿曼",
+  "name_en": "Oman",
+  "country": "OM",
+  "region": "middleEast",
+  "lon": 55.98,
+  "lat": 21.47,
+  "aliases": []
+ },
+ {
+  "id": "CTY_ET",
+  "type": "country",
+  "name_zh": "埃塞俄比亚",
+  "name_en": "Ethiopia",
+  "country": "ET",
+  "region": "africa",
+  "lon": 40.49,
+  "lat": 9.15,
+  "aliases": []
+ },
+ {
+  "id": "CTY_DJ",
+  "type": "country",
+  "name_zh": "吉布提",
+  "name_en": "Djibouti",
+  "country": "DJ",
+  "region": "africa",
+  "lon": 42.59,
+  "lat": 11.83,
+  "aliases": [
+   "Djibouti"
+  ]
+ },
+ {
+  "id": "CTY_SO",
+  "type": "country",
+  "name_zh": "索马里",
+  "name_en": "Somalia",
+  "country": "SO",
+  "region": "africa",
+  "lon": 46.2,
+  "lat": 5.15,
+  "aliases": [
+   "Somalia",
+   "Somaliland"
+  ]
+ },
+ {
+  "id": "CTY_JO",
+  "type": "country",
+  "name_zh": "约旦",
+  "name_en": "Jordan",
+  "country": "JO",
+  "region": "middleEast",
+  "lon": 36.24,
+  "lat": 30.59,
   "aliases": []
  },
  {
@@ -623,6 +912,9 @@
   "name_zh": "马六甲海峡",
   "name_en": "Strait of Malacca",
   "country": "",
+  "region": "southeastAsia",
+  "lon": 101.5,
+  "lat": 2.5,
   "aliases": [
    "Malacca"
   ]
@@ -633,6 +925,9 @@
   "name_zh": "新加坡海峡",
   "name_en": "Singapore Strait",
   "country": "",
+  "region": "southeastAsia",
+  "lon": 103.85,
+  "lat": 1.22,
   "aliases": []
  },
  {
@@ -641,6 +936,9 @@
   "name_zh": "巽他海峡",
   "name_en": "Sunda Strait",
   "country": "",
+  "region": "southeastAsia",
+  "lon": 105.8,
+  "lat": -6,
   "aliases": [
    "Sunda"
   ]
@@ -651,6 +949,9 @@
   "name_zh": "卡里马塔海峡",
   "name_en": "Karimata Strait",
   "country": "",
+  "region": "southeastAsia",
+  "lon": 108.8,
+  "lat": -2.2,
   "aliases": []
  },
  {
@@ -659,6 +960,9 @@
   "name_zh": "台湾海峡",
   "name_en": "Taiwan Strait",
   "country": "",
+  "region": "eastAsia",
+  "lon": 119.5,
+  "lat": 24.5,
   "aliases": [
    "Taiwan Strait"
   ]
@@ -669,6 +973,9 @@
   "name_zh": "巴士海峡/吕宋海峡",
   "name_en": "Luzon Strait / Bashi Channel",
   "country": "",
+  "region": "southeastAsia",
+  "lon": 121.5,
+  "lat": 20.5,
   "aliases": [
    "Bashi Channel"
   ]
@@ -679,6 +986,9 @@
   "name_zh": "朝鲜海峡/对马海峡",
   "name_en": "Korea Strait",
   "country": "",
+  "region": "eastAsia",
+  "lon": 129.5,
+  "lat": 34.5,
   "aliases": [
    "Tsushima Strait"
   ]
@@ -689,6 +999,9 @@
   "name_zh": "曼德海峡",
   "name_en": "Bab-el-Mandeb",
   "country": "",
+  "region": "middleEast",
+  "lon": 43.33,
+  "lat": 12.58,
   "aliases": [
    "Bab el-Mandeb",
    "红海南口"
@@ -700,6 +1013,9 @@
   "name_zh": "苏伊士运河",
   "name_en": "Suez Canal",
   "country": "",
+  "region": "middleEast",
+  "lon": 32.35,
+  "lat": 30.58,
   "aliases": [
    "Suez"
   ]
@@ -710,6 +1026,9 @@
   "name_zh": "霍尔木兹海峡",
   "name_en": "Strait of Hormuz",
   "country": "",
+  "region": "middleEast",
+  "lon": 56.25,
+  "lat": 26.56,
   "aliases": [
    "Hormuz",
    "Ormuz"
@@ -721,6 +1040,9 @@
   "name_zh": "直布罗陀海峡",
   "name_en": "Strait of Gibraltar",
   "country": "",
+  "region": "europe",
+  "lon": -5.5,
+  "lat": 35.96,
   "aliases": [
    "Gibraltar"
   ]
@@ -731,6 +1053,9 @@
   "name_zh": "多佛尔海峡/英吉利海峡东口",
   "name_en": "Dover Strait",
   "country": "",
+  "region": "europe",
+  "lon": 1.45,
+  "lat": 51.05,
   "aliases": [
    "English Channel",
    "Dover"
@@ -742,6 +1067,9 @@
   "name_zh": "丹麦海峡/波罗的海入口",
   "name_en": "Danish Straits",
   "country": "",
+  "region": "europe",
+  "lon": 11,
+  "lat": 55.6,
   "aliases": [
    "Great Belt",
    "Øresund",
@@ -754,6 +1082,9 @@
   "name_zh": "达达尼尔海峡",
   "name_en": "Dardanelles",
   "country": "",
+  "region": "europe",
+  "lon": 26.4,
+  "lat": 40.15,
   "aliases": []
  },
  {
@@ -762,6 +1093,9 @@
   "name_zh": "博斯普鲁斯海峡",
   "name_en": "Bosphorus",
   "country": "",
+  "region": "europe",
+  "lon": 29.07,
+  "lat": 41.12,
   "aliases": [
    "Bosporus"
   ]
@@ -772,6 +1106,9 @@
   "name_zh": "巴拿马运河",
   "name_en": "Panama Canal",
   "country": "",
+  "region": "northAmerica",
+  "lon": -79.68,
+  "lat": 9.08,
   "aliases": [
    "Panama"
   ]
@@ -782,6 +1119,9 @@
   "name_zh": "好望角（绕行）",
   "name_en": "Cape of Good Hope",
   "country": "",
+  "region": "southernAfrica",
+  "lon": 18.47,
+  "lat": -34.36,
   "aliases": [
    "Cape route",
    "Cape of Good Hope"
@@ -793,6 +1133,9 @@
   "name_zh": "南海",
   "name_en": "South China Sea",
   "country": "",
+  "region": "southeastAsia",
+  "lon": 114,
+  "lat": 12,
   "aliases": [
    "SCS"
   ]
@@ -803,6 +1146,9 @@
   "name_zh": "珠江口水域",
   "name_en": "Pearl River Estuary",
   "country": "",
+  "region": "eastAsia",
+  "lon": 113.75,
+  "lat": 22.3,
   "aliases": [
    "Pearl River Delta waters"
   ]
@@ -813,6 +1159,9 @@
   "name_zh": "红海",
   "name_en": "Red Sea",
   "country": "",
+  "region": "middleEast",
+  "lon": 38.5,
+  "lat": 20,
   "aliases": []
  },
  {
@@ -821,6 +1170,9 @@
   "name_zh": "地中海",
   "name_en": "Mediterranean",
   "country": "",
+  "region": "europe",
+  "lon": 18,
+  "lat": 35,
   "aliases": []
  },
  {
@@ -829,6 +1181,9 @@
   "name_zh": "黑海",
   "name_en": "Black Sea",
   "country": "",
+  "region": "europe",
+  "lon": 34,
+  "lat": 43.3,
   "aliases": []
  },
  {
@@ -837,6 +1192,9 @@
   "name_zh": "太平洋跨洋航线",
   "name_en": "Trans-Pacific",
   "country": "",
+  "region": "westernPacific",
+  "lon": 155,
+  "lat": 22,
   "aliases": [
    "Pacific"
   ]
@@ -847,6 +1205,9 @@
   "name_zh": "里海（阿克套–巴库渡运）",
   "name_en": "Caspian Sea",
   "country": "",
+  "region": "asia",
+  "lon": 50.8,
+  "lat": 41.5,
   "aliases": [
    "Transcaspian"
   ]
@@ -857,6 +1218,9 @@
   "name_zh": "俄罗斯空域",
   "name_en": "Russian airspace",
   "country": "RU",
+  "region": "europe",
+  "lon": 50,
+  "lat": 58,
   "aliases": []
  },
  {
@@ -865,6 +1229,9 @@
   "name_zh": "中东空域（海湾/伊朗/伊拉克/红海上空）",
   "name_en": "Middle East airspace",
   "country": "",
+  "region": "middleEast",
+  "lon": 46,
+  "lat": 28,
   "aliases": [
    "Gulf airspace"
   ]
@@ -872,92 +1239,130 @@
  {
   "id": "PORT_YANTIAN",
   "type": "port",
+  "code": "CNYTN",
   "name_zh": "盐田港",
   "name_en": "Yantian",
   "country": "CN",
+  "region": "eastAsia",
+  "lon": 114.27,
+  "lat": 22.57,
   "aliases": [
-   "Yantian"
-  ]
+   "Yantian",
+   "Yantian Port",
+   "CNYTN",
+   "盐田"
+  ],
+  "verified": true
  },
  {
   "id": "PORT_SHEKOU",
   "type": "port",
+  "code": "CNSHK",
   "name_zh": "蛇口港",
   "name_en": "Shekou",
   "country": "CN",
+  "region": "eastAsia",
+  "lon": 113.9,
+  "lat": 22.48,
   "aliases": [
-   "Shekou"
-  ]
+   "Shekou",
+   "Shekou Port",
+   "CNSHK",
+   "蛇口"
+  ],
+  "verified": true
  },
  {
   "id": "PORT_NANSHA",
   "type": "port",
+  "code": "CNNSA",
   "name_zh": "南沙港",
   "name_en": "Nansha",
   "country": "CN",
+  "region": "eastAsia",
+  "lon": 113.66,
+  "lat": 22.66,
   "aliases": [
-   "Nansha"
-  ]
- },
- {
-  "id": "PORT_KWAITSING",
-  "type": "port",
-  "name_zh": "香港葵涌货柜码头",
-  "name_en": "Hong Kong (Kwai Tsing)",
-  "country": "HK",
-  "aliases": [
-   "Kwai Tsing",
-   "HK port"
-  ]
+   "Nansha",
+   "Nansha Port",
+   "CNNSA",
+   "南沙"
+  ],
+  "verified": true
  },
  {
   "id": "PORT_JEBELALI",
   "type": "port",
+  "code": "AEJEA",
   "name_zh": "杰贝阿里港",
   "name_en": "Jebel Ali",
   "country": "AE",
+  "region": "middleEast",
+  "lon": 55.05,
+  "lat": 25,
   "aliases": [
-   "Jebel Ali"
-  ]
- },
- {
-  "id": "PORT_KHORFAKKAN",
-  "type": "port",
-  "name_zh": "豪尔费坎港（霍尔木兹外）",
-  "name_en": "Khor Fakkan",
-  "country": "AE",
-  "aliases": []
+   "Jebel Ali",
+   "Jebel Ali Port",
+   "Port of Jebel Ali",
+   "AEJEA",
+   "杰贝阿里"
+  ],
+  "verified": true
  },
  {
   "id": "PORT_DAMMAM",
   "type": "port",
+  "code": "SADMM",
   "name_zh": "达曼港",
   "name_en": "Dammam (King Abdulaziz Port)",
   "country": "SA",
+  "region": "middleEast",
+  "lon": 50.19,
+  "lat": 26.47,
   "aliases": [
-   "Dammam"
-  ]
+   "Dammam",
+   "Dammam Port",
+   "King Abdulaziz Port",
+   "SADMM",
+   "达曼"
+  ],
+  "verified": true
  },
  {
   "id": "PORT_JEDDAH",
   "type": "port",
+  "code": "SAJED",
   "name_zh": "吉达港",
   "name_en": "Jeddah Islamic Port",
   "country": "SA",
+  "region": "middleEast",
+  "lon": 39.17,
+  "lat": 21.49,
   "aliases": [
-   "Jeddah"
-  ]
+   "Jeddah",
+   "Jeddah Port",
+   "SAJED",
+   "吉达"
+  ],
+  "verified": true
  },
  {
   "id": "PORT_SHUWAIKH",
   "type": "port",
+  "code": "KWSWK",
   "name_zh": "科威特舒威赫港",
-  "name_en": "Shuwaikh",
+  "name_en": "Port of Shuwaikh",
   "country": "KW",
+  "region": "middleEast",
+  "lon": 47.92,
+  "lat": 29.36,
   "aliases": [
    "Shuwaikh",
-   "Shuaiba"
-  ]
+   "Shuwaikh Port",
+   "KWSWK",
+   "舒威赫"
+  ],
+  "verified": true
  },
  {
   "id": "PORT_HAMAD",
@@ -965,45 +1370,70 @@
   "name_zh": "哈马德港",
   "name_en": "Hamad Port",
   "country": "QA",
+  "region": "middleEast",
+  "lon": 51.61,
+  "lat": 25.03,
   "aliases": [
    "Hamad"
   ]
  },
  {
-  "id": "PORT_AINSOKHNA",
-  "type": "port",
-  "name_zh": "艾因苏赫纳港",
-  "name_en": "Ain Sokhna",
-  "country": "EG",
-  "aliases": [
-   "Sokhna"
-  ]
- },
- {
   "id": "PORT_PORTSAID",
   "type": "port",
+  "code": "EGPSD",
   "name_zh": "塞得港",
   "name_en": "Port Said",
   "country": "EG",
-  "aliases": []
+  "region": "middleEast",
+  "lon": 32.31,
+  "lat": 31.26,
+  "aliases": [
+   "Port Said",
+   "East Port Said",
+   "EGPSD",
+   "塞得港"
+  ],
+  "verified": true
  },
  {
   "id": "PORT_AMBARLI",
   "type": "port",
-  "name_zh": "安巴尔勒港（伊斯坦布尔）",
-  "name_en": "Ambarli",
+  "code": "TRIST",
+  "name_zh": "伊斯坦布尔港（安巴尔勒）",
+  "name_en": "Istanbul Port (Ambarli)",
   "country": "TR",
+  "region": "middleEast",
+  "lon": 28.68,
+  "lat": 40.97,
   "aliases": [
-   "Ambarlı"
-  ]
+   "Ambarli",
+   "Ambarlı",
+   "Istanbul Port",
+   "Port of Istanbul",
+   "Haydarpasa",
+   "TRIST",
+   "安巴尔勒",
+   "伊斯坦布尔港"
+  ],
+  "verified": true
  },
  {
   "id": "PORT_MERSIN",
   "type": "port",
+  "code": "TRMER",
   "name_zh": "梅尔辛港",
-  "name_en": "Mersin",
+  "name_en": "Port of Mersin",
   "country": "TR",
-  "aliases": []
+  "region": "middleEast",
+  "lon": 34.65,
+  "lat": 36.8,
+  "aliases": [
+   "Mersin",
+   "Mersin Port",
+   "TRMER",
+   "梅尔辛"
+  ],
+  "verified": true
  },
  {
   "id": "PORT_ROTTERDAM",
@@ -1011,6 +1441,9 @@
   "name_zh": "鹿特丹港",
   "name_en": "Rotterdam",
   "country": "NL",
+  "region": "europe",
+  "lon": 4.48,
+  "lat": 51.95,
   "aliases": [
    "Rotterdam"
   ]
@@ -1021,6 +1454,9 @@
   "name_zh": "费利克斯托港",
   "name_en": "Felixstowe",
   "country": "GB",
+  "region": "europe",
+  "lon": 1.35,
+  "lat": 51.96,
   "aliases": []
  },
  {
@@ -1029,6 +1465,9 @@
   "name_zh": "伦敦门户港",
   "name_en": "London Gateway",
   "country": "GB",
+  "region": "europe",
+  "lon": 0.47,
+  "lat": 51.5,
   "aliases": []
  },
  {
@@ -1037,6 +1476,9 @@
   "name_zh": "南安普敦港",
   "name_en": "Southampton",
   "country": "GB",
+  "region": "europe",
+  "lon": -1.41,
+  "lat": 50.9,
   "aliases": []
  },
  {
@@ -1045,6 +1487,9 @@
   "name_zh": "瓦伦西亚港",
   "name_en": "Valencia",
   "country": "ES",
+  "region": "europe",
+  "lon": -0.32,
+  "lat": 39.44,
   "aliases": []
  },
  {
@@ -1053,6 +1498,9 @@
   "name_zh": "巴塞罗那港",
   "name_en": "Barcelona",
   "country": "ES",
+  "region": "europe",
+  "lon": 2.18,
+  "lat": 41.35,
   "aliases": []
  },
  {
@@ -1061,6 +1509,9 @@
   "name_zh": "阿尔赫西拉斯港",
   "name_en": "Algeciras",
   "country": "ES",
+  "region": "europe",
+  "lon": -5.44,
+  "lat": 36.13,
   "aliases": []
  },
  {
@@ -1069,6 +1520,9 @@
   "name_zh": "热那亚港",
   "name_en": "Genoa",
   "country": "IT",
+  "region": "europe",
+  "lon": 8.92,
+  "lat": 44.41,
   "aliases": [
    "Genova"
   ]
@@ -1079,6 +1533,9 @@
   "name_zh": "奇维塔韦基亚港",
   "name_en": "Civitavecchia",
   "country": "IT",
+  "region": "europe",
+  "lon": 11.79,
+  "lat": 42.09,
   "aliases": []
  },
  {
@@ -1087,6 +1544,9 @@
   "name_zh": "焦亚陶罗港",
   "name_en": "Gioia Tauro",
   "country": "IT",
+  "region": "europe",
+  "lon": 15.9,
+  "lat": 38.43,
   "aliases": []
  },
  {
@@ -1095,6 +1555,9 @@
   "name_zh": "科佩尔港",
   "name_en": "Koper",
   "country": "SI",
+  "region": "europe",
+  "lon": 13.73,
+  "lat": 45.55,
   "aliases": []
  },
  {
@@ -1103,6 +1566,9 @@
   "name_zh": "比雷埃夫斯港",
   "name_en": "Piraeus",
   "country": "GR",
+  "region": "europe",
+  "lon": 23.62,
+  "lat": 37.94,
   "aliases": []
  },
  {
@@ -1111,6 +1577,9 @@
   "name_zh": "汉堡港",
   "name_en": "Hamburg",
   "country": "DE",
+  "region": "europe",
+  "lon": 9.97,
+  "lat": 53.54,
   "aliases": []
  },
  {
@@ -1119,6 +1588,9 @@
   "name_zh": "格但斯克港",
   "name_en": "Gdansk",
   "country": "PL",
+  "region": "europe",
+  "lon": 18.67,
+  "lat": 54.4,
   "aliases": [
    "Gdańsk"
   ]
@@ -1126,18 +1598,20 @@
  {
   "id": "PORT_DURBAN",
   "type": "port",
+  "code": "ZADUR",
   "name_zh": "德班港",
-  "name_en": "Durban",
+  "name_en": "Port of Durban",
   "country": "ZA",
-  "aliases": []
- },
- {
-  "id": "PORT_MAPUTO",
-  "type": "port",
-  "name_zh": "马普托港",
-  "name_en": "Maputo",
-  "country": "MZ",
-  "aliases": []
+  "region": "southernAfrica",
+  "lon": 31.03,
+  "lat": -29.87,
+  "aliases": [
+   "Durban",
+   "Durban Port",
+   "ZADUR",
+   "德班"
+  ],
+  "verified": true
  },
  {
   "id": "PORT_MANZANILLO",
@@ -1145,6 +1619,9 @@
   "name_zh": "曼萨尼约港",
   "name_en": "Manzanillo (MX)",
   "country": "MX",
+  "region": "northAmerica",
+  "lon": -104.31,
+  "lat": 19.06,
   "aliases": []
  },
  {
@@ -1153,6 +1630,9 @@
   "name_zh": "拉萨罗卡德纳斯港",
   "name_en": "Lazaro Cardenas",
   "country": "MX",
+  "region": "northAmerica",
+  "lon": -102.18,
+  "lat": 17.94,
   "aliases": []
  },
  {
@@ -1161,6 +1641,9 @@
   "name_zh": "韦拉克鲁斯港",
   "name_en": "Veracruz",
   "country": "MX",
+  "region": "northAmerica",
+  "lon": -96.13,
+  "lat": 19.2,
   "aliases": []
  },
  {
@@ -1169,6 +1652,9 @@
   "name_zh": "布埃纳文图拉港",
   "name_en": "Buenaventura",
   "country": "CO",
+  "region": "southAmerica",
+  "lon": -77.08,
+  "lat": 3.89,
   "aliases": []
  },
  {
@@ -1177,6 +1663,9 @@
   "name_zh": "卡塔赫纳港",
   "name_en": "Cartagena",
   "country": "CO",
+  "region": "southAmerica",
+  "lon": -75.53,
+  "lat": 10.39,
   "aliases": []
  },
  {
@@ -1185,6 +1674,9 @@
   "name_zh": "圣安东尼奥港（智利）",
   "name_en": "San Antonio (CL)",
   "country": "CL",
+  "region": "southAmerica",
+  "lon": -71.62,
+  "lat": -33.59,
   "aliases": []
  },
  {
@@ -1193,6 +1685,9 @@
   "name_zh": "瓦尔帕莱索港",
   "name_en": "Valparaiso",
   "country": "CL",
+  "region": "southAmerica",
+  "lon": -71.63,
+  "lat": -33.04,
   "aliases": []
  },
  {
@@ -1201,6 +1696,9 @@
   "name_zh": "卡亚俄港",
   "name_en": "Callao",
   "country": "PE",
+  "region": "southAmerica",
+  "lon": -77.15,
+  "lat": -12.05,
   "aliases": []
  },
  {
@@ -1209,6 +1707,9 @@
   "name_zh": "钱凯港",
   "name_en": "Chancay",
   "country": "PE",
+  "region": "southAmerica",
+  "lon": -77.27,
+  "lat": -11.58,
   "aliases": []
  },
  {
@@ -1217,6 +1718,9 @@
   "name_zh": "桑托斯港",
   "name_en": "Santos",
   "country": "BR",
+  "region": "southAmerica",
+  "lon": -46.32,
+  "lat": -23.96,
   "aliases": []
  },
  {
@@ -1225,6 +1729,9 @@
   "name_zh": "巴生港",
   "name_en": "Port Klang",
   "country": "MY",
+  "region": "southeastAsia",
+  "lon": 101.39,
+  "lat": 3,
   "aliases": [
    "Klang"
   ]
@@ -1235,6 +1742,9 @@
   "name_zh": "丹戎帕拉帕斯港",
   "name_en": "Tanjung Pelepas",
   "country": "MY",
+  "region": "southeastAsia",
+  "lon": 103.55,
+  "lat": 1.36,
   "aliases": [
    "PTP"
   ]
@@ -1245,6 +1755,9 @@
   "name_zh": "林查班港",
   "name_en": "Laem Chabang",
   "country": "TH",
+  "region": "southeastAsia",
+  "lon": 100.88,
+  "lat": 13.08,
   "aliases": []
  },
  {
@@ -1253,6 +1766,9 @@
   "name_zh": "曼谷港",
   "name_en": "Bangkok Port",
   "country": "TH",
+  "region": "southeastAsia",
+  "lon": 100.57,
+  "lat": 13.7,
   "aliases": [
    "Khlong Toei"
   ]
@@ -1263,6 +1779,9 @@
   "name_zh": "丹戎普瑞克港",
   "name_en": "Tanjung Priok",
   "country": "ID",
+  "region": "southeastAsia",
+  "lon": 106.88,
+  "lat": -6.1,
   "aliases": []
  },
  {
@@ -1271,6 +1790,9 @@
   "name_zh": "马尼拉港",
   "name_en": "Port of Manila",
   "country": "PH",
+  "region": "southeastAsia",
+  "lon": 120.96,
+  "lat": 14.59,
   "aliases": []
  },
  {
@@ -1279,6 +1801,9 @@
   "name_zh": "八打雁港",
   "name_en": "Batangas",
   "country": "PH",
+  "region": "southeastAsia",
+  "lon": 121.05,
+  "lat": 13.75,
   "aliases": []
  },
  {
@@ -1287,6 +1812,9 @@
   "name_zh": "巴淡岛港（Batu Ampar）",
   "name_en": "Batam (Batu Ampar)",
   "country": "ID",
+  "region": "southeastAsia",
+  "lon": 104.01,
+  "lat": 1.16,
   "aliases": []
  },
  {
@@ -1295,6 +1823,9 @@
   "name_zh": "新加坡港（转运）",
   "name_en": "Port of Singapore",
   "country": "SG",
+  "region": "southeastAsia",
+  "lon": 103.78,
+  "lat": 1.26,
   "aliases": []
  },
  {
@@ -1303,6 +1834,9 @@
   "name_zh": "横滨/东京港",
   "name_en": "Yokohama / Tokyo",
   "country": "JP",
+  "region": "eastAsia",
+  "lon": 139.65,
+  "lat": 35.45,
   "aliases": [
    "Tokyo Bay"
   ]
@@ -1313,6 +1847,9 @@
   "name_zh": "符拉迪沃斯托克/东方港",
   "name_en": "Vladivostok / Vostochny",
   "country": "RU",
+  "region": "europe",
+  "lon": 133.07,
+  "lat": 42.73,
   "aliases": [
    "Vladivostok"
   ]
@@ -1323,6 +1860,9 @@
   "name_zh": "圣彼得堡港",
   "name_en": "St Petersburg",
   "country": "RU",
+  "region": "europe",
+  "lon": 30.22,
+  "lat": 59.89,
   "aliases": []
  },
  {
@@ -1331,78 +1871,588 @@
   "name_zh": "新罗西斯克港",
   "name_en": "Novorossiysk",
   "country": "RU",
+  "region": "europe",
+  "lon": 37.78,
+  "lat": 44.72,
   "aliases": []
+ },
+ {
+  "id": "PORT_CHIWAN",
+  "type": "port",
+  "code": "CNCWN",
+  "name_zh": "赤湾港",
+  "name_en": "Chiwan",
+  "country": "CN",
+  "region": "eastAsia",
+  "lon": 113.89,
+  "lat": 22.47,
+  "aliases": [
+   "Chiwan",
+   "Chiwan Port",
+   "CNCWN",
+   "赤湾"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_MAWAN",
+  "type": "port",
+  "code": "CNMWN",
+  "name_zh": "妈湾港",
+  "name_en": "Mawan",
+  "country": "CN",
+  "region": "eastAsia",
+  "lon": 113.88,
+  "lat": 22.49,
+  "aliases": [
+   "Mawan",
+   "Mawan Port",
+   "CNMWN",
+   "妈湾"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_DACHANBAY",
+  "type": "port",
+  "code": "CNDCB",
+  "name_zh": "大铲湾港",
+  "name_en": "Dachan Bay",
+  "country": "CN",
+  "region": "eastAsia",
+  "lon": 113.86,
+  "lat": 22.53,
+  "aliases": [
+   "Dachan Bay",
+   "Da Chan Bay",
+   "Dachanbay",
+   "CNDCB",
+   "大铲湾"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_HK_HIT",
+  "type": "port",
+  "code": "HKHKG",
+  "name_zh": "香港国际集装箱码头（HIT）",
+  "name_en": "Hongkong International Terminals",
+  "country": "HK",
+  "region": "eastAsia",
+  "lon": 114.12,
+  "lat": 22.34,
+  "aliases": [
+   "Hongkong International Terminals",
+   "Hong Kong International Terminals",
+   "Kwai Tsing",
+   "HKHKG",
+   "香港国际集装箱码头",
+   "香港国际货柜码头",
+   "葵青货柜码头"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_HK_ACT",
+  "type": "port",
+  "code": "HKHKG",
+  "name_zh": "亚洲国际货柜码头（ACT）",
+  "name_en": "Asia Container Terminals",
+  "country": "HK",
+  "region": "eastAsia",
+  "lon": 114.11,
+  "lat": 22.33,
+  "aliases": [
+   "Asia Container Terminals",
+   "Kwai Tsing",
+   "HKHKG",
+   "亚洲国际货柜码头",
+   "亚洲货柜码头"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_KHALIFA",
+  "type": "port",
+  "code": "AEKHL",
+  "name_zh": "哈利法港",
+  "name_en": "Khalifa Port",
+  "country": "AE",
+  "region": "middleEast",
+  "lon": 54.65,
+  "lat": 24.81,
+  "aliases": [
+   "Khalifa Port",
+   "Mina Khalifa",
+   "Abu Dhabi Port",
+   "AEKHL",
+   "哈利法"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_SHARJAH",
+  "type": "port",
+  "code": "AESHJ",
+  "name_zh": "沙迦港（哈立德港）",
+  "name_en": "Sharjah Port",
+  "country": "AE",
+  "region": "middleEast",
+  "lon": 55.37,
+  "lat": 25.36,
+  "aliases": [
+   "Sharjah",
+   "Sharjah Port",
+   "Port Khalid",
+   "AESHJ",
+   "沙迦",
+   "哈立德港"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_JUBAIL",
+  "type": "port",
+  "code": "SAJUB",
+  "name_zh": "朱拜勒港",
+  "name_en": "Jubail Commercial Port",
+  "country": "SA",
+  "region": "middleEast",
+  "lon": 49.68,
+  "lat": 27.01,
+  "aliases": [
+   "Jubail",
+   "Jubail Port",
+   "King Fahd Industrial Port",
+   "SAJUB",
+   "朱拜勒"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_YANBU",
+  "type": "port",
+  "code": "SAYNB",
+  "name_zh": "延布港",
+  "name_en": "Yanbu Commercial Port",
+  "country": "SA",
+  "region": "middleEast",
+  "lon": 38.06,
+  "lat": 24.08,
+  "aliases": [
+   "Yanbu",
+   "Yanbu Port",
+   "SAYNB",
+   "延布"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_SALALAH",
+  "type": "port",
+  "code": "OMSLL",
+  "name_zh": "塞拉莱港",
+  "name_en": "Port of Salalah",
+  "country": "OM",
+  "region": "middleEast",
+  "lon": 54,
+  "lat": 16.94,
+  "aliases": [
+   "Salalah",
+   "Salalah Port",
+   "OMSLL",
+   "塞拉莱"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_MUSCAT",
+  "type": "port",
+  "code": "OMMCT",
+  "name_zh": "马斯喀特港（苏丹卡布斯港）",
+  "name_en": "Port Sultan Qaboos",
+  "country": "OM",
+  "region": "middleEast",
+  "lon": 58.57,
+  "lat": 23.63,
+  "aliases": [
+   "Port Sultan Qaboos",
+   "Sultan Qaboos",
+   "Muscat Port",
+   "Port of Muscat",
+   "OMMCT",
+   "苏丹卡布斯港"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_DUQM",
+  "type": "port",
+  "code": "OMDQM",
+  "name_zh": "杜库姆港",
+  "name_en": "Port of Duqm",
+  "country": "OM",
+  "region": "middleEast",
+  "lon": 57.71,
+  "lat": 19.67,
+  "aliases": [
+   "Port of Duqm",
+   "Duqm Port",
+   "OMDQM",
+   "杜库姆"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_DJIBOUTI",
+  "type": "port",
+  "code": "DJJIB",
+  "name_zh": "吉布提港",
+  "name_en": "Port of Djibouti",
+  "country": "DJ",
+  "region": "africa",
+  "lon": 43.13,
+  "lat": 11.6,
+  "aliases": [
+   "Djibouti Port",
+   "Port of Djibouti",
+   "Doraleh",
+   "Doraleh Container Terminal",
+   "DJJIB",
+   "吉布提港",
+   "多哈雷港"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_BERBERA",
+  "type": "port",
+  "code": "SOBBO",
+  "name_zh": "柏培拉港",
+  "name_en": "Port of Berbera",
+  "country": "SO",
+  "region": "africa",
+  "lon": 45.01,
+  "lat": 10.44,
+  "aliases": [
+   "Berbera",
+   "Berbera Port",
+   "Port of Berbera",
+   "SOBBO",
+   "柏培拉",
+   "柏培拉港"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_IZMIR",
+  "type": "port",
+  "code": "TRIZM",
+  "name_zh": "伊兹密尔港",
+  "name_en": "Port of Izmir",
+  "country": "TR",
+  "region": "middleEast",
+  "lon": 27.14,
+  "lat": 38.44,
+  "aliases": [
+   "Izmir",
+   "İzmir",
+   "Izmir Port",
+   "Alsancak",
+   "Aliaga",
+   "TRIZM",
+   "伊兹密尔"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_AQABA",
+  "type": "port",
+  "code": "JOAQJ",
+  "name_zh": "亚喀巴港",
+  "name_en": "Port of Aqaba",
+  "country": "JO",
+  "region": "middleEast",
+  "lon": 34.99,
+  "lat": 29.52,
+  "aliases": [
+   "Aqaba",
+   "Aqaba Port",
+   "Port of Aqaba",
+   "Aqaba Container Terminal",
+   "JOAQJ",
+   "亚喀巴",
+   "亚喀巴港"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_ALEXANDRIA",
+  "type": "port",
+  "code": "EGALY",
+  "name_zh": "亚历山大港",
+  "name_en": "Port of Alexandria",
+  "country": "EG",
+  "region": "middleEast",
+  "lon": 29.88,
+  "lat": 31.19,
+  "aliases": [
+   "Alexandria",
+   "Alexandria Port",
+   "Dekheila",
+   "El Dekheila",
+   "EGALY",
+   "亚历山大港"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_SUEZ",
+  "type": "port",
+  "code": "EGSUE",
+  "name_zh": "苏伊士港",
+  "name_en": "Port of Suez",
+  "country": "EG",
+  "region": "middleEast",
+  "lon": 32.56,
+  "lat": 29.95,
+  "aliases": [
+   "Port of Suez",
+   "Suez Port",
+   "Port Tawfik",
+   "Adabiya",
+   "EGSUE",
+   "苏伊士港"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_DAMIETTA",
+  "type": "port",
+  "code": "EGDMI",
+  "name_zh": "杜姆亚特港",
+  "name_en": "Port of Damietta",
+  "country": "EG",
+  "region": "middleEast",
+  "lon": 31.76,
+  "lat": 31.46,
+  "aliases": [
+   "Damietta",
+   "Damietta Port",
+   "EGDMI",
+   "杜姆亚特",
+   "杜姆亚特港"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_SHUAIBA",
+  "type": "port",
+  "code": "KWSAA",
+  "name_zh": "科威特舒艾拜港",
+  "name_en": "Port of Shuaiba",
+  "country": "KW",
+  "region": "middleEast",
+  "lon": 48.16,
+  "lat": 29.04,
+  "aliases": [
+   "Shuaiba",
+   "Shuaiba Port",
+   "KWSAA",
+   "舒艾拜",
+   "舒艾拜港"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_CAPETOWN",
+  "type": "port",
+  "code": "ZACPT",
+  "name_zh": "开普敦港",
+  "name_en": "Port of Cape Town",
+  "country": "ZA",
+  "region": "southernAfrica",
+  "lon": 18.43,
+  "lat": -33.91,
+  "aliases": [
+   "Cape Town",
+   "Cape Town Port",
+   "ZACPT",
+   "开普敦",
+   "开普敦港"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_NGQURA",
+  "type": "port",
+  "code": "ZANGQ",
+  "name_zh": "恩古拉港（科加港）",
+  "name_en": "Port of Ngqura",
+  "country": "ZA",
+  "region": "southernAfrica",
+  "lon": 25.69,
+  "lat": -33.8,
+  "aliases": [
+   "Ngqura",
+   "Coega",
+   "Coega Port",
+   "ZANGQ",
+   "恩古拉",
+   "恩古拉港",
+   "科加港"
+  ],
+  "verified": true
+ },
+ {
+  "id": "PORT_PORTELIZABETH",
+  "type": "port",
+  "code": "ZAPPE",
+  "name_zh": "伊丽莎白港（格贝哈港）",
+  "name_en": "Port Elizabeth",
+  "country": "ZA",
+  "region": "southernAfrica",
+  "lon": 25.63,
+  "lat": -33.96,
+  "aliases": [
+   "Port Elizabeth",
+   "Gqeberha",
+   "ZAPPE",
+   "ZAPLZ",
+   "伊丽莎白港",
+   "格贝哈港"
+  ],
+  "verified": true
  },
  {
   "id": "AP_SZX",
   "type": "airport",
+  "code": "SZX",
   "name_zh": "深圳宝安机场",
-  "name_en": "SZX",
+  "name_en": "Shenzhen Bao'an Airport",
   "country": "CN",
+  "region": "eastAsia",
+  "lon": 113.81,
+  "lat": 22.64,
   "aliases": [
-   "Shenzhen Bao'an"
-  ]
+   "Shenzhen Bao'an",
+   "Bao'an Airport",
+   "Shenzhen Airport",
+   "宝安机场"
+  ],
+  "verified": true
  },
  {
   "id": "AP_HKG",
   "type": "airport",
+  "code": "HKG",
   "name_zh": "香港国际机场",
-  "name_en": "HKG",
+  "name_en": "Hong Kong International Airport",
   "country": "HK",
+  "region": "eastAsia",
+  "lon": 113.91,
+  "lat": 22.31,
   "aliases": [
-   "Hong Kong Airport"
-  ]
+   "Hong Kong Airport",
+   "Chek Lap Kok",
+   "香港国际机场"
+  ],
+  "verified": true
  },
  {
   "id": "AP_CAN",
   "type": "airport",
+  "code": "CAN",
   "name_zh": "广州白云机场",
-  "name_en": "CAN",
+  "name_en": "Guangzhou Baiyun Airport",
   "country": "CN",
+  "region": "eastAsia",
+  "lon": 113.3,
+  "lat": 23.39,
   "aliases": [
-   "Baiyun"
-  ]
+   "Baiyun",
+   "Guangzhou Baiyun",
+   "Baiyun Airport",
+   "白云机场"
+  ],
+  "verified": true
  },
  {
   "id": "AP_DXB",
   "type": "airport",
+  "code": "DXB",
   "name_zh": "迪拜国际机场",
-  "name_en": "DXB",
+  "name_en": "Dubai International Airport",
   "country": "AE",
-  "aliases": []
+  "region": "middleEast",
+  "lon": 55.36,
+  "lat": 25.25,
+  "aliases": [
+   "Dubai International",
+   "Dubai Airport"
+  ],
+  "verified": true
  },
  {
   "id": "AP_DWC",
   "type": "airport",
+  "code": "DWC",
   "name_zh": "迪拜阿勒马克图姆机场",
-  "name_en": "DWC",
+  "name_en": "Al Maktoum International Airport",
   "country": "AE",
+  "region": "middleEast",
+  "lon": 55.16,
+  "lat": 24.9,
   "aliases": [
-   "Al Maktoum"
-  ]
+   "Al Maktoum",
+   "Dubai World Central"
+  ],
+  "verified": true
  },
  {
   "id": "AP_RUH",
   "type": "airport",
+  "code": "RUH",
   "name_zh": "利雅得哈立德国王机场",
-  "name_en": "RUH",
+  "name_en": "Riyadh International Airport",
   "country": "SA",
-  "aliases": []
+  "region": "middleEast",
+  "lon": 46.7,
+  "lat": 24.96,
+  "aliases": [
+   "Riyadh Airport",
+   "King Khalid International",
+   "利雅得机场"
+  ],
+  "verified": true
  },
  {
   "id": "AP_KWI",
   "type": "airport",
+  "code": "KWI",
   "name_zh": "科威特国际机场",
-  "name_en": "KWI",
+  "name_en": "Kuwait International Airport",
   "country": "KW",
-  "aliases": []
+  "region": "middleEast",
+  "lon": 47.97,
+  "lat": 29.23,
+  "aliases": [
+   "Kuwait Airport",
+   "Kuwait International",
+   "科威特机场"
+  ],
+  "verified": true
  },
  {
   "id": "AP_DOH",
   "type": "airport",
+  "code": "DOH",
   "name_zh": "多哈哈马德机场",
   "name_en": "DOH",
   "country": "QA",
+  "region": "middleEast",
+  "lon": 51.61,
+  "lat": 25.27,
   "aliases": [
    "Hamad International"
   ]
@@ -1410,25 +2460,46 @@
  {
   "id": "AP_CAI",
   "type": "airport",
+  "code": "CAI",
   "name_zh": "开罗国际机场",
-  "name_en": "CAI",
+  "name_en": "Cairo International Airport",
   "country": "EG",
-  "aliases": []
+  "region": "middleEast",
+  "lon": 31.41,
+  "lat": 30.12,
+  "aliases": [
+   "Cairo Airport",
+   "Cairo International",
+   "开罗机场"
+  ],
+  "verified": true
  },
  {
   "id": "AP_IST",
   "type": "airport",
+  "code": "IST",
   "name_zh": "伊斯坦布尔机场",
-  "name_en": "IST",
+  "name_en": "Istanbul Airport",
   "country": "TR",
-  "aliases": []
+  "region": "middleEast",
+  "lon": 28.75,
+  "lat": 41.28,
+  "aliases": [
+   "Istanbul Airport",
+   "Istanbul International"
+  ],
+  "verified": true
  },
  {
   "id": "AP_AMS",
   "type": "airport",
+  "code": "AMS",
   "name_zh": "阿姆斯特丹史基浦机场",
   "name_en": "AMS",
   "country": "NL",
+  "region": "europe",
+  "lon": 4.76,
+  "lat": 52.31,
   "aliases": [
    "Schiphol"
   ]
@@ -1436,9 +2507,13 @@
  {
   "id": "AP_LHR",
   "type": "airport",
+  "code": "LHR",
   "name_zh": "伦敦希思罗机场",
   "name_en": "LHR",
   "country": "GB",
+  "region": "europe",
+  "lon": -0.45,
+  "lat": 51.47,
   "aliases": [
    "Heathrow"
   ]
@@ -1446,17 +2521,25 @@
  {
   "id": "AP_MAD",
   "type": "airport",
+  "code": "MAD",
   "name_zh": "马德里巴拉哈斯机场",
   "name_en": "MAD",
   "country": "ES",
+  "region": "europe",
+  "lon": -3.57,
+  "lat": 40.47,
   "aliases": []
  },
  {
   "id": "AP_FCO",
   "type": "airport",
+  "code": "FCO",
   "name_zh": "罗马菲乌米奇诺机场",
   "name_en": "FCO",
   "country": "IT",
+  "region": "europe",
+  "lon": 12.25,
+  "lat": 41.8,
   "aliases": [
    "Fiumicino"
   ]
@@ -1464,35 +2547,55 @@
  {
   "id": "AP_BUD",
   "type": "airport",
+  "code": "BUD",
   "name_zh": "布达佩斯机场",
   "name_en": "BUD",
   "country": "HU",
+  "region": "europe",
+  "lon": 19.26,
+  "lat": 47.44,
   "aliases": []
  },
  {
   "id": "AP_WAW",
   "type": "airport",
+  "code": "WAW",
   "name_zh": "华沙肖邦机场",
   "name_en": "WAW",
   "country": "PL",
+  "region": "europe",
+  "lon": 20.97,
+  "lat": 52.17,
   "aliases": []
  },
  {
   "id": "AP_JNB",
   "type": "airport",
+  "code": "JNB",
   "name_zh": "约翰内斯堡OR坦博机场",
-  "name_en": "JNB",
+  "name_en": "O.R. Tambo International Airport",
   "country": "ZA",
+  "region": "southernAfrica",
+  "lon": 28.25,
+  "lat": -26.14,
   "aliases": [
-   "OR Tambo"
-  ]
+   "OR Tambo",
+   "O.R. Tambo",
+   "Johannesburg Airport",
+   "约翰内斯堡机场"
+  ],
+  "verified": true
  },
  {
   "id": "AP_MEX",
   "type": "airport",
+  "code": "MEX",
   "name_zh": "墨西哥城国际机场",
   "name_en": "MEX",
   "country": "MX",
+  "region": "northAmerica",
+  "lon": -99.07,
+  "lat": 19.44,
   "aliases": [
    "AICM"
   ]
@@ -1500,33 +2603,49 @@
  {
   "id": "AP_BOG",
   "type": "airport",
+  "code": "BOG",
   "name_zh": "波哥大埃尔多拉多机场",
   "name_en": "BOG",
   "country": "CO",
+  "region": "southAmerica",
+  "lon": -74.15,
+  "lat": 4.7,
   "aliases": []
  },
  {
   "id": "AP_SCL",
   "type": "airport",
+  "code": "SCL",
   "name_zh": "圣地亚哥机场",
   "name_en": "SCL",
   "country": "CL",
+  "region": "southAmerica",
+  "lon": -70.79,
+  "lat": -33.39,
   "aliases": []
  },
  {
   "id": "AP_LIM",
   "type": "airport",
+  "code": "LIM",
   "name_zh": "利马豪尔赫查韦斯机场",
   "name_en": "LIM",
   "country": "PE",
+  "region": "southAmerica",
+  "lon": -77.11,
+  "lat": -12.02,
   "aliases": []
  },
  {
   "id": "AP_GRU",
   "type": "airport",
+  "code": "GRU",
   "name_zh": "圣保罗瓜鲁柳斯机场",
   "name_en": "GRU",
   "country": "BR",
+  "region": "southAmerica",
+  "lon": -46.47,
+  "lat": -23.43,
   "aliases": [
    "Guarulhos"
   ]
@@ -1534,9 +2653,13 @@
  {
   "id": "AP_VCP",
   "type": "airport",
+  "code": "VCP",
   "name_zh": "坎皮纳斯维拉科波斯机场",
   "name_en": "VCP",
   "country": "BR",
+  "region": "southAmerica",
+  "lon": -47.13,
+  "lat": -23.01,
   "aliases": [
    "Viracopos"
   ]
@@ -1544,33 +2667,49 @@
  {
   "id": "AP_SVO",
   "type": "airport",
+  "code": "SVO",
   "name_zh": "莫斯科谢列梅捷沃机场",
   "name_en": "SVO",
   "country": "RU",
+  "region": "europe",
+  "lon": 37.41,
+  "lat": 55.97,
   "aliases": []
  },
  {
   "id": "AP_DME",
   "type": "airport",
+  "code": "DME",
   "name_zh": "莫斯科多莫杰多沃机场",
   "name_en": "DME",
   "country": "RU",
+  "region": "europe",
+  "lon": 37.91,
+  "lat": 55.41,
   "aliases": []
  },
  {
   "id": "AP_KUL",
   "type": "airport",
+  "code": "KUL",
   "name_zh": "吉隆坡国际机场",
   "name_en": "KUL",
   "country": "MY",
+  "region": "southeastAsia",
+  "lon": 101.71,
+  "lat": 2.75,
   "aliases": []
  },
  {
   "id": "AP_MNL",
   "type": "airport",
+  "code": "MNL",
   "name_zh": "马尼拉尼诺伊·阿基诺机场",
   "name_en": "MNL",
   "country": "PH",
+  "region": "southeastAsia",
+  "lon": 121.02,
+  "lat": 14.51,
   "aliases": [
    "NAIA"
   ]
@@ -1578,9 +2717,13 @@
  {
   "id": "AP_CRK",
   "type": "airport",
+  "code": "CRK",
   "name_zh": "克拉克国际机场",
   "name_en": "CRK",
   "country": "PH",
+  "region": "southeastAsia",
+  "lon": 120.56,
+  "lat": 15.19,
   "aliases": [
    "Clark"
   ]
@@ -1588,25 +2731,37 @@
  {
   "id": "AP_BKK",
   "type": "airport",
+  "code": "BKK",
   "name_zh": "曼谷素万那普机场",
   "name_en": "BKK",
   "country": "TH",
+  "region": "southeastAsia",
+  "lon": 100.75,
+  "lat": 13.69,
   "aliases": []
  },
  {
   "id": "AP_CGK",
   "type": "airport",
+  "code": "CGK",
   "name_zh": "雅加达苏加诺-哈达机场",
   "name_en": "CGK",
   "country": "ID",
+  "region": "southeastAsia",
+  "lon": 106.66,
+  "lat": -6.13,
   "aliases": []
  },
  {
   "id": "AP_NRT",
   "type": "airport",
+  "code": "NRT",
   "name_zh": "东京成田机场",
   "name_en": "NRT",
   "country": "JP",
+  "region": "eastAsia",
+  "lon": 140.39,
+  "lat": 35.76,
   "aliases": [
    "Narita"
   ]
@@ -1614,9 +2769,13 @@
  {
   "id": "AP_HND",
   "type": "airport",
+  "code": "HND",
   "name_zh": "东京羽田机场",
   "name_en": "HND",
   "country": "JP",
+  "region": "eastAsia",
+  "lon": 139.78,
+  "lat": 35.55,
   "aliases": [
    "Haneda"
   ]
@@ -1624,9 +2783,13 @@
  {
   "id": "AP_BTH",
   "type": "airport",
+  "code": "BTH",
   "name_zh": "巴淡岛哈迪姆机场",
   "name_en": "BTH",
   "country": "ID",
+  "region": "southeastAsia",
+  "lon": 104.12,
+  "lat": 1.12,
   "aliases": [
    "Hang Nadim"
   ]
@@ -1634,22 +2797,228 @@
  {
   "id": "AP_SIN",
   "type": "airport",
+  "code": "SIN",
   "name_zh": "新加坡樟宜机场（转运）",
   "name_en": "SIN",
   "country": "SG",
+  "region": "southeastAsia",
+  "lon": 103.99,
+  "lat": 1.36,
   "aliases": [
    "Changi"
   ]
  },
  {
-  "id": "HUBAP_ADD",
-  "type": "hub_airport",
-  "name_zh": "亚的斯亚贝巴机场（转运）",
-  "name_en": "ADD",
-  "country": "ET",
+  "id": "AP_AUH",
+  "type": "airport",
+  "code": "AUH",
+  "name_zh": "阿布扎比扎耶德国际机场",
+  "name_en": "Abu Dhabi International Airport",
+  "country": "AE",
+  "region": "middleEast",
+  "lon": 54.65,
+  "lat": 24.43,
   "aliases": [
-   "Addis Ababa"
-  ]
+   "Abu Dhabi Airport",
+   "Zayed International",
+   "Abu Dhabi International",
+   "阿布扎比机场"
+  ],
+  "verified": true
+ },
+ {
+  "id": "AP_SHJ",
+  "type": "airport",
+  "code": "SHJ",
+  "name_zh": "沙迦国际机场",
+  "name_en": "Sharjah International Airport",
+  "country": "AE",
+  "region": "middleEast",
+  "lon": 55.52,
+  "lat": 25.33,
+  "aliases": [
+   "Sharjah Airport",
+   "Sharjah International",
+   "沙迦机场"
+  ],
+  "verified": true
+ },
+ {
+  "id": "AP_JED",
+  "type": "airport",
+  "code": "JED",
+  "name_zh": "吉达阿卜杜勒-阿齐兹国王机场",
+  "name_en": "Jeddah International Airport",
+  "country": "SA",
+  "region": "middleEast",
+  "lon": 39.16,
+  "lat": 21.68,
+  "aliases": [
+   "Jeddah Airport",
+   "King Abdulaziz International",
+   "吉达机场"
+  ],
+  "verified": true
+ },
+ {
+  "id": "AP_DMM",
+  "type": "airport",
+  "code": "DMM",
+  "name_zh": "达曼法赫德国王机场",
+  "name_en": "Dammam International Airport",
+  "country": "SA",
+  "region": "middleEast",
+  "lon": 49.8,
+  "lat": 26.47,
+  "aliases": [
+   "Dammam Airport",
+   "King Fahd International",
+   "达曼机场"
+  ],
+  "verified": true
+ },
+ {
+  "id": "AP_MCT",
+  "type": "airport",
+  "code": "MCT",
+  "name_zh": "马斯喀特国际机场",
+  "name_en": "Muscat International Airport",
+  "country": "OM",
+  "region": "middleEast",
+  "lon": 58.28,
+  "lat": 23.59,
+  "aliases": [
+   "Muscat Airport",
+   "Muscat International",
+   "马斯喀特机场"
+  ],
+  "verified": true
+ },
+ {
+  "id": "AP_SLL",
+  "type": "airport",
+  "code": "SLL",
+  "name_zh": "塞拉莱国际机场",
+  "name_en": "Salalah International Airport",
+  "country": "OM",
+  "region": "middleEast",
+  "lon": 54.09,
+  "lat": 17.04,
+  "aliases": [
+   "Salalah Airport",
+   "Salalah International",
+   "塞拉莱机场"
+  ],
+  "verified": true
+ },
+ {
+  "id": "AP_ADD",
+  "type": "airport",
+  "code": "ADD",
+  "name_zh": "亚的斯亚贝巴博莱机场",
+  "name_en": "Addis Ababa Bole International Airport",
+  "country": "ET",
+  "region": "africa",
+  "lon": 38.8,
+  "lat": 8.98,
+  "aliases": [
+   "Addis Ababa Airport",
+   "Bole International",
+   "Addis Ababa Bole",
+   "亚的斯亚贝巴机场"
+  ],
+  "verified": true
+ },
+ {
+  "id": "AP_SAW",
+  "type": "airport",
+  "code": "SAW",
+  "name_zh": "伊斯坦布尔萨比哈·格克琴机场",
+  "name_en": "Sabiha Gokcen International Airport",
+  "country": "TR",
+  "region": "middleEast",
+  "lon": 29.31,
+  "lat": 40.9,
+  "aliases": [
+   "Sabiha Gokcen",
+   "Sabiha Gökçen",
+   "萨比哈机场"
+  ],
+  "verified": true
+ },
+ {
+  "id": "AP_ESB",
+  "type": "airport",
+  "code": "ESB",
+  "name_zh": "安卡拉埃森博阿机场",
+  "name_en": "Ankara Esenboga Airport",
+  "country": "TR",
+  "region": "middleEast",
+  "lon": 32.99,
+  "lat": 40.13,
+  "aliases": [
+   "Esenboga",
+   "Esenboğa",
+   "Ankara Airport",
+   "安卡拉机场",
+   "埃森博阿机场"
+  ],
+  "verified": true
+ },
+ {
+  "id": "AP_AMM",
+  "type": "airport",
+  "code": "AMM",
+  "name_zh": "安曼阿勒娅王后机场",
+  "name_en": "Queen Alia International Airport",
+  "country": "JO",
+  "region": "middleEast",
+  "lon": 35.99,
+  "lat": 31.72,
+  "aliases": [
+   "Queen Alia",
+   "Amman Airport",
+   "Queen Alia International",
+   "安曼机场",
+   "阿勒娅王后机场"
+  ],
+  "verified": true
+ },
+ {
+  "id": "AP_CPT",
+  "type": "airport",
+  "code": "CPT",
+  "name_zh": "开普敦国际机场",
+  "name_en": "Cape Town International Airport",
+  "country": "ZA",
+  "region": "southernAfrica",
+  "lon": 18.6,
+  "lat": -33.97,
+  "aliases": [
+   "Cape Town Airport",
+   "Cape Town International",
+   "开普敦机场"
+  ],
+  "verified": true
+ },
+ {
+  "id": "AP_DUR",
+  "type": "airport",
+  "code": "DUR",
+  "name_zh": "德班沙卡国王机场",
+  "name_en": "King Shaka International Airport",
+  "country": "ZA",
+  "region": "southernAfrica",
+  "lon": 31.12,
+  "lat": -29.61,
+  "aliases": [
+   "King Shaka",
+   "Durban Airport",
+   "King Shaka International",
+   "德班机场",
+   "沙卡国王机场"
+  ],
+  "verified": true
  },
  {
   "id": "HUBAP_US",
@@ -1657,6 +3026,9 @@
   "name_zh": "美国货运枢纽（安克雷奇/洛杉矶/迈阿密）",
   "name_en": "US cargo hubs",
   "country": "US",
+  "region": "northAmerica",
+  "lon": -118.41,
+  "lat": 33.94,
   "aliases": [
    "ANC",
    "LAX",
@@ -1669,6 +3041,9 @@
   "name_zh": "欧洲货运枢纽（阿姆斯特丹/法兰克福/列日）",
   "name_en": "EU cargo hubs",
   "country": "",
+  "region": "europe",
+  "lon": 8.56,
+  "lat": 50.03,
   "aliases": [
    "FRA",
    "LGG"
@@ -1680,6 +3055,9 @@
   "name_zh": "华南铁路始发站/集结",
   "name_en": "South China rail origin",
   "country": "CN",
+  "region": "eastAsia",
+  "lon": 113.26,
+  "lat": 23.13,
   "aliases": []
  },
  {
@@ -1688,6 +3066,9 @@
   "name_zh": "阿拉山口口岸（中哈）",
   "name_en": "Alashankou",
   "country": "CN",
+  "region": "eastAsia",
+  "lon": 82.57,
+  "lat": 45.17,
   "aliases": [
    "阿拉山口",
    "多斯特克"
@@ -1699,6 +3080,9 @@
   "name_zh": "霍尔果斯口岸（中哈）",
   "name_en": "Khorgos",
   "country": "CN",
+  "region": "eastAsia",
+  "lon": 80.42,
+  "lat": 44.21,
   "aliases": [
    "霍尔果斯",
    "Altynkol"
@@ -1710,6 +3094,9 @@
   "name_zh": "马拉舍维奇/特雷斯波尔口岸（白波）",
   "name_en": "Malaszewicze / Terespol",
   "country": "PL",
+  "region": "europe",
+  "lon": 23.51,
+  "lat": 52.02,
   "aliases": [
    "Brest",
    "布列斯特"
@@ -1721,6 +3108,9 @@
   "name_zh": "满洲里口岸（中俄）",
   "name_en": "Manzhouli",
   "country": "CN",
+  "region": "eastAsia",
+  "lon": 117.45,
+  "lat": 49.59,
   "aliases": [
    "Zabaykalsk",
    "后贝加尔斯克"
@@ -1732,6 +3122,9 @@
   "name_zh": "后贝加尔斯克（俄方）",
   "name_en": "Zabaykalsk",
   "country": "RU",
+  "region": "europe",
+  "lon": 117.33,
+  "lat": 49.65,
   "aliases": []
  },
  {
@@ -1740,9 +3133,70 @@
   "name_zh": "西伯利亚大铁路",
   "name_en": "Trans-Siberian Railway",
   "country": "RU",
+  "region": "europe",
+  "lon": 82.93,
+  "lat": 55.01,
   "aliases": [
    "Transsib"
   ]
+ },
+ {
+  "id": "CORR_DMM_RUH",
+  "type": "corridor",
+  "name_zh": "达曼–利雅得铁路/公路走廊",
+  "name_en": "Dammam–Riyadh corridor",
+  "country": "SA",
+  "region": "middleEast",
+  "lon": 48.4,
+  "lat": 25.6,
+  "aliases": []
+ },
+ {
+  "id": "CORR_JED_RUH",
+  "type": "corridor",
+  "name_zh": "吉达–利雅得陆桥（公路）",
+  "name_en": "Jeddah–Riyadh land bridge",
+  "country": "SA",
+  "region": "middleEast",
+  "lon": 42.9,
+  "lat": 23.1,
+  "aliases": []
+ },
+ {
+  "id": "CORR_N3",
+  "type": "corridor",
+  "name_zh": "德班–约翰内斯堡走廊（N3公路/Transnet铁路）",
+  "name_en": "Durban–Johannesburg N3 corridor",
+  "country": "ZA",
+  "region": "southernAfrica",
+  "lon": 29.5,
+  "lat": -28,
+  "aliases": [
+   "N3",
+   "Transnet"
+  ]
+ },
+ {
+  "id": "CORR_MX_PORT",
+  "type": "corridor",
+  "name_zh": "墨西哥港口–墨西哥城公路/铁路走廊",
+  "name_en": "MX port–CDMX corridor",
+  "country": "MX",
+  "region": "northAmerica",
+  "lon": -101.7,
+  "lat": 19.25,
+  "aliases": []
+ },
+ {
+  "id": "CORR_BUENAVENTURA",
+  "type": "corridor",
+  "name_zh": "布埃纳文图拉–波哥大公路走廊",
+  "name_en": "Buenaventura–Bogota road",
+  "country": "CO",
+  "region": "southAmerica",
+  "lon": -75.5,
+  "lat": 4.3,
+  "aliases": []
  },
  {
   "id": "RAIL_DUISBURG",
@@ -1750,6 +3204,9 @@
   "name_zh": "杜伊斯堡铁路枢纽",
   "name_en": "Duisburg",
   "country": "DE",
+  "region": "europe",
+  "lon": 6.76,
+  "lat": 51.43,
   "aliases": [
    "Duisburg"
   ]
@@ -1760,6 +3217,9 @@
   "name_zh": "深港陆路口岸（皇岗/落马洲/深圳湾）",
   "name_en": "Shenzhen–HK land crossings",
   "country": "",
+  "region": "eastAsia",
+  "lon": 114.07,
+  "lat": 22.52,
   "aliases": [
    "Lok Ma Chau",
    "Huanggang",
@@ -1772,59 +3232,11 @@
   "name_zh": "港珠澳大桥口岸",
   "name_en": "HK–Zhuhai–Macao Bridge",
   "country": "",
+  "region": "eastAsia",
+  "lon": 113.84,
+  "lat": 22.28,
   "aliases": [
    "HZMB"
   ]
- },
- {
-  "id": "CORR_DMM_RUH",
-  "type": "corridor",
-  "name_zh": "达曼–利雅得铁路/公路走廊",
-  "name_en": "Dammam–Riyadh corridor",
-  "country": "SA",
-  "aliases": []
- },
- {
-  "id": "CORR_JED_RUH",
-  "type": "corridor",
-  "name_zh": "吉达–利雅得陆桥（公路）",
-  "name_en": "Jeddah–Riyadh land bridge",
-  "country": "SA",
-  "aliases": []
- },
- {
-  "id": "CORR_N3",
-  "type": "corridor",
-  "name_zh": "德班–约翰内斯堡走廊（N3公路/Transnet铁路）",
-  "name_en": "Durban–Johannesburg N3 corridor",
-  "country": "ZA",
-  "aliases": [
-   "N3",
-   "Transnet"
-  ]
- },
- {
-  "id": "CORR_MAPUTO",
-  "type": "corridor",
-  "name_zh": "马普托–约翰内斯堡走廊",
-  "name_en": "Maputo corridor",
-  "country": "MZ",
-  "aliases": []
- },
- {
-  "id": "CORR_MX_PORT",
-  "type": "corridor",
-  "name_zh": "墨西哥港口–墨西哥城公路/铁路走廊",
-  "name_en": "MX port–CDMX corridor",
-  "country": "MX",
-  "aliases": []
- },
- {
-  "id": "CORR_BUENAVENTURA",
-  "type": "corridor",
-  "name_zh": "布埃纳文图拉–波哥大公路走廊",
-  "name_en": "Buenaventura–Bogota road",
-  "country": "CO",
-  "aliases": []
  }
 ]

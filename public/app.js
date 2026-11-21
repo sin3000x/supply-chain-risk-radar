@@ -66,7 +66,7 @@ function info(event) {
       reports:event.records.filter(record => record.role !== 'background').length,
       search:[
         event.title, event.displayTitle, event.latestUpdate?.text, event.summary, event.region, geo.label, geo.nodeId, data?.regions?.[geo.region]?.label, topic && topics[topic],
-        ...event.networkMatches.flatMap(match => [match.nodeName,match.nodeId,...match.routes.flatMap(route => [route.origin,route.destination])]),
+        ...event.networkMatches.flatMap(match => [match.nodeName,match.nodeId,match.nodeCode,...match.routes.flatMap(route => [route.origin,route.destination])]),
         ...event.records.flatMap(record => [record.title,record.category,record.summary,record.source?.publisher]),
       ].filter(Boolean).join('\n').toLowerCase(),
     };
@@ -859,7 +859,7 @@ el('network-data').addEventListener('toggle', async event => {
     const {nodes,lanes,meta} = await response.json();
     const names = new Map(nodes.map(node => [node.id,node.name_zh || node.name_en || node.id]));
     const modeNames = {sea:'海运',air:'空运',rail:'铁路',road:'公路',local:'本地'};
-    const nodeTypes = {city:'城市',country:'国家或地区',port:'港口',airport:'机场',chokepoint:'交通咽喉',sea_area:'海域'};
+    const nodeTypes = {city:'城市',country:'国家或地区',port:'港口',airport:'机场',hub_airport:'中转机场',chokepoint:'交通咽喉',sea_area:'海域',airspace:'空域',rail_origin:'铁路始发',rail_border:'铁路口岸',corridor:'陆运走廊',hub:'陆运枢纽',border:'陆路口岸'};
     const content = document.createDocumentFragment();
     add(content,'p',[networkLabel,meta?.basis].filter(Boolean).join(' · '),'meta');
     const laneTable = dataTable(content,'线路与候选路径',['线路','运输方式','候选路径']);
@@ -874,12 +874,14 @@ el('network-data').addEventListener('toggle', async event => {
         }
       }
     }
-    const nodeTable = dataTable(content,'节点',['节点 ID','名称','类型','国家或地区代码','别名']);
+    const nodeTable = dataTable(content,'节点',['节点 ID','口岸代码','名称','类型','国家或地区代码','别名']);
     for (const node of nodes) {
       const row = add(nodeTable,'tr');
       const id = add(row,'th');
       id.scope = 'row';
       add(id,'code',node.id);
+      const codeCell = add(row,'td');
+      if (node.code) add(codeCell,'code',node.code);
       add(row,'td',names.get(node.id));
       add(row,'td',nodeTypes[node.type] ?? node.type);
       add(row,'td',node.country);

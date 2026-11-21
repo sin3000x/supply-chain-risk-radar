@@ -24,7 +24,7 @@ import {createForecastTranslator, createPresentationQueue} from './model-present
 import {openModelSettings} from './model-settings.mjs';
 import {openIntakeSettings} from './intake-settings.mjs';
 import {loadNetwork} from './network.mjs';
-import {createEventLocator, regions} from './geography.mjs';
+import {buildRegions, createEventLocator, loadGeography} from './geography.mjs';
 import {createFeedReader} from './rss.mjs';
 import {createSignalReader} from './signals.mjs';
 import {createMarketReader} from './markets.mjs';
@@ -32,8 +32,10 @@ import {samples} from './samples.mjs';
 
 const networkDirectory = process.env.RISK_NETWORK_DATA_DIR || fileURLToPath(new URL('./data/',import.meta.url));
 const network = await loadNetwork(networkDirectory, process.env.RISK_NETWORK_DATA_DIR ? '自定义线路数据' : 'risk_network 默认线路');
+const geoConfig = await loadGeography(networkDirectory);
+const activeRegions = buildRegions(geoConfig);
 const findPlaces = record => network.findPlaces(record);
-const locateEvent = createEventLocator(network);
+const locateEvent = createEventLocator(network, geoConfig);
 const present = event => presentEvent({...network.annotate(event),geo:locateEvent(event)});
 const modelSettings = await openModelSettings();
 const intakeSettings = await openIntakeSettings();
@@ -229,7 +231,7 @@ async function buildFeed(mode) {
     ruleSummary:describeSourceRule(source.kind,mode,intake),
   }));
   return {schemaVersion:'0.5',mode,liveSource:origin ? 'self-hosted' : 'rss',fetchedAt:new Date().toISOString(),sources:status,
-    intake:intakeSettings.describe(),network:network.summary,regions,
+    intake:intakeSettings.describe(),network:network.summary,regions:activeRegions,
     ...(mode === 'live' && {presentationPending,presentationStatus}),events};
 }
 

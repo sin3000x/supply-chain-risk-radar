@@ -8,7 +8,8 @@ import {
   extractTag, looksLikeRssXml, scanTagBlocks, usableFeedDateMs,
 } from './vendor/worldmonitor/feed-xml.ts';
 
-export const FEEDS = JSON.parse(readFileSync(new URL('./data/news-sources.json', import.meta.url), 'utf8'));
+const defaultFeedsPath = process.env.NEWS_SOURCES_PATH || new URL('./data/news-sources.json', import.meta.url);
+export const FEEDS = JSON.parse(readFileSync(defaultFeedsPath, 'utf8'));
 const ITEMS_PER_FEED = 30;
 const FETCH_TIMEOUT_MS = 15_000;
 const MAX_CONCURRENT_PER_HOST = 3;

@@ -1,8 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {mkdtemp, rm, writeFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {buildEvents} from './events.mjs';
-import {createEventLocator} from './geography.mjs';
-import {loadNetwork} from './network.mjs';
+import {createEventLocator, loadGeography} from './geography.mjs';
+import {computeNodeExposure, loadNetwork} from './network.mjs';
 
 test('live intake groups coverage, attaches commentary, and filters unrelated news', async () => {
   const network = await loadNetwork(new URL('./data/',import.meta.url).pathname,'demo');
@@ -363,4 +366,140 @@ test('nonSupplyChainNoise drops off-topic domestic lawsuits and settler/gang san
   const events = buildEvents([{records}], 'live');
   const keptIds = events.flatMap(ev => ev.records.map(r => r.id));
   assert.deepEqual(keptIds.sort(), ['keep1', 'keep2']);
+});
+
+test('bundled network snapshot satisfies structural, coordinate, exposure, and verified gateway invariants', async () => {
+  const network = await loadNetwork(new URL('./data/', import.meta.url).pathname, 'default');
+  const locate = createEventLocator(network);
+  const {nodes, lanes} = network.snapshot;
+  const nodeIds = new Set(nodes.map(node => node.id));
+
+  assert.equal(network.summary.originCount, 3);
+  assert.equal(network.summary.destinationCount, 29);
+  assert.equal(network.summary.laneCount, 87);
+  assert.equal(nodes.filter(node => node.verified).length, 56);
+
+  for (const node of nodes) {
+    assert.ok(Number.isFinite(node.lon) && Number.isFinite(node.lat), `${node.id} should carry self-contained coordinates`);
+    assert.ok(node.region && node.region !== 'unknown', `${node.id} should carry self-contained region`);
+    assert.notEqual(locate({geoAnchors: [node.id]}).region, 'unknown');
+  }
+
+  for (const lane of lanes) {
+    for (const [mode, detail] of Object.entries(lane.modes)) {
+      for (const path of detail.paths) {
+        for (const id of path.nodes) {
+          assert.ok(nodeIds.has(id), `${lane.lane_id}|${mode} references unknown node ${id}`);
+        }
+      }
+      assert.deepEqual(detail.node_exposure, computeNodeExposure(detail.paths), `${lane.lane_id}|${mode} exposure matches paths`);
+    }
+  }
+
+  // UAE sea lanes now require Strait of Hormuz on every path (must), whereas Oman avoids Hormuz.
+  const szDxbSea = lanes.find(l => l.lane_id === 'SZ>WH_DXB').modes.sea;
+  assert.equal(szDxbSea.node_exposure.CP_HORMUZ, 'must');
+  const szMctSea = lanes.find(l => l.lane_id === 'SZ>WH_MCT').modes.sea;
+  assert.equal(szMctSea.node_exposure.CP_HORMUZ, undefined);
+});
+
+test('real UN/LOCODE and IATA gateway matching covers updated ports/airports without false positives', async () => {
+  const network = await loadNetwork(new URL('./data/', import.meta.url).pathname, 'default');
+  const matchIds = (title, topic = 'transport_disruption') =>
+    network.annotate({title, topic, routeRelevant: true, records: []}).networkMatches.map(m => m.nodeId);
+  const matchLanes = (title, topic = 'transport_disruption') =>
+    new Set(network.annotate({title, topic, routeRelevant: true, records: []})
+      .networkMatches.flatMap(m => m.routes.map(r => r.laneId)));
+
+  // UN/LOCODE matching across updated sea ports
+  const locodes = [
+    ['AEJEA', 'PORT_JEBELALI'], ['AEKHL', 'PORT_KHALIFA'], ['AESHJ', 'PORT_SHARJAH'],
+    ['SAJED', 'PORT_JEDDAH'], ['SAJUB', 'PORT_JUBAIL'], ['SAYNB', 'PORT_YANBU'],
+    ['OMSLL', 'PORT_SALALAH'], ['OMDQM', 'PORT_DUQM'], ['DJJIB', 'PORT_DJIBOUTI'],
+    ['SOBBO', 'PORT_BERBERA'], ['TRIZM', 'PORT_IZMIR'], ['JOAQJ', 'PORT_AQABA'],
+    ['EGALY', 'PORT_ALEXANDRIA'], ['EGDMI', 'PORT_DAMIETTA'], ['KWSAA', 'PORT_SHUAIBA'],
+    ['ZACPT', 'PORT_CAPETOWN'], ['ZANGQ', 'PORT_NGQURA'], ['ZAPPE', 'PORT_PORTELIZABETH'],
+    ['CNDCB', 'PORT_DACHANBAY'],
+  ];
+  for (const [code, expectedId] of locodes) {
+    assert.ok(
+      matchIds(`Port congestion alert at ${code} container terminal`).includes(expectedId),
+      `expected ${code} to match ${expectedId}`,
+    );
+  }
+
+  // IATA aviation-context matching & ambiguous-code protection
+  assert.deepEqual(matchIds('Flights delayed at DXB due to storm'), ['AP_DXB']);
+  assert.deepEqual(matchIds('Cargo flights suspended at AUH and JED').sort(), ['AP_AUH', 'AP_JED']);
+  assert.deepEqual(matchIds('Sabiha Gokcen (SAW) airport ground stop'), ['AP_SAW']);
+  assert.deepEqual(matchIds('Addis Ababa (ADD) cargo flights delayed'), ['AP_ADD']);
+  assert.deepEqual(matchIds('Airlines can add routes after airspace reopens'), []);
+  assert.deepEqual(matchIds('Oil tanker hit in Red Sea', 'maritime_security'), ['SEA_RED']);
+  assert.deepEqual(matchIds('Suez Canal closure disrupts maritime shipping', 'maritime_security'), ['CP_SUEZ']);
+
+  // New destinations: Oman (WH_MCT), Ethiopia (WH_ADD), Jordan (WH_AMM)
+  assert.ok(matchLanes('Port congestion reported at Salalah').has('SZ>WH_MCT'));
+  assert.ok(matchLanes('Dockworkers strike at Port of Djibouti').has('SZ>WH_ADD'));
+  assert.ok(matchLanes('Berbera port operations halted after storm').has('GZ>WH_ADD'));
+  assert.ok(matchLanes('Port of Aqaba container terminal closed').has('HK>WH_AMM'));
+});
+
+test('loadNetwork derives node_exposure automatically and loadGeography merges custom overrides', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'custom-network-'));
+  try {
+    await writeFile(join(directory, 'nodes.json'), JSON.stringify([
+      {id: 'CITY_A', type: 'city', name_zh: '甲市', name_en: 'Alpha City', country: 'AA', region: 'eastAsia', lon: 114, lat: 22, aliases: []},
+      {id: 'PORT_A', type: 'port', code: 'AAALP', name_zh: '甲港', name_en: 'Alpha Port', country: 'AA', region: 'eastAsia', lon: 114.1, lat: 22.1, aliases: []},
+      {id: 'PORT_B', type: 'port', code: 'BBBTA', name_zh: '乙港', name_en: 'Beta Port', country: 'BB', region: 'customHub', lon: 55.1, lat: 25.1, aliases: []},
+      {id: 'CITY_B', type: 'city', name_zh: '乙市', name_en: 'Beta City', country: 'BB', region: 'customHub', lon: 55.2, lat: 25.2, aliases: []},
+    ]));
+    await writeFile(join(directory, 'lanes.json'), JSON.stringify({
+      meta: {basis: 'custom test'},
+      lanes: [{
+        lane_id: 'A>B',
+        origin_id: 'A',
+        origin_name: '甲',
+        origin_city: 'CITY_A',
+        origin_country: 'AA',
+        dest_wh: 'WH_B',
+        dest_name: '乙',
+        dest_city: 'CITY_B',
+        dest_country: 'BB',
+        modes: {
+          sea: {
+            confidence: '高',
+            paths: [
+              {id: 'A>B|sea|1', likelihood: '主要', nodes: ['CITY_A', 'PORT_A', 'PORT_B', 'CITY_B']},
+              {id: 'A>B|sea|2', likelihood: '备选', nodes: ['CITY_A', 'PORT_B', 'CITY_B']},
+            ],
+          },
+        },
+      }],
+    }));
+    await writeFile(join(directory, 'geography.json'), JSON.stringify({
+      regions: {
+        customHub: {label: '自定义走廊', lon: 55, lat: 25, aliases: ['Custom Corridor'], countries: 'BB'},
+      },
+      coordinates: {
+        PORT_B: [55.5, 25.5],
+      },
+    }));
+
+    const network = await loadNetwork(directory, 'custom');
+    const geoConfig = await loadGeography(directory);
+    const locate = createEventLocator(network, geoConfig);
+
+    const matched = network.annotate({title: 'Port strike at AAALP', topic: 'transport_disruption', routeRelevant: true, records: []});
+    assert.equal(matched.networkMatches.length, 1);
+    assert.equal(matched.networkMatches[0].nodeId, 'PORT_A');
+    assert.equal(matched.networkMatches[0].nodeCode, 'AAALP');
+    assert.equal(matched.networkMatches[0].routes[0].exposure, 'main');
+
+    const bLoc = locate({geoAnchors: ['PORT_B']});
+    assert.equal(bLoc.region, 'customHub');
+    assert.equal(bLoc.lon, 55.1);
+    assert.equal(locate({title: 'Disruption across Custom Corridor', topic: 'transport_disruption'}).region, 'customHub');
+  } finally {
+    await rm(directory, {recursive: true, force: true});
+  }
 });

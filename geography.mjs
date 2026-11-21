@@ -1,38 +1,82 @@
-import geography from './data/geography.json' with {type:'json'};
+import {readFile} from 'node:fs/promises';
+import {join} from 'node:path';
+import defaultGeography from './data/geography.json' with {type:'json'};
 import {GEO_HUBS, getGeoHubById} from './public/vendor/worldmonitor/geo-hub-index.mjs';
 import {matchKeyword, tokenizeForMatch} from './public/vendor/worldmonitor/keyword-match.mjs';
 
 const fold = text => text.trim().toLowerCase();
-const regionsByName = new Map();
-const regionsByCountry = new Map();
-const regionsByNode = new Map();
-const coordinates = geography.coordinates ?? {};
+const NON_MAP_REGIONS = new Set(['crossRegion', 'unknown']);
+const strategicNodeTypes = new Set(['chokepoint','sea_area']);
 const hubsByNetworkId = new Map(
   GEO_HUBS.filter(hub => hub.networkId && Number.isFinite(hub.lon) && Number.isFinite(hub.lat))
     .map(hub => [hub.networkId, hub])
 );
 
-export const regions = Object.fromEntries(Object.entries(geography.regions).map(([id, area]) => {
-  for (const name of [id, area.label, ...(area.aliases ?? [])]) regionsByName.set(fold(name), id);
-  for (const country of area.countries?.split(' ') ?? []) regionsByCountry.set(country, id);
-  for (const node of area.nodes?.split(' ') ?? []) regionsByNode.set(node, id);
-  const {label, lon, lat} = area;
-  return [id, {label, lon, lat}];
-}));
+/** Build public region summary metadata from a geography configuration object. */
+export function buildRegions(geoConfig = defaultGeography) {
+  return Object.fromEntries(Object.entries(geoConfig?.regions ?? {}).map(([id, area]) => {
+    const {label, lon, lat} = area;
+    return [id, {label, ...(lon != null && {lon}), ...(lat != null && {lat})}];
+  }));
+}
 
-const NON_MAP_REGIONS = new Set(['crossRegion', 'unknown']);
-const unknown = {id:'unknown',label:regions.unknown.label,region:'unknown',basis:'unresolved'};
+function buildGeoTables(geoConfig = defaultGeography) {
+  const regions = buildRegions(geoConfig);
+  const regionsByName = new Map();
+  const regionsByCountry = new Map();
+  const regionsByNode = new Map();
+  for (const [id, area] of Object.entries(geoConfig?.regions ?? {})) {
+    for (const name of [id, area.label, ...(area.aliases ?? [])]) {
+      if (name) regionsByName.set(fold(name), id);
+    }
+    for (const country of area.countries?.split(' ') ?? []) {
+      if (country) regionsByCountry.set(country, id);
+    }
+    for (const node of area.nodes?.split(' ') ?? []) {
+      if (node) regionsByNode.set(node, id);
+    }
+  }
+  const regionAliasEntries = Object.entries(geoConfig?.regions ?? {})
+    .filter(([id]) => !NON_MAP_REGIONS.has(id))
+    .flatMap(([regionId, area]) =>
+      [area.label, ...(area.aliases ?? [])]
+        .filter(Boolean)
+        .map(alias => ({regionId, alias, folded: fold(alias)})))
+    .sort((a, b) => b.folded.length - a.folded.length);
+  return {regions, regionsByName, regionsByCountry, regionsByNode, regionAliasEntries, coordinates: geoConfig?.coordinates ?? {}};
+}
+
+function mergeGeography(base, override) {
+  if (!override || typeof override !== 'object') return base;
+  const mergedRegions = {...(base.regions ?? {})};
+  for (const [id, area] of Object.entries(override.regions ?? {})) {
+    mergedRegions[id] = {...(mergedRegions[id] ?? {}), ...area};
+  }
+  return {
+    maritimeTopicAliases: Array.isArray(override.maritimeTopicAliases)
+      ? override.maritimeTopicAliases
+      : (base.maritimeTopicAliases ?? []),
+    regions: mergedRegions,
+    coordinates: {...(base.coordinates ?? {}), ...(override.coordinates ?? {})},
+  };
+}
+
+/** Load optional custom geography overrides and merge onto the bundled default geography. */
+export async function loadGeography(directory = null, configPath = process.env.GEOGRAPHY_CONFIG_PATH) {
+  const candidate = configPath || (directory ? join(directory, 'geography.json') : null);
+  if (!candidate) return defaultGeography;
+  try {
+    const raw = await readFile(candidate, 'utf8');
+    return mergeGeography(defaultGeography, JSON.parse(raw));
+  } catch (error) {
+    if (error.code === 'ENOENT') return defaultGeography;
+    throw error;
+  }
+}
+
+export const regions = buildRegions(defaultGeography);
 const crossTrade = {id:'cross:trade_policy',label:'跨区经贸与制裁政策',region:'crossRegion',basis:'cross_region'};
 const crossMarket = {id:'cross:market_change',label:'全球能源与航运市场',region:'crossRegion',basis:'cross_region'};
-const strategicNodeTypes = new Set(['chokepoint','sea_area']);
-
-const regionAliasEntries = Object.entries(geography.regions)
-  .filter(([id]) => !NON_MAP_REGIONS.has(id))
-  .flatMap(([regionId, area]) =>
-    [area.label, ...(area.aliases ?? [])]
-      .filter(Boolean)
-      .map(alias => ({regionId, alias, folded: fold(alias)})))
-  .sort((a, b) => b.folded.length - a.folded.length);
 
 const HUB_COUNTRY_CODES = new Map([
   ['USA', 'US'], ['United States', 'US'],
@@ -56,6 +100,7 @@ const HUB_COUNTRY_CODES = new Map([
   ['Iraq', 'IQ'], ['Yemen', 'YE'], ['Syria', 'SY'], ['Lebanon', 'LB'],
   ['Sudan', 'SD'], ['Myanmar', 'MM'], ['Panama', 'PA'], ['France', 'FR'],
   ['Germany', 'DE'], ['Italy', 'IT'], ['Spain', 'ES'], ['Netherlands', 'NL'],
+  ['Djibouti', 'DJ'], ['Somaliland', 'SO'],
 ]);
 
 const TRADE_POLITY_PATTERNS = [
@@ -86,10 +131,25 @@ const TRADE_POLITY_PATTERNS = [
   ['UA', /\b(?:ukraine|ukrainian|kyiv|kiev)\b/i],
   ['SA', /\b(?:saudi|saudi arabia|riyadh)\b/i],
   ['AE', /\b(?:uae|emirates|emirati|abu dhabi|dubai)\b/i],
+  ['OM', /\b(?:oman|omani|muscat)\b/i],
+  ['JO', /\b(?:jordan|jordanian|amman)\b/i],
+  ['EG', /\b(?:egypt|egyptian|cairo)\b/i],
+  ['KW', /\b(?:kuwait|kuwaiti)\b/i],
+  ['ZA', /\b(?:south africa|south african|johannesburg|cape town|pretoria)\b/i],
+  ['ET', /\b(?:ethiopia|ethiopian|addis ababa)\b/i],
 ];
 const MULTILATERAL_TRADE = /\b(?:usmca|wto|apec|g7|g20|brics|asean|opec)\b/i;
 
-export function createEventLocator(network) {
+export function createEventLocator(network, geoConfig = defaultGeography) {
+  const {
+    regions: activeRegions,
+    regionsByName,
+    regionsByCountry,
+    regionsByNode,
+    regionAliasEntries,
+    coordinates,
+  } = buildGeoTables(geoConfig);
+  const unknown = {id:'unknown',label:activeRegions.unknown?.label ?? '地点待确认',region:'unknown',basis:'unresolved'};
   const nodeByAlias = new Map();
   for (const node of network.snapshot?.nodes ?? []) {
     for (const raw of [node.name_en, node.name_zh, ...(node.aliases ?? [])]) {
@@ -101,7 +161,7 @@ export function createEventLocator(network) {
   }
 
   function regionLocation(regionId, basis) {
-    const area = regions[regionId];
+    const area = activeRegions[regionId];
     if (!area || NON_MAP_REGIONS.has(regionId)) return null;
     return {
       id:regionId, label:area.label, region:regionId, basis,
@@ -119,7 +179,7 @@ export function createEventLocator(network) {
     if (Array.isArray(countryCoords) && Number.isFinite(countryCoords[0]) && Number.isFinite(countryCoords[1])) {
       return countryCoords;
     }
-    const fallback = regions[region];
+    const fallback = activeRegions[region];
     return fallback?.lon != null && fallback?.lat != null ? [fallback.lon, fallback.lat] : null;
   }
 
@@ -283,7 +343,7 @@ export function createEventLocator(network) {
     if (declared) {
       const region = regionsByName.get(fold(declared));
       if (region) {
-        const area = regions[region];
+        const area = activeRegions[region];
         return {
           id:region, label:area.label, region, basis:'reported',
           ...(area.lon != null && area.lat != null && {lon:area.lon, lat:area.lat}),

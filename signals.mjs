@@ -18,15 +18,23 @@ const CHOKEPOINTS = [
   { name: 'Dover Strait', nodeId: 'CP_DOVER', label: '多佛尔海峡', region: '西欧' },
 ];
 
-const CHOKEPOINT_BY_NAME = new Map(CHOKEPOINTS.map(cp => [cp.name, cp]));
 const formatDay = epochMs => new Date(epochMs).toISOString().slice(0, 10);
 const toArcgisTimestamp = epochMs => `timestamp '${formatDay(epochMs)} 00:00:00'`;
 const mean = values => values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : null;
 const pctDelta = (current, base) => (base && Number.isFinite(current)) ? Math.round(((current - base) / base) * 1000) / 10 : null;
 
-export function buildPortWatchSignals(recentByNode, baselineByNode, { windowDays = 7, thresholdPct = 15 } = {}) {
+function resolveActiveChokepoints(getNode) {
+  if (typeof getNode !== 'function') return CHOKEPOINTS;
+  const matched = CHOKEPOINTS.flatMap(cp => {
+    const node = getNode(cp.nodeId);
+    return node ? [{ ...cp, label: node.name_zh || cp.label }] : [];
+  });
+  return matched.length ? matched : CHOKEPOINTS;
+}
+
+export function buildPortWatchSignals(recentByNode, baselineByNode, { windowDays = 7, thresholdPct = 15, chokepoints = CHOKEPOINTS } = {}) {
   const signals = [];
-  for (const cp of CHOKEPOINTS) {
+  for (const cp of chokepoints) {
     const rows = (recentByNode.get(cp.nodeId) ?? []).sort((a, b) => b.date.localeCompare(a.date));
     if (rows.length < windowDays * 2) continue;
     const thisWindow = mean(rows.slice(0, windowDays).map(r => r.total));
@@ -74,6 +82,8 @@ export function buildPortWatchSignals(recentByNode, baselineByNode, { windowDays
 
 export function parsePortWatchCsv(text, nowMs = Date.now(), options = {}) {
   const windowDays = options.windowDays ?? 7;
+  const chokepoints = options.chokepoints ?? CHOKEPOINTS;
+  const byName = new Map(chokepoints.map(cp => [cp.name, cp]));
   const lines = text.replace(/^\uFEFF/, '').split('\n');
   const header = lines[0]?.trim().split(',');
   if (!header?.length) throw new Error('PortWatch CSV header missing');
@@ -91,7 +101,7 @@ export function parsePortWatchCsv(text, nowMs = Date.now(), options = {}) {
   for (const line of lines.slice(1)) {
     if (!line.trim()) continue;
     const cells = line.split(',');
-    const cp = CHOKEPOINT_BY_NAME.get(cells[col.portname]);
+    const cp = byName.get(cells[col.portname]);
     if (!cp) continue;
     const date = cells[col.date]?.replaceAll('/', '-');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
@@ -119,8 +129,10 @@ export function parsePortWatchCsv(text, nowMs = Date.now(), options = {}) {
 
 async function fetchPortWatchArcgis(fetchFn, nowMs = Date.now(), options = {}) {
   const windowDays = options.windowDays ?? 7;
+  const chokepoints = options.chokepoints ?? CHOKEPOINTS;
+  const byName = new Map(chokepoints.map(cp => [cp.name, cp]));
   const recentDays = Math.max(30, windowDays * 3);
-  const namesList = CHOKEPOINTS.map(cp => `'${cp.name.replace(/'/g, "''")}'`).join(',');
+  const namesList = chokepoints.map(cp => `'${cp.name.replace(/'/g, "''")}'`).join(',');
   const recentParams = new URLSearchParams({
     where: `portname IN (${namesList}) AND date >= ${toArcgisTimestamp(nowMs - recentDays * DAY_MS)}`,
     outFields: 'date,portname,n_total,n_container,n_tanker',
@@ -146,7 +158,7 @@ async function fetchPortWatchArcgis(fetchFn, nowMs = Date.now(), options = {}) {
   const recentByNode = new Map();
   for (const feat of recentJson.features ?? []) {
     const a = feat.attributes ?? {};
-    const cp = CHOKEPOINT_BY_NAME.get(a.portname);
+    const cp = byName.get(a.portname);
     if (!cp || !Number.isFinite(a.n_total) || !a.date) continue;
     const date = typeof a.date === 'number' ? formatDay(a.date) : String(a.date).replaceAll('/', '-').slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
@@ -159,7 +171,7 @@ async function fetchPortWatchArcgis(fetchFn, nowMs = Date.now(), options = {}) {
     const baseJson = await baseRes.json().catch(() => null);
     for (const feat of baseJson?.features ?? []) {
       const a = feat.attributes ?? {};
-      const cp = CHOKEPOINT_BY_NAME.get(a.portname);
+      const cp = byName.get(a.portname);
       if (cp && Number.isFinite(a.avg_total)) baselineByNode.set(cp.nodeId, Number(a.avg_total));
     }
   }
@@ -306,14 +318,15 @@ export function createSignalReader({ findPlaces = () => [], getNode = null, fetc
   let inFlight = null;
 
   function buildSources(windowDays, thresholdPct) {
+    const activeChokepoints = resolveActiveChokepoints(getNode);
     return [
       {
         name: 'IMF PortWatch 航运通行量',
         url: 'https://portwatch.imf.org/',
         category: 'chokepoint',
         window: `近 ${windowDays} 日均值 vs 上期 / 去年同期 (≥${thresholdPct}%)`,
-        scope: `11 个关键海峡/运河（${CHOKEPOINTS.slice(0, 4).map(c => c.label).join('、')}等）`,
-        load: () => fetchPortWatchArcgis(fetchFn, Date.now(), { windowDays, thresholdPct }),
+        scope: `${activeChokepoints.length} 个关键海峡/运河（${activeChokepoints.slice(0, 4).map(c => c.label).join('、')}等）`,
+        load: () => fetchPortWatchArcgis(fetchFn, Date.now(), { windowDays, thresholdPct, chokepoints: activeChokepoints }),
       },
       {
         name: 'WMO 极端天气预警',

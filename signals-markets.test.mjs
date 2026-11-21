@@ -331,3 +331,31 @@ test('parseWmoAlerts rejects cross-country town collisions when getNode is provi
   assert.equal(signals.length, 1);
   assert.deepEqual(signals[0].geoAnchors, ['PORT_BUENAVENTURA']);
 });
+
+test('createSignalReader scopes PortWatch queries to active network chokepoints via getNode', async () => {
+  const seenUrls = [];
+  const networkNodes = new Map([
+    ['CP_SUEZ', {id: 'CP_SUEZ', name_zh: '苏伊士主通道'}],
+    ['CP_HORMUZ', {id: 'CP_HORMUZ', name_zh: '霍尔木兹海峡'}],
+  ]);
+  const readSignals = createSignalReader({
+    getNode: id => networkNodes.get(id),
+    fetchFn: async url => {
+      seenUrls.push(String(url));
+      if (String(url).includes('severeweather.wmo.int')) {
+        return {ok: true, json: async () => ({items: []})};
+      }
+      return {ok: true, json: async () => ({features: []})};
+    },
+  });
+
+  const res = await readSignals();
+  assert.equal(res.feedStatus[0].scope.startsWith('2 个关键海峡/运河（苏伊士主通道、霍尔木兹海峡等）'), true);
+  const pwUrls = seenUrls.filter(u => u.includes('Daily_Chokepoints_Data'));
+  assert.equal(pwUrls.length, 2);
+  for (const url of pwUrls) {
+    const where = new URL(url).searchParams.get('where');
+    assert.match(where, /'Suez Canal','Strait of Hormuz'/);
+    assert.doesNotMatch(where, /Panama Canal/);
+  }
+});
