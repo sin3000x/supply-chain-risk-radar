@@ -144,11 +144,32 @@ async function getFeed(kind, path, mode) {
 }
 
 const LIVE_NEWS_RETENTION_HOURS = 48;
+const EVENT_DISK_RETENTION_DAYS = 7;
+const EVENT_PRUNE_INTERVAL_MS = 6 * 3600_000;
 const liveNewsRetentionHours = intake => (
   intake.newsMaxAgeHours > 0
     ? Math.min(LIVE_NEWS_RETENTION_HOURS, intake.newsMaxAgeHours)
     : LIVE_NEWS_RETENTION_HOURS
 );
+const eventDiskRetentionMs = () => {
+  const intake = intakeSettings.read();
+  return Math.max(
+    EVENT_DISK_RETENTION_DAYS * 24 * 3600_000,
+    intake.clusterWindowHours * 1.5 * 3600_000,
+    liveNewsRetentionHours(intake) * 3600_000,
+  );
+};
+async function pruneExpiredEvents() {
+  try {
+    const {removed, remaining} = await eventStore.prune({maxAgeMs: eventDiskRetentionMs()});
+    if (removed > 0) console.log(`Pruned ${removed} expired events from disk (${remaining} remaining)`);
+  } catch (error) {
+    console.error('Failed to prune expired events:', error?.message ?? error);
+  }
+}
+await pruneExpiredEvents();
+const pruneTimer = setInterval(pruneExpiredEvents, EVENT_PRUNE_INTERVAL_MS);
+pruneTimer.unref();
 
 function describeSourceRule(kind, mode, intake) {
   if (mode === 'sample') return '虚构演示样例，仅用于界面预览与功能验证';
@@ -378,6 +399,7 @@ server.listen(port,host,()=>console.log(`Supply Chain Risk Radar: http://${host}
 
 function shutdown(signal) {
   console.log(`Received ${signal}, shutting down...`);
+  clearInterval(pruneTimer);
   const forceExit = setTimeout(()=>process.exit(1),8000);
   forceExit.unref();
   server.close(()=>{clearTimeout(forceExit); process.exit(0);});

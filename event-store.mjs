@@ -4,6 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {canJoinEvent, dedupeNewsRecords, summarizeNewsRecords} from './news-clusters.mjs';
 
 const WINDOW = 48 * 3600_000;
+const DEFAULT_DISK_RETENTION_MS = 7 * 24 * 3600_000;
 const reports = event => event.records?.filter(record=>record.role !== 'background') ?? [];
 const isNewsReport = record => record.kind === 'news' && record.role !== 'background';
 const newsReports = event => (event.records ?? []).filter(isNewsReport);
@@ -15,6 +16,17 @@ function resolve(events, id) {
   return event?.mergedInto ? undefined : event;
 }
 const firstNewsReport = event => newsReports(event)[0]?.time?.value ?? reports(event)[0]?.time?.value ?? '';
+
+function eventTimestampMs(event) {
+  const direct = Date.parse(event?.updatedAt ?? '');
+  if (Number.isFinite(direct)) return direct;
+  let latest = NaN;
+  for (const record of event?.records ?? []) {
+    const ts = Date.parse(record?.time?.value ?? '');
+    if (Number.isFinite(ts) && (!Number.isFinite(latest) || ts > latest)) latest = ts;
+  }
+  return latest;
+}
 
 function signalGroupKey(event) {
   const record = event.records?.[0];
@@ -231,8 +243,32 @@ export async function openEventStore(path, findPlaces = () => [], { getWindowMs 
     }
     return [...result.values()].sort((a,b)=>(b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
   }
+  async function pruneEvents({ maxAgeMs = DEFAULT_DISK_RETENTION_MS, now = Date.now() } = {}) {
+    if (!(maxAgeMs > 0) || !Number.isFinite(now)) {
+      return { removed: 0, remaining: stored.size };
+    }
+    const cutoff = now - maxAgeMs;
+    const next = new Map();
+    for (const [id, event] of stored) {
+      if (event.mergedInto) {
+        next.set(id, event);
+        continue;
+      }
+      const ts = eventTimestampMs(event);
+      if (!Number.isFinite(ts) || ts >= cutoff) next.set(id, event);
+    }
+    // Drop merge redirects whose target event no longer resolves (e.g. expired or cyclic).
+    for (const [id, event] of next) {
+      if (event.mergedInto && !resolve(next, id)) next.delete(id);
+    }
+    const removed = stored.size - next.size;
+    if (removed > 0) await persist(next);
+    return { removed, remaining: next.size };
+  }
   return {
     update(events, options) {return serialize(()=>reconcile(events, options));},
+    /** Remove persisted events older than `maxAgeMs` and any dangling merge redirects. */
+    prune(options) {return serialize(()=>pruneEvents(options));},
     /**
      * Replace the presentation of an issued event. `change` receives the current presentation and
      * returns the next one, or undefined to leave it alone. Events merged away are skipped.

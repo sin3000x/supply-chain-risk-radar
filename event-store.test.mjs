@@ -405,3 +405,80 @@ test('retainNewsMs keeps recent untouched news events without resurrecting old n
     await rm(directory, {recursive: true, force: true});
   }
 });
+
+test('prune removes expired events and dangling merge redirects from disk while preserving active redirects', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'event-store-prune-'));
+  try {
+    const storePath = join(directory, 'events.json');
+    const now = Date.parse('2026-11-23T02:00:00.000Z');
+    const isoDaysAgo = days => new Date(now - days * 24 * 3600_000).toISOString();
+
+    const store = await openEventStore(storePath, () => []);
+    await store.update([
+      {
+        id: 'evt_old_target',
+        title: 'Old target',
+        updatedAt: isoDaysAgo(10.1),
+        records: [{id: 'rss:old-1', kind: 'news', role: 'report', title: 'Old target', time: {kind: 'published', value: isoDaysAgo(10.1)}}],
+      },
+      {
+        id: 'evt_recent_target',
+        title: 'Recent target',
+        updatedAt: isoDaysAgo(2.1),
+        records: [{id: 'rss:recent-1', kind: 'news', role: 'report', title: 'Recent target', time: {kind: 'published', value: isoDaysAgo(2.1)}}],
+      },
+    ]);
+
+    // Trigger merges so redirect entries exist for both old and recent targets.
+    await store.update([
+      {
+        id: 'evt_old_merged',
+        title: 'Old merged',
+        updatedAt: isoDaysAgo(10),
+        records: [{id: 'rss:old-2', kind: 'news', role: 'report', title: 'Old merged', time: {kind: 'published', value: isoDaysAgo(10)}}],
+      },
+      {
+        id: 'evt_recent_merged',
+        title: 'Recent merged',
+        updatedAt: isoDaysAgo(2),
+        records: [{id: 'rss:recent-2', kind: 'news', role: 'report', title: 'Recent merged', time: {kind: 'published', value: isoDaysAgo(2)}}],
+      },
+    ]);
+    await store.update([
+      {
+        id: 'evt_old_combine',
+        title: 'Old combined',
+        records: [
+          {id: 'rss:old-1', kind: 'news', role: 'report', title: 'Old target', time: {kind: 'published', value: isoDaysAgo(10.1)}},
+          {id: 'rss:old-2', kind: 'news', role: 'report', title: 'Old merged', time: {kind: 'published', value: isoDaysAgo(10)}},
+        ],
+      },
+      {
+        id: 'evt_recent_combine',
+        title: 'Recent combined',
+        records: [
+          {id: 'rss:recent-1', kind: 'news', role: 'report', title: 'Recent target', time: {kind: 'published', value: isoDaysAgo(2.1)}},
+          {id: 'rss:recent-2', kind: 'news', role: 'report', title: 'Recent merged', time: {kind: 'published', value: isoDaysAgo(2)}},
+        ],
+      },
+    ]);
+
+    const first = await store.prune({maxAgeMs: 7 * 24 * 3600_000, now});
+    assert.equal(first.removed, 2, 'removes both expired target and its redirect');
+    assert.equal(first.remaining, 2, 'keeps recent target and its redirect');
+    assert.equal(store.get('evt_old_target'), undefined);
+    assert.equal(store.get('evt_old_merged'), undefined);
+    assert.equal(store.get('evt_recent_target')?.id, 'evt_recent_target');
+    assert.equal(store.get('evt_recent_merged')?.id, 'evt_recent_target');
+
+    const second = await store.prune({maxAgeMs: 7 * 24 * 3600_000, now});
+    assert.equal(second.removed, 0, 'subsequent prune is a no-op');
+    assert.equal(second.remaining, 2);
+
+    const reopened = await openEventStore(storePath, () => []);
+    assert.equal(reopened.get('evt_old_target'), undefined);
+    assert.equal(reopened.get('evt_recent_merged')?.id, 'evt_recent_target');
+  } finally {
+    await rm(directory, {recursive: true, force: true});
+  }
+});
