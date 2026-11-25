@@ -965,11 +965,16 @@ function buildRegionGroups(list, sortMode) {
     const idx = regionOrder.indexOf(id);
     return idx === -1 ? 999 : idx;
   };
-  const compareRows = (a, b) => sortMode === 'routes'
+  const isHighPortWatch = row => Boolean(
+    row.event.records?.some(r => r.id?.startsWith('signal:portwatch:') && r.evidence?.severity === 'HIGH')
+  );
+  const compareRows = (a, b) => (
+    sortMode !== 'newest' ? Number(isHighPortWatch(b)) - Number(isHighPortWatch(a)) : 0
+  ) || (sortMode === 'routes'
     ? Number(a.event.action === 'reopening') - Number(b.event.action === 'reopening') ||
       b.lanes.size - a.lanes.size ||
       (b.event.updatedAt ?? '').localeCompare(a.event.updatedAt ?? '')
-    : (b.event.updatedAt ?? '').localeCompare(a.event.updatedAt ?? '');
+    : (b.event.updatedAt ?? '').localeCompare(a.event.updatedAt ?? ''));
 
   const groups = [...byRegion.entries()].map(([regionId, byPlace]) => {
     const places = [...byPlace.values()].map(placeRows => {
@@ -1221,6 +1226,18 @@ function renderEvent(parent, {event, kinds, topic, dimension, lanes, reports}) {
   const metadata = add(headline,'span','','event-metadata');
   const category = topic ? topics[topic] : dimension === 'mixed' ? '多类信息' : labels[dimension];
   if (category) add(metadata,'span',category,'event-category');
+  const pwDrop = event.records?.find(r => r.id?.startsWith('signal:portwatch:') && r.evidence?.severity === 'HIGH');
+  if (pwDrop) {
+    const {baselineDeltaPct, wowChangePct} = pwDrop.evidence;
+    const isWowDrop = Number.isFinite(wowChangePct) && wowChangePct <= -30;
+    const label = isWowDrop
+      ? `近期通行量骤降 ${Math.abs(wowChangePct)}%`
+      : Number.isFinite(baselineDeltaPct)
+        ? `通行量较去年同期 -${Math.abs(baselineDeltaPct)}%`
+        : '通行量持续低位';
+    const badge = add(metadata,'span',label,'event-alert');
+    badge.title = pwDrop.title ?? '';
+  }
   if (event.action === 'reopening') add(metadata,'span','恢复/重开','event-action');
   if (kinds.length > 1) add(metadata,'span',kinds.map(kind => labels[kind]).join(' / '));
   if (reports > 1) add(metadata,'span',`${reports} 条记录`);

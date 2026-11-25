@@ -53,6 +53,8 @@ function findMatchingEvent(record, newsEvents, findPlaces, windowMs) {
   const recHubs = recAnchors.size === 0 ? new Set(canonicalHubs(record.title)) : null;
   const recAt = Date.parse(record.time?.value ?? '');
   const isPortWatch = record.id?.startsWith('signal:portwatch:') || record.source?.provider === 'IMF PortWatch';
+  // PortWatch is a 7-day rolling chokepoint observation; keep it as its own card rather than attributing it to one news incident.
+  if (isPortWatch) return null;
   let best = null;
   let bestScore = 0;
 
@@ -65,8 +67,7 @@ function findMatchingEvent(record, newsEvents, findPlaces, windowMs) {
       if (!sharedAnchors) continue;
       if (!isSignalTopicCompatible(record, entry.event.topic)) continue;
       if (Number.isFinite(recAt) && Number.isFinite(entry.latestAt)) {
-        const maxAge = isPortWatch ? Math.max(windowMs, 5 * DAY_MS) : windowMs;
-        if (Math.abs(recAt - entry.latestAt) > maxAge) continue;
+        if (Math.abs(recAt - entry.latestAt) > windowMs) continue;
       }
       const score = sharedAnchors * 10 + sharedTokens + (entry.event.corroborationCount ?? 1) * 0.1;
       if (score > bestScore) { bestScore = score; best = entry.event; }

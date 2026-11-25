@@ -292,14 +292,14 @@ test('rebuildEventStore splits corrupted blackhole events, drops orphan forecast
     const result = await rebuildEventStore({storePath, intakeConfigPath});
     assert.equal(result.skipped, false);
     assert.equal(result.beforeActive, 3);
-    assert.equal(result.afterActive, 2); // korea separated from qeshm+portwatch; bad WMO and orphan forecast dropped
+    assert.equal(result.afterActive, 3); // korea, qeshm, and standalone portwatch separated; bad WMO and orphan forecast dropped
     assert.equal(result.restoredTitleOnly, 1);
 
     const files = await readdir(directory);
     assert.ok(files.some(name => name.startsWith('events.before-rebuild.')), 'backup file created');
 
     const rebuilt = JSON.parse(await readFile(storePath, 'utf8'));
-    assert.equal(rebuilt.events.length, 2);
+    assert.equal(rebuilt.events.length, 3);
     assert.ok(!rebuilt.events.some(e => e.records.some(r => r.id === badWmo.id)), 'cross-country WMO dropped');
     assert.ok(!rebuilt.events.some(e => e.records.some(r => r.id === orphanForecast.id)), 'orphan forecast dropped');
 
@@ -310,7 +310,9 @@ test('rebuildEventStore splits corrupted blackhole events, drops orphan forecast
 
     const qeshmEvent = rebuilt.events.find(e => e.records.some(r => r.id === qeshm.id));
     assert.notEqual(qeshmEvent.id, koreaEvent.id);
-    assert.ok(qeshmEvent.records.some(r => r.id === portwatch.id), 'portwatch attaches to matching recent Hormuz event only');
+    assert.ok(!qeshmEvent.records.some(r => r.id === portwatch.id), 'portwatch stays standalone rather than attaching to qeshm news');
+    const pwEvent = rebuilt.events.find(e => e.records.some(r => r.id === portwatch.id));
+    assert.equal(pwEvent.records.length, 1);
   } finally {
     await rm(directory, {recursive: true, force: true});
   }

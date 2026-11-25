@@ -89,7 +89,7 @@ test('normalizePolymarketEvents extracts relevant supply-chain probabilities', (
   assert.equal(records[0].forecast.direction, 'rising');
 });
 
-test('buildEvents attaches matching live signals and forecasts to news events', () => {
+test('buildEvents keeps PortWatch signals standalone and attaches matching live forecasts', () => {
   const findPlaces = r => r.geoAnchors ?? (r.title.includes('Suez') ? ['CP_SUEZ'] : []);
   const events = buildEvents([
     {
@@ -107,7 +107,7 @@ test('buildEvents attaches matching live signals and forecasts to news events', 
       records: [{
         id: 'signal:portwatch:CP_SUEZ:2026-11-18',
         kind: 'signal',
-        title: '苏伊士运河船舶通行量异动',
+        title: '苏伊士运河船舶通行量持续低位',
         geoAnchors: ['CP_SUEZ'],
         time: { kind: 'detected', value: '2026-11-18T00:00:00.000Z' },
         source: { provider: 'IMF PortWatch' },
@@ -128,9 +128,12 @@ test('buildEvents attaches matching live signals and forecasts to news events', 
     },
   ], 'live', findPlaces);
 
-  assert.equal(events.length, 1);
-  assert.equal(events[0].records.length, 3);
-  assert.deepEqual(events[0].records.map(r => r.kind).sort(), ['forecast', 'news', 'signal']);
+  assert.equal(events.length, 2);
+  const newsEvent = events.find(e => e.records.some(r => r.kind === 'news'));
+  const signalEvent = events.find(e => e.records.every(r => r.kind === 'signal'));
+  assert.deepEqual(newsEvent.records.map(r => r.kind).sort(), ['forecast', 'news']);
+  assert.equal(signalEvent.records.length, 1);
+  assert.equal(signalEvent.records[0].id, 'signal:portwatch:CP_SUEZ:2026-11-18');
 });
 
 test('buildEvents drops unmatched live forecasts and classifies standalone signals', () => {
