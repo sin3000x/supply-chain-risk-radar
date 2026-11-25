@@ -9,29 +9,48 @@ import geography from './data/geography.json' with {type:'json'};
 const WINDOW_MS = 48 * 3600 * 1000;
 const PUB_TITLE_DEDUPE_MS = 24 * 3600 * 1000;
 const escapePattern = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Merchant ship types used both for topic detection and for grouping commercial vessel attacks.
+const MERCHANT_VESSELS = 'commercial vessels?|merchant (?:ships?|vessels?)|vessels?|cargo ships?|container ships?|freighters?|' +
+  'lpg carriers?|lng carriers?|bulk carriers?|bulkers?|car carriers?|tankers?|supertankers?|vlccs?|ulccs?';
 const maritimeSubject = new RegExp(
-  '\\b(?:shipping lanes?|commercial vessels?|vessels?|cargo ships?|container ships?|lpg carriers?|lng carriers?|bulk carriers?|tankers?|maritime|piracy|' +
+  `\\b(?:shipping lanes?|${MERCHANT_VESSELS}|maritime|piracy|` +
   geography.maritimeTopicAliases.map(escapePattern).join('|') + ')\\b','i');
-const marketLead = /^(?:global\s+|world\s+)?(?:the\s+)?(?:oil|crude|fuel|freight|shipping|container)\s+(?:prices?|markets?|rates?|edges?)\b/i;
+const merchantVessel = new RegExp(`\\b(?:${MERCHANT_VESSELS}|tara gas|adnoc)\\b`, 'i');
+const marketLead = /^(?:global\s+|world\s+|asian\s+|european\s+)?(?:the\s+)?(?:oil|crude|fuel|freight|shipping|container|gas|lng|energy)(?:\s*(?:,|and|&)\s*(?:\w+\s+)?(?:oil|gas|lng|fuel|diesel))?\s+(?:prices?|markets?|rates?|futures|edges?)\b/i;
 
 const topics = [
-  ['maritime_security', maritimeSubject, /\b(attacks?|mines?|seiz\w+|captur\w+|hit|hits|(?<!traffic )control|retreat|blockad\w+|clos\w+|disrupt\w+|strike\w*|missil\w*|sink\w*|sunk|capsiz\w*|ablaze|burn\w*|disabl\w*)\b/i],
-  ['transport_disruption', /\b(ports?|airports?|flights?|airspace|railways?|borders?|terminals?|shipping|crossings?|dockworkers|ground stop|bridges?)\b/i, /\b(strikes?|clos\w+|cancell?\w+|delay\w+|congestion|suspend\w+|collision|ground stop|restrict\w+|reopen\w+|disrupt\w+|shut\w*)\b/i],
-  ['trade_policy', /\b(tariffs?|sanctions?|export controls?|trade talks?|trade deal|trade agreement|customs|export ban|trade restrictions?)\b/i, /\b(impos\w+|announc\w+|agree\w+|fail\w*|sign\w*|authoris\w+|approv\w+|lift\w*|rais\w+|cut\w*|lower\w*|seek\w*|ban\w*|consider\w+|talks?|deal|extend\w+|target\w+|clamp\w*|remov\w+|delay\w+)\b/i],
+  ['maritime_security', maritimeSubject, /\b(attacks?|mines?|seiz\w+|captur\w+|hit|hits|(?<!traffic )control|retreat|blockad\w+|clos(?:ed?|es|ing|ures?)|disrupt\w+|strike\w*|missil\w*|sink\w*|sunk|capsiz\w*|ablaze|burn\w*|disabl\w*)\b/i],
+  ['transport_disruption', /\b(ports?|airports?|flights?|airspace|railways?|borders?|terminals?|shipping|crossings?|dockworkers|ground stop|bridges?)\b/i, /\b(strikes?|clos(?:ed?|es|ing|ures?)|cancell?\w+|delay\w+|congestion|suspend\w+|collision|ground stop|restrict\w+|reopen\w+|disrupt\w+|shut\w*)\b/i],
+  ['trade_policy', /\b(tariffs?|sanctions?|export controls?|trade talks?|trade deal|trade agreement|customs|export ban|trade restrictions?)\b/i, /\b(impos\w+|announc\w+|agree\w+|fail\w*|sign\w*|authoris\w+|approv\w+|lift\w*|rais\w+|cut\w*|lower\w*|seek\w*|ban\w*|consider\w+|talks?|deal|extend\w+|target\w+|clamp\w*|remov\w+|delay\w+|warn\w*|threat\w*|prepar\w+|hike\w*|slap\w*)\b/i],
   ['security_development', /\b(houthis?|armed forces|military|troops|missiles?|drone|armed group|ceasefire|rebels?|carrier)\b/i, /\b(attack\w*|advance\w*|retreat\w*|(?<!traffic )control|strike\w*|deploy\w*|arriv\w+|ceasefire|defend|capture\w*|intercept\w*|thwart\w*|pull\w*\s+back|target\w*)\b/i],
-  ['natural_hazard', /\b(earthquake|wildfires?|cyclones?|typhoons?|hurricanes?|flood\w*|volcan\w+)\b/i, /\b(alert\w*|warn\w*|hit|kill\w*|haze|evacu\w+|clos\w+|spread\w*|apologis\w+|damag\w+)\b/i],
-  ['market_change', /\b(freight rates?|oil prices?|oil market|crude(?: oil)?(?: prices?)?|fuel prices?|shipping rates?|cargo capacity|container rates?)\b/i, /\b(rise\w*|fell|fall\w*|surge\w*|jump\w*|drop\w*|climb\w*|declin\w*|edg\w+\s+(?:up|down)|brimming|afloat|rall\w+|slump\w*)\b/i],
+  // "money floods back" / "flood of orders" are figurative; "flood-hit X" describes aftermath (aid, politics), not a new hazard.
+  ['natural_hazard', /\b(earthquakes?|wildfires?|cyclones?|typhoons?|hurricanes?|floods?(?!\s+(?:back|in(?:to)?\s+(?:the\s+)?(?:market|stocks?|shares))\b)|flooding|flash floods?|volcan\w+)\b/i, /\b(alert\w*|warn\w*|(?<!-)hits?|kill\w*|haze|evacu\w+|clos(?:ed?|es|ing|ures?)|spread\w*|apologis\w+|damag\w+|strand\w*|batter\w*|lash\w*|sweep\w*|swept)\b/i],
+  ['market_change', /\b(freight rates?|oil prices?|oil market|crude(?: oil)?(?: prices?)?|fuel prices?|gas prices?|shipping rates?|cargo capacity|container rates?)\b/i, /\b(rise\w*|fell|fall\w*|surge\w*|jump\w*|drop\w*|climb\w*|declin\w*|edg\w+\s+(?:up|down)|brimming|afloat|rall\w+|slump\w*|soar\w*|spike\w*|tumbl\w*|plung\w*)\b/i],
   ['infrastructure_incident', /\b(power grid|communications network|pipeline|oil refinery|subsea cable|infrastructure)\b/i, /\b(outage|blackout|fail\w*|explosion|fire|attack\w*|damage\w*|restor\w+)\b/i],
 ];
 
 const marketChangeRule = topics.find(([key]) => key === 'market_change');
-const nonSupplyChainNoise = /\b(?:west\s+bank\s+settle\w*|israeli\s+settle\w*|illegal\s+settle\w*|settlement\s+expansion|settler\s+(?:sanctions?|violence)|haiti\s+gangs?|street\s+gangs?|class\s+action|individual\s+arbitration|warranty\s+agreement|\bxbox\b|fishermen\s+sue)\b/i;
+const nonSupplyChainNoise = new RegExp([
+  // Off-topic domestic politics / litigation.
+  String.raw`west\s+bank\s+settle\w*|israeli\s+settle\w*|illegal\s+settle\w*|settlement\s+expansion|settler\s+(?:sanctions?|violence)`,
+  String.raw`class\s+action|individual\s+arbitration|warranty\s+agreement|\bxbox\b|fishermen\s+sue`,
+  // Organised crime and policing rather than state/military security.
+  String.raw`gangs?|gang\s+members?|drug\s+lords?|drug\s+cartels?|cartel\s+(?:leader|boss|chief)|narco\w*|kingpins?`,
+  // Equity-market wraps ("stocks" as inventories, e.g. "crude stocks", are excluded by the lookbehind).
+  String.raw`(?<!(?:crude|oil|fuel|gasoline|diesel|distillate|grain)\s)stocks?\s+(?:close|end|lower|higher|rise|rises|fall|falls|slip|gain|rally|rallies|slump|surge|tumble|edge|mixed|extend|open|near|hit)\w*`,
+  String.raw`(?:asian|european|us|u\.s\.|global|world|indian|chinese|japanese|wall\s+street)\s+(?:stocks|shares|equities|bourses)`,
+  String.raw`stock\s+markets?|sensex|nifty|dow\s+jones|nasdaq|s&p\s+500|nikkei\s+(?:index|average|225)|hang\s+seng`,
+  // Utility rate schedules are "tariffs" too.
+  String.raw`(?:large[-\s]load|electricity|power|utility|energy|water|feed[-\s]in|grid)\s+tariffs?`,
+  // Aid / diplomacy pegged to an older disaster.
+  String.raw`(?:aid|relief|package|donat\w+|bolster\s+ties)\b.*\b(?:flood|quake|earthquake|cyclone|typhoon|hurricane)[-\s]hit`,
+].map(part => `(?:${part})`).join('|').replace(/^/, String.raw`\b(?:`).replace(/$/, String.raw`)\b`), 'i');
 
 /** Classify a news headline into one of the radar topics, or undefined if unrelated. */
 export function classifyTopic(title) {
   const text = title ?? '';
   if (nonSupplyChainNoise.test(text)) return undefined;
-  if (marketLead.test(text) && marketChangeRule[1].test(text) && marketChangeRule[2].test(text)) {
+  if (marketLead.test(text) && marketChangeRule[2].test(text)) {
     return 'market_change';
   }
   return topics.find(([,subject,change]) => subject.test(text) && change.test(text))?.[0];
@@ -49,8 +68,10 @@ const actions = [
 ];
 
 /** Identify the primary operational action in a news headline without confusing military strikes or trade phrases with labor strikes. */
-export function actionFor(title) {
+export function actionFor(title, topic = undefined) {
   const text = title ?? '';
+  // Price and policy stories mention attacks or closures only as context ("Oil falls as traders weigh Gulf attacks").
+  if (topic === 'market_change' || topic === 'trade_policy') return null;
   const direct = actions.find(([,pattern]) => pattern.test(text))?.[0];
   if (direct) return direct;
   if (!MILITARY_STRIKE_CONTEXT.test(text) && (
@@ -200,7 +221,7 @@ function maritimeKind(headline, topic) {
   if (/\bblockad\w+\b/i.test(headline) && !/\b(tankers?|cargo ships?|lpg|lng)\b/i.test(headline)) return 'blockade';
   if (topic === 'maritime_security' && /\b(declares?\b.*\bclosed|kept\b.*\bshut)\b/i.test(headline)) return 'closure';
   if (topic === 'maritime_security' &&
-    /\b(tankers?|vessels?|cargo ships?|container ships?|lpg carriers?|lng carriers?|bulk carriers?|tara gas|adnoc)\b/i.test(headline) &&
+    merchantVessel.test(headline) &&
     /\b(attacks?|mines?|hit|hits|hitting|strike\w*|struck|projectile|missil\w*|fire|ablaze|burn\w*|sink\w*|sunk|capsiz\w*|disabl\w*|abandon\w*|injur\w*|crew|missing|safe|accounted|blast\w*|target\w*)\b/i.test(headline)) {
     return 'vessel_attack';
   }
@@ -256,7 +277,7 @@ function buildArticle(record, findPlaces, fallbackTopic) {
     topic,
     contextTopics: topics.filter(([,subject]) => subject.test(title)).map(([key]) => key),
     background: record.role === 'background' || backgroundTitle.test(title),
-    action: actionFor(title),
+    action: actionFor(title, topic),
     meta,
   };
 }
@@ -499,7 +520,8 @@ export function summarizeNewsRecords(newsRecords, findPlaces = () => [], { previ
     reportTopics.find(t => routeTopics.has(t)) ?? reportTopics[0] ?? null;
   const topic = previous?.topic ?? incoming?.topic ?? derivedTopic;
   const routeRelevant = topic ? routeTopics.has(topic) : (incoming?.routeRelevant ?? previous?.routeRelevant ?? true);
-  const action = sorted.map(r => actionFor(r.title)).find(Boolean) ?? incoming?.action ?? previous?.action ?? null;
+  const action = sorted.map(r => actionFor(r.title, topic)).find(Boolean) ?? (topic === 'market_change' || topic === 'trade_policy'
+    ? null : incoming?.action ?? previous?.action ?? null);
   const corroborationCount = detectSyndication(sorted.map(record => ({
     title: record.title,
     snippet: record.summary,

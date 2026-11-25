@@ -503,3 +503,32 @@ test('loadNetwork derives node_exposure automatically and loadGeography merges c
     await rm(directory, {recursive: true, force: true});
   }
 });
+
+test('classifier drops equity/utility/crime noise, strips market/trade actions, and groups VLCC attacks', () => {
+  const records = [
+    article('eq1', 'Indian stocks close to wiping out 2026 losses as foreign money floods back', '2026-11-25T02:17:00Z'),
+    article('eq2', 'Asian Stocks Lower on AI Doubts, Tariff Jitters', '2026-11-25T05:52:00Z'),
+    article('ut1', 'TVA touts $1.7B data center deal under new large-load tariff', '2026-11-24T18:34:00Z'),
+    article('cr1', 'US flew surveillance drone over Mexico to help capture top drug lord', '2026-11-24T02:09:00Z'),
+    article('cr2', 'Armed forces in Haiti kill at least 34 gang members to regain control of key corridor', '2026-11-19T22:31:00Z'),
+    article('aid1', 'India announces $1.62 billion package to bolster ties with flood-hit Nepal', '2026-11-23T12:33:00Z'),
+    article('mkt1', 'Oil Prices Fall as Traders Weigh Supply Surplus, Gulf Attacks', '2026-11-25T09:10:00Z'),
+    article('mkt2', 'Oil and European gas prices fall amid renewed attacks in Strait of Hormuz', '2026-11-25T08:45:00Z'),
+    article('vlcc1', 'Iran Guards say container ship hits mine near Strait of Hormuz', '2026-11-25T01:00:00Z'),
+    article('vlcc2', 'Three Sinokor VLCCs hit in latest Strait of Hormuz attacks', '2026-11-25T02:00:00Z'),
+  ];
+  const events = buildEvents([{records}], 'live');
+  const ids = events.flatMap(ev => ev.records.map(r => r.id));
+  assert.deepEqual(ids.sort(), ['mkt1', 'mkt2', 'vlcc1', 'vlcc2']);
+  assert.equal(events.find(ev => ev.records.some(r => r.id === 'mkt1')).action, null);
+  assert.equal(events.find(ev => ev.records.some(r => r.id === 'mkt2')).topic, 'market_change');
+  const hormuz = events.find(ev => ev.records.some(r => r.id === 'vlcc1'));
+  assert.ok(hormuz.records.some(r => r.id === 'vlcc2'));
+});
+
+test('locator maps Benghazi to Africa and Hodeidah to Yemen rather than Europe/Saudi', async () => {
+  const network = await loadNetwork(new URL('./data/', import.meta.url).pathname, 'default');
+  const locate = createEventLocator(network);
+  assert.equal(locate({title: 'Russian warship sinks in Benghazi after suspected Ukrainian drone attack', topic: 'security_development'}).region, 'africa');
+  assert.equal(locate({title: 'Saudi-led coalition intercepts Houthi attacks after Hodeidah strike', topic: 'security_development'}).id, 'hodeidah');
+});

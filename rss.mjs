@@ -21,6 +21,47 @@ export const FEED_ERROR_RETRY_MS = 30_000;
 const USER_AGENT = 'SupplyChainRiskRadar/0.2';
 const isAggregator = url => new URL(url).hostname === 'news.google.com';
 
+const NAMED_ENTITIES = {nbsp:' ', amp:'&', quot:'"', apos:"'", lt:'<', gt:'>', ndash:'–', mdash:'—', hellip:'…',
+  lsquo:'‘', rsquo:'’', ldquo:'“', rdquo:'”'};
+const decodeResidualEntities = text => text
+  .replace(/&#x([0-9a-f]+);/gi, (m, hex) => { const cp = parseInt(hex, 16); return cp <= 0x10ffff ? String.fromCodePoint(cp) : m; })
+  .replace(/&#(\d+);/g, (m, dec) => { const cp = Number(dec); return cp <= 0x10ffff ? String.fromCodePoint(cp) : m; })
+  .replace(/&([a-z]+);/gi, (m, name) => NAMED_ENTITIES[name.toLowerCase()] ?? m);
+const comparable = text => text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
+/**
+ * Google News descriptions are HTML that is entity-escaped twice, so after the shared parser runs they still
+ * read "Headline &nbsp;&nbsp; Publisher". Decode the leftover entities, drop the trailing publisher and
+ * return '' when what remains only repeats the headline.
+ */
+export function cleanSnippet(snippet, title, source = '') {
+  let text = decodeResidualEntities(snippet ?? '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+  if (source) {
+    const suffix = source.trim();
+    if (suffix && text.toLowerCase().endsWith(suffix.toLowerCase())) text = text.slice(0, -suffix.length).trim();
+  }
+  text = text.replace(/[\s\-–—|·]+$/, '').trim();
+  const head = comparable(title ?? '');
+  const body = comparable(text);
+  if (!body || body === head || (head && head.startsWith(body))) return '';
+  // Snippet is "Headline + a few trailing words": keep only the extra part if meaningful.
+  if (head && body.startsWith(head)) {
+    const rest = text.slice(Math.min(text.length, (title ?? '').length)).replace(/^[\s\-–—|·:.]+/, '').trim();
+    return comparable(rest).length >= 20 ? rest : '';
+  }
+  return text;
+}
+
+// Social posts and link shares are not reports: no headline, a raw URL, or a social network as publisher.
+const SOCIAL_PUBLISHERS = /^(?:facebook|instagram|x|twitter|x\.com|threads|tiktok|youtube|reddit|linkedin|telegram|bluesky)$/i;
+export function isJunkItem(title, source = '') {
+  const text = (title ?? '').trim();
+  if (SOCIAL_PUBLISHERS.test((source ?? '').trim())) return true;
+  if (/https?:\/\/|\bwww\.\S+\.\w{2,}/i.test(text)) return true;
+  if (/^[^.!?]{2,60}\.\s*\.\s/.test(text)) return true; // "Washington Post. . Lewis Pugh ..."
+  return text.length > 220;
+}
+
 function formatFetchError(error) {
   if (error?.name === 'TimeoutError' || error?.cause?.name === 'TimeoutError') return 'timeout';
   const code = error?.cause?.code;
@@ -116,10 +157,12 @@ export function parseFeed(xml, feed) {
       const suffix = ' - ' + source;
       if (title.endsWith(suffix) && title.length > suffix.length) title = title.slice(0, -suffix.length);
     }
+    title = decodeResidualEntities(title).replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+    if (isJunkItem(title, source)) continue;
     items.push({
       title, link, source, publishedAt,
       feedName:feed.name, feedCategory:feed.category,
-      snippet:extractDescription(block, isAtom, title, blockLower),
+      snippet:cleanSnippet(extractDescription(block, isAtom, title, blockLower), title, source),
     });
   }
   return items;

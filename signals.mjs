@@ -45,21 +45,30 @@ export function buildPortWatchSignals(recentByNode, baselineByNode, { windowDays
     if (Math.abs(basePct ?? 0) < thresholdPct && Math.abs(wowPct ?? 0) < thresholdPct) continue;
 
     const latestDate = rows[0].date;
+    const baseHit = basePct != null && Math.abs(basePct) >= thresholdPct;
+    const wowHit = wowPct != null && Math.abs(wowPct) >= thresholdPct;
+    // Direction follows the year-on-year baseline when it qualifies (structural change), else week-on-week.
+    const leadPct = baseHit ? basePct : wowPct;
+    const direction = leadPct < 0 ? 'down' : 'up';
     const parts = [];
-    if (basePct != null && Math.abs(basePct) >= thresholdPct) {
+    if (baseHit) {
       parts.push(`近 ${windowDays} 日日均通行 ${Math.round(thisWindow)} 艘，较去年同期基线${basePct > 0 ? '上升' : '下降'} ${Math.abs(basePct)}%`);
+    } else {
+      parts.push(`近 ${windowDays} 日日均通行 ${Math.round(thisWindow)} 艘`);
     }
-    if (wowPct != null && Math.abs(wowPct) >= thresholdPct) {
+    if (wowHit) {
       const prevLabel = windowDays === 7 ? '上周' : `前 ${windowDays} 日`;
       parts.push(`环比${prevLabel}${wowPct > 0 ? '上升' : '下降'} ${Math.abs(wowPct)}%`);
     }
-    const severity = Math.abs(basePct ?? 0) >= Math.max(35, thresholdPct * 2) ||
-      Math.abs(wowPct ?? 0) >= Math.max(30, thresholdPct * 2) ? 'HIGH' : 'MEDIUM';
+    // Falling traffic is the disruption signal; rising traffic (e.g. rerouted flows) is context only.
+    const severity = direction === 'up' ? 'LOW'
+      : (basePct ?? 0) <= -Math.max(35, thresholdPct * 2) || (wowPct ?? 0) <= -Math.max(30, thresholdPct * 2) ? 'HIGH' : 'MEDIUM';
+    const verb = direction === 'up' ? '上升' : severity === 'HIGH' ? '骤降' : '下降';
 
     signals.push({
       id: `signal:portwatch:${cp.nodeId}:${latestDate}`,
       kind: 'signal',
-      title: `${cp.label}船舶通行量异动：${parts.join('，')}`,
+      title: `${cp.label}船舶通行量${verb}：${parts.join('，')}`,
       summary: null,
       region: cp.region,
       geoAnchors: [cp.nodeId],
@@ -73,7 +82,7 @@ export function buildPortWatchSignals(recentByNode, baselineByNode, { windowDays
         publisher: 'IMF PortWatch',
         url: 'https://portwatch.imf.org/',
       },
-      evidence: { contributingTypes: ['船舶通行量'], wowChangePct: wowPct, baselineDeltaPct: basePct, severity },
+      evidence: { contributingTypes: ['船舶通行量'], wowChangePct: wowPct, baselineDeltaPct: basePct, direction, severity },
       forecast: null,
     });
   }
@@ -225,6 +234,36 @@ function formatWmoHazard(event, headline) {
   return raw || '恶劣天气';
 }
 
+/** Split a WMO areaDesc like "Antioquia (Bello, Medellín), Arauca (Tame)" into top-level entries. */
+export function splitAreaList(areaDesc) {
+  const parts = [];
+  let depth = 0;
+  let current = '';
+  for (const ch of areaDesc ?? '') {
+    if (ch === '(' || ch === '（') depth++;
+    if ((ch === ')' || ch === '）') && depth > 0) depth--;
+    if ((ch === ',' || ch === ';') && depth === 0) {
+      if (current.trim()) parts.push(current.trim());
+      current = '';
+    } else current += ch;
+  }
+  if (current.trim()) parts.push(current.trim());
+  return parts;
+}
+
+/** Truncate an area list on whole entries so parentheses stay balanced. */
+function truncateAreaList(areaDesc, maxLength) {
+  if (!areaDesc || areaDesc.length <= maxLength) return areaDesc;
+  const parts = splitAreaList(areaDesc);
+  const kept = [];
+  for (const part of parts) {
+    const next = [...kept, part].join(', ');
+    if (next.length > maxLength && kept.length) break;
+    kept.push(part.length > maxLength ? part.replace(/\s*[（(].*$/, '') : part);
+  }
+  return kept.length < parts.length ? `${kept.join(', ')} 等 ${parts.length} 个地区` : kept.join(', ');
+}
+
 function buildWmoSummary(item, expiresIso) {
   const parts = [];
   if (item.event) parts.push(`类型：${item.event}`);
@@ -233,10 +272,7 @@ function buildWmoSummary(item, expiresIso) {
   }
   if (WMO_URGENCY[item.u]) parts.push(`紧迫度：${WMO_URGENCY[item.u]}`);
   if (WMO_CERTAINTY[item.c]) parts.push(`确定性：${WMO_CERTAINTY[item.c]}`);
-  if (item.areaDesc) {
-    const area = item.areaDesc.length > 180 ? `${item.areaDesc.slice(0, 178)}…` : item.areaDesc;
-    parts.push(`影响区域：${area}`);
-  }
+  if (item.areaDesc) parts.push(`影响区域：${truncateAreaList(item.areaDesc, 180)}`);
   if (expiresIso) parts.push(`有效至 ${expiresIso.slice(0, 16).replace('T', ' ')} UTC`);
   return parts.join('｜') || null;
 }
@@ -282,8 +318,12 @@ export function parseWmoAlerts(payload, findPlaces, nowMs = Date.now(), { getNod
     const severity = item.s >= 4 ? 'HIGH' : 'MEDIUM';
     const levelLabel = item.s >= 4 ? '极端' : '严重';
     const hazardLabel = formatWmoHazard(item.event, item.headline);
-    const rawArea = item.areaDesc || primaryNode;
-    const areaLabel = rawArea.length > 50 ? rawArea.slice(0, 48) + '…' : rawArea;
+    // Lead with the network node the alert touches; a long provincial list otherwise hides why it is on the radar.
+    const nodeLabels = places.slice(0, 2).map(id => (typeof getNode === 'function' && getNode(id)?.name_zh) || null).filter(Boolean);
+    const areaCount = splitAreaList(item.areaDesc).length;
+    const areaLabel = nodeLabels.length
+      ? `${nodeLabels.join('、')}所在地区${areaCount > 1 ? `，共 ${areaCount} 个地区` : ''}`
+      : truncateAreaList(item.areaDesc || primaryNode, 50);
     const relUrl = item.url || item.capURL;
     signals.push({
       id: `signal:wmo:${item.id || dedupKey}`,

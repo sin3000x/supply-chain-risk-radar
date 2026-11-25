@@ -22,6 +22,9 @@ test('parsePortWatchCsv detects chokepoint deviation against baseline', () => {
   assert.equal(signals[0].kind, 'signal');
   assert.deepEqual(signals[0].geoAnchors, ['CP_SUEZ']);
   assert.equal(signals[0].evidence.baselineDeltaPct, -50);
+  assert.equal(signals[0].evidence.direction, 'down');
+  assert.equal(signals[0].evidence.severity, 'HIGH');
+  assert.match(signals[0].title, /^苏伊士运河船舶通行量骤降：/);
 });
 
 test('parseWmoAlerts filters severe unexpired alerts matching network nodes', () => {

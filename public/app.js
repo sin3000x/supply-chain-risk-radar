@@ -277,8 +277,8 @@ function layoutMapOverlays(regionGroups) {
 
   const nodes = projected.filter(node => node.inView);
   // Relax close in-view place markers so counts stay clickable while leader lines point back to true coordinates.
-  for (let iter = 0; iter < 16; iter++) {
-    if (iter < 12) {
+  for (let iter = 0; iter < 24; iter++) {
+    if (iter < 16) {
       for (const node of nodes) {
         node.displayX += (node.anchorX - node.displayX) * 0.08;
         node.displayY += (node.anchorY - node.displayY) * 0.08;
@@ -290,7 +290,7 @@ function layoutMapOverlays(regionGroups) {
         let dx = b.displayX - a.displayX;
         let dy = b.displayY - a.displayY;
         let dist = Math.hypot(dx, dy);
-        const minDist = a.radius + b.radius + 5;
+        const minDist = a.radius + b.radius + 8;
         if (dist < minDist) {
           if (dist < 0.01) {
             const angle = (i * 2.39996) % (Math.PI * 2);
@@ -504,7 +504,7 @@ function focusPlace(placeId, {scroll = true, open = true, zoom = false} = {}) {
   if (selectedPlaceId) {
     const section = [...document.querySelectorAll('.place-group')].find(item => item.dataset.placeId === selectedPlaceId);
     if (section) {
-      if (open) section.open = true;
+      if (open) section._setOpen?.(true);
       if (scroll) section.scrollIntoView({behavior:'smooth', block:'nearest'});
     }
     if (zoom) {
@@ -555,11 +555,52 @@ function renderRegionControls(rows) {
   unmappedEvents = counts.get('unknown') ?? 0;
 }
 
+function labelBox(place, placement) {
+  const text = place.geo.label ?? '';
+  let units = 0;
+  for (const ch of text) units += /[\u3000-\u9fff\uff00-\uffef]/.test(ch) ? 1.85 : 1;
+  const w = Math.max(36, Math.round(units * 9.5 + 16));
+  const h = 22;
+  const r = place.radius + 5;
+  if (placement === 'top') return {x1:place.displayX - w / 2, y1:place.displayY - r - h, x2:place.displayX + w / 2, y2:place.displayY - r};
+  if (placement === 'right') return {x1:place.displayX + r, y1:place.displayY - h / 2, x2:place.displayX + r + w, y2:place.displayY + h / 2};
+  if (placement === 'left') return {x1:place.displayX - r - w, y1:place.displayY - h / 2, x2:place.displayX - r, y2:place.displayY + h / 2};
+  return {x1:place.displayX - w / 2, y1:place.displayY + r, x2:place.displayX + w / 2, y2:place.displayY + r + h};
+}
+
+function boxesOverlap(a, b) {
+  return a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
+}
+
 function renderMapMarkers() {
   const markers = el('map-markers');
   const focused = document.activeElement?.dataset.placeId;
   markers.replaceChildren();
   const showAllLabels = mapCamera.zoomed || mapPlaces.length <= 10;
+  const occupied = mapPlaces.map(p => ({
+    x1:p.displayX - p.radius - 2, y1:p.displayY - p.radius - 2,
+    x2:p.displayX + p.radius + 2, y2:p.displayY + p.radius + 2,
+  }));
+  const ordered = [...mapPlaces].sort((a, b) => b.events.length - a.events.length);
+  const labelPlacement = new Map();
+  for (const place of ordered) {
+    const wantsLabel = showAllLabels || place.events.length >= 2 || place.id === selectedPlaceId;
+    let chosen = 'bottom';
+    let show = false;
+    for (const dir of ['bottom', 'top', 'right', 'left']) {
+      const box = labelBox(place, dir);
+      if (box.x1 < 4 || box.x2 > BASE_W - 4 || box.y1 < 4 || box.y2 > BASE_H - 4) continue;
+      if (!occupied.some(o => boxesOverlap(box, o))) {
+        chosen = dir;
+        if (wantsLabel) {
+          occupied.push(box);
+          show = true;
+        }
+        break;
+      }
+    }
+    labelPlacement.set(place.id, {dir:chosen, show});
+  }
   for (const place of mapPlaces) {
     const marker = add(markers,'button','','map-marker');
     marker.type = 'button';
@@ -568,14 +609,15 @@ function renderMapMarkers() {
     marker.style.setProperty('--size',`${place.size}px`);
     marker.dataset.placeId = place.id;
     marker.dataset.region = place.regionId;
-    const alwaysLabel = showAllLabels || place.events.length >= 2;
-    marker.dataset.alwaysLabel = String(alwaysLabel);
+    const {dir, show} = labelPlacement.get(place.id) ?? {dir:'bottom', show:false};
+    marker.dataset.alwaysLabel = String(show);
     const coord = formatCoord(place.geo.lon, place.geo.lat);
     const regionLabel = data?.regions?.[place.regionId]?.label;
     marker.title = [regionLabel, place.geo.label, `${place.events.length} 个事件`, coord].filter(Boolean).join(' · ');
     marker.setAttribute('aria-label', marker.title);
     add(marker,'span',String(place.events.length),'map-marker-count');
-    add(marker,'span',place.geo.label,'map-marker-label');
+    const lbl = add(marker,'span',place.geo.label,'map-marker-label');
+    lbl.dataset.placement = dir;
     marker.onmouseenter = () => {hoveredPlaceId = place.id; hoveredRegionId = place.regionId; syncGeoHighlight();};
     marker.onmouseleave = () => {
       if (hoveredPlaceId === place.id) hoveredPlaceId = null;
@@ -719,15 +761,16 @@ const openPlaces = new Map();
 function renderStats(list) {
   const stats = el('stats');
   stats.replaceChildren();
-  const stat = (label, value, tone) => {
+  const stat = (label, value, tone, title) => {
     const item = add(stats,'div','','stat');
     if (tone) item.dataset.tone = tone;
+    if (title) item.title = title;
     add(item,'dt',label);
     add(item,'dd',String(value));
   };
   stat('事件',list.length);
   stat('关联线路',new Set(list.flatMap(event => [...info(event).lanes])).size);
-  stat('记录',list.reduce((sum,event) => sum + info(event).reports,0));
+  stat('入库记录',list.reduce((sum,event) => sum + info(event).reports,0), null, '当前筛选事件包含的新闻、观测信号与预测记录数');
   if (data.mode === 'live') {
     const feeds = data.sources.flatMap(source => source.feedStatus ?? []);
     if (feeds.length) {
@@ -1043,47 +1086,55 @@ function render() {
 
     for (const place of places) {
       const {geo, events, lanes, latestUpdated} = place;
-      const section = add(regionSection,'details','','place-group');
+      const section = add(regionSection,'section','','place-group');
       section.dataset.placeId = geo.id;
       section.dataset.region = regionId;
       // Cards are one-line summaries, so groups start open; the unresolved bucket starts closed.
       const initiallyOpen = selectedRegion !== '' || geo.region !== 'unknown' || (regionGroups.length === 1 && places.length === 1);
-      section.open = openPlaces.get(geo.id) ?? initiallyOpen;
-      const title = add(section,'summary','','place-overview');
-      title.onmouseenter = () => {hoveredPlaceId = geo.id; hoveredRegionId = regionId; syncGeoHighlight();};
-      title.onmouseleave = () => {
+      const isOpen = openPlaces.get(geo.id) ?? initiallyOpen;
+      section.dataset.open = String(isOpen);
+
+      const headerRow = add(section,'div','','place-overview');
+      headerRow.onmouseenter = () => {hoveredPlaceId = geo.id; hoveredRegionId = regionId; syncGeoHighlight();};
+      headerRow.onmouseleave = () => {
         if (hoveredPlaceId === geo.id) hoveredPlaceId = null;
         if (hoveredRegionId === regionId) hoveredRegionId = null;
         syncGeoHighlight();
       };
 
-      const name = add(title,'span','','place-name');
+      const toggle = add(headerRow,'button','','place-toggle');
+      toggle.type = 'button';
+      toggle.setAttribute('aria-expanded', String(isOpen));
+      const name = add(toggle,'span','','place-name');
       add(name,'strong',geo.label);
       if (geo.nodeId) add(name,'code',geo.nodeId,'meta');
       const coord = formatCoord(geo.lon, geo.lat);
       if (coord) add(name,'span',coord,'place-coord');
 
-      const stats = add(title,'span','','place-stats');
+      const stats = add(toggle,'span','','place-stats');
       add(stats,'span',`${events.length} 个事件`);
       if (lanes.size) add(stats,'span',`${lanes.size} 条线路`,'accent');
       timeElement(stats,latestUpdated,shortTime,'');
+
       if (hasCoords(geo)) {
-        const pin = add(stats,'button','定位','place-pin');
+        const pin = add(headerRow,'button','定位','place-pin');
         pin.type = 'button';
         pin.title = '在地图上定位';
-        pin.onclick = event => {
-          event.preventDefault();
-          event.stopPropagation();
-          focusPlace(geo.id, {scroll:false, open:true, zoom:true});
-        };
+        pin.onclick = () => focusPlace(geo.id, {scroll:false, open:true, zoom:true});
       }
 
-      section.addEventListener('toggle',() => {
-        if (!section.isConnected) return;
-        if (section.open === initiallyOpen) openPlaces.delete(geo.id);
-        else openPlaces.set(geo.id,section.open);
-      });
       const cards = add(section,'div','','place-events');
+      cards.hidden = !isOpen;
+      const setOpen = next => {
+        const openState = Boolean(next);
+        section.dataset.open = String(openState);
+        toggle.setAttribute('aria-expanded', String(openState));
+        cards.hidden = !openState;
+        if (openState === initiallyOpen) openPlaces.delete(geo.id);
+        else openPlaces.set(geo.id, openState);
+      };
+      section._setOpen = setOpen;
+      toggle.onclick = () => setOpen(cards.hidden);
       for (const row of events) renderEvent(cards,row);
     }
   }
@@ -1170,6 +1221,11 @@ function renderEvent(parent, {event, kinds, topic, dimension, lanes, reports}) {
   const metadata = add(headline,'span','','event-metadata');
   const category = topic ? topics[topic] : dimension === 'mixed' ? '多类信息' : labels[dimension];
   if (category) add(metadata,'span',category,'event-category');
+  const pwDrop = event.records?.find(r => r.id?.startsWith('signal:portwatch:') && r.evidence?.severity === 'HIGH');
+  if (pwDrop) {
+    const dropPct = pwDrop.evidence.baselineDeltaPct ?? pwDrop.evidence.wowChangePct;
+    add(metadata,'span',Number.isFinite(dropPct) ? `通行量骤降 ${Math.abs(dropPct)}%` : '通行量骤降','event-alert');
+  }
   if (event.action === 'reopening') add(metadata,'span','恢复/重开','event-action');
   if (kinds.length > 1) add(metadata,'span',kinds.map(kind => labels[kind]).join(' / '));
   if (reports > 1) add(metadata,'span',`${reports} 条记录`);

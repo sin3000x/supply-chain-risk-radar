@@ -118,5 +118,8 @@
   {"id":"port-busan","name":"Busan","aliases":["Pusan","Port of Busan"],"region":"East Asia","country":"South Korea","lat":35.1,"lon":129.04,"type":"port","tier":"major","keywords":["busan","pusan","port of busan"],"label":"釜山港"},
   {"id":"quito","name":"Quito","aliases":["Ecuadorian"],"region":"South America","country":"Ecuador","lat":-0.18,"lon":-78.47,"type":"capital","tier":"notable","keywords":["quito","ecuador","ecuadorian"],"label":"厄瓜多尔"},
   {"id":"santiago","name":"Santiago","aliases":["Chilean"],"region":"South America","country":"Chile","lat":-33.45,"lon":-70.67,"type":"capital","tier":"notable","keywords":["santiago","chile","chilean"],"label":"智利"},
-  {"id":"lima","name":"Lima","aliases":["Peruvian"],"region":"South America","country":"Peru","lat":-12.05,"lon":-77.04,"type":"capital","tier":"notable","keywords":["lima","peru","peruvian"],"label":"秘鲁"}
+  {"id":"lima","name":"Lima","aliases":["Peruvian"],"region":"South America","country":"Peru","lat":-12.05,"lon":-77.04,"type":"capital","tier":"notable","keywords":["lima","peru","peruvian"],"label":"秘鲁"},
+  {"id":"benghazi","name":"Benghazi","region":"Africa","country":"Libya","lat":32.1167,"lon":20.0667,"type":"city","tier":"notable","keywords":["benghazi"],"label":"班加西"},
+  {"id":"hodeidah","name":"Hodeidah","aliases":["Hudaydah","Al Hudaydah","Hodeida","Ras Isa","Salif"],"region":"Middle East","country":"Yemen","lat":14.7978,"lon":42.9545,"type":"port","tier":"notable","keywords":["hodeidah","hudaydah","hodeida","ras isa","salif"],"label":"荷台达港"},
+  {"id":"kathmandu","name":"Kathmandu","region":"Asia","country":"Nepal","lat":27.7172,"lon":85.324,"type":"capital","tier":"notable","keywords":["kathmandu","nepal","nepali","nepalese"],"label":"尼泊尔"}
 ]

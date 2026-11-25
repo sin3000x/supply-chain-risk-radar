@@ -220,3 +220,27 @@ test('normalize deduplicates same-publisher same-headline items while preferring
   assert.equal(records[0].source.url, direct.link);
   assert.equal(records[1].source.publisher, 'Reuters');
 });
+
+test('parseFeed decodes leftover &nbsp; entities, drops duplicate snippets, and filters social posts', () => {
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+  <rss version="2.0"><channel>
+    <item>
+      <title>Three Tankers Hit in Strait of Hormuz - The Maritime Executive</title>
+      <link>https://news.google.com/rss/articles/CBMi123?oc=5</link>
+      <pubDate>Tue, 25 Nov 2026 09:00:00 GMT</pubDate>
+      <source url="https://maritime-executive.com">The Maritime Executive</source>
+      <description>&lt;a href="https://news.google.com/..."&gt;Three Tankers Hit in Strait of Hormuz&lt;/a&gt;&amp;nbsp;&amp;nbsp;&lt;font color="#6f6f6f"&gt;The Maritime Executive&lt;/font&gt;</description>
+    </item>
+    <item>
+      <title>Washington Post. . Swimmer crosses Strait of Hormuz https://wapo.st/4C4 - Facebook</title>
+      <link>https://news.google.com/rss/articles/CBMi456?oc=5</link>
+      <pubDate>Tue, 25 Nov 2026 08:00:00 GMT</pubDate>
+      <source url="https://facebook.com">Facebook</source>
+      <description>Washington Post. . Swimmer crosses Strait of Hormuz https://wapo.st/4C4</description>
+    </item>
+  </channel></rss>`;
+  const items = parseFeed(xml, {name: 'Shipping & Freight', category: 'shipping', url: 'https://news.google.com/rss/search?q=shipping'});
+  assert.equal(items.length, 1);
+  assert.equal(items[0].title, 'Three Tankers Hit in Strait of Hormuz');
+  assert.equal(items[0].snippet, '');
+});
