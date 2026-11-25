@@ -61,9 +61,12 @@ export function buildPortWatchSignals(recentByNode, baselineByNode, { windowDays
       parts.push(`环比${prevLabel}${wowPct > 0 ? '上升' : '下降'} ${Math.abs(wowPct)}%`);
     }
     // Falling traffic is the disruption signal; rising traffic (e.g. rerouted flows) is context only.
+    // Only call it "骤降" when week-on-week dropped sharply; a year-on-year-only drop is "持续低位".
+    const sharpRecentDrop = (wowPct ?? 0) <= -Math.max(30, thresholdPct * 2);
+    const sustainedLow = !sharpRecentDrop && (basePct ?? 0) <= -Math.max(35, thresholdPct * 2) && (wowPct ?? 0) > -thresholdPct;
     const severity = direction === 'up' ? 'LOW'
-      : (basePct ?? 0) <= -Math.max(35, thresholdPct * 2) || (wowPct ?? 0) <= -Math.max(30, thresholdPct * 2) ? 'HIGH' : 'MEDIUM';
-    const verb = direction === 'up' ? '上升' : severity === 'HIGH' ? '骤降' : '下降';
+      : sharpRecentDrop || (basePct ?? 0) <= -Math.max(35, thresholdPct * 2) ? 'HIGH' : 'MEDIUM';
+    const verb = direction === 'up' ? '上升' : sharpRecentDrop ? '骤降' : sustainedLow ? '持续低位' : '下降';
 
     signals.push({
       id: `signal:portwatch:${cp.nodeId}:${latestDate}`,

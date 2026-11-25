@@ -1221,11 +1221,6 @@ function renderEvent(parent, {event, kinds, topic, dimension, lanes, reports}) {
   const metadata = add(headline,'span','','event-metadata');
   const category = topic ? topics[topic] : dimension === 'mixed' ? '多类信息' : labels[dimension];
   if (category) add(metadata,'span',category,'event-category');
-  const pwDrop = event.records?.find(r => r.id?.startsWith('signal:portwatch:') && r.evidence?.severity === 'HIGH');
-  if (pwDrop) {
-    const dropPct = pwDrop.evidence.baselineDeltaPct ?? pwDrop.evidence.wowChangePct;
-    add(metadata,'span',Number.isFinite(dropPct) ? `通行量骤降 ${Math.abs(dropPct)}%` : '通行量骤降','event-alert');
-  }
   if (event.action === 'reopening') add(metadata,'span','恢复/重开','event-action');
   if (kinds.length > 1) add(metadata,'span',kinds.map(kind => labels[kind]).join(' / '));
   if (reports > 1) add(metadata,'span',`${reports} 条记录`);
